@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 import { searchStock } from "./actions";
@@ -13,6 +14,7 @@ export function StockSearch({
   initialQuery: string;
   initialResults: Result[];
 }) {
+  const t = useTranslations("stock");
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState(initialResults);
   const [loading, setLoading] = useState(false);
@@ -40,12 +42,12 @@ export function StockSearch({
           color: "color-mix(in srgb, var(--color-text) 55%, transparent)",
         }}
       >
-        Locate
+        {t("locate")}
       </div>
       <input
         className="input"
         type="search"
-        placeholder="SKU, name or location"
+        placeholder={t("searchPlaceholder")}
         value={query}
         onChange={(e) => handleChange(e.target.value)}
         autoFocus
@@ -89,7 +91,7 @@ export function StockSearch({
 
       {query.trim() && !loading && results.length === 0 && (
         <div style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>
-          Nothing matches &ldquo;{query}&rdquo;.
+          {t("noMatches", { query })}
         </div>
       )}
     </div>

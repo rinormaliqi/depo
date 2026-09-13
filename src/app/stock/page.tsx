@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
@@ -12,12 +13,13 @@ export default async function StockPage({
 }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  const t = await getTranslations();
 
   const facility = await getMyFacility();
   if (!facility) {
     return (
       <main style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
-        <p className="text-muted">No facility found for your organization yet.</p>
+        <p className="text-muted">{t("common.noFacility")}</p>
       </main>
     );
   }
@@ -32,7 +34,7 @@ export default async function StockPage({
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
       <AppHeader
         facilityName={facility.name}
-        floorText={`${facility.widthM.toFixed(1)} × ${facility.heightM.toFixed(1)} m · metric`}
+        floorText={t("common.floorText", { width: facility.widthM.toFixed(1), height: facility.heightM.toFixed(1) })}
         userEmail={session.user.email ?? ""}
       />
       <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "minmax(0,280px) 1fr", overflow: "auto" }}>
@@ -50,7 +52,7 @@ export default async function StockPage({
               marginBottom: 11,
             }}
           >
-            Zone utilisation
+            {t("stock.zoneUtilisation")}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 0, maxWidth: 560 }}>
             {zones.map((z) => (
@@ -80,13 +82,13 @@ export default async function StockPage({
                     color: "color-mix(in srgb, var(--color-text) 50%, transparent)",
                   }}
                 >
-                  {z.occupied} of {z.totalBins} locations occupied · {z.areaM2} m²
+                  {t("stock.occupiedOfTotal", { occupied: z.occupied, total: z.totalBins, area: z.areaM2 })}
                 </div>
               </div>
             ))}
             {zones.length === 0 && (
               <p className="text-muted" style={{ fontSize: 13 }}>
-                No zones on the blueprint yet.
+                {t("stock.noZones")}
               </p>
             )}
           </div>

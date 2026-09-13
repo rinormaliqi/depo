@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
 import { getBlueprint, getMyFacility } from "./actions";
@@ -11,11 +12,12 @@ export default async function BuilderPage() {
   }
 
   const facility = await getMyFacility();
+  const t = await getTranslations();
 
   if (!facility) {
     return (
       <main style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
-        <p className="text-muted">No facility found for your organization yet.</p>
+        <p className="text-muted">{t("common.noFacility")}</p>
       </main>
     );
   }
@@ -26,7 +28,7 @@ export default async function BuilderPage() {
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
       <AppHeader
         facilityName={facility.name}
-        floorText={`${facility.widthM.toFixed(1)} × ${facility.heightM.toFixed(1)} m · metric`}
+        floorText={t("common.floorText", { width: facility.widthM.toFixed(1), height: facility.heightM.toFixed(1) })}
         userEmail={session.user.email ?? ""}
       />
       <BlueprintCanvas

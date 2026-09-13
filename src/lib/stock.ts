@@ -1,4 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
+import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { facilities, items, locations, movements, stock } from "@/db/schema";
 
@@ -7,8 +8,9 @@ import { facilities, items, locations, movements, stock } from "@/db/schema";
 
 export async function requireOwnedBin(locationId: string, organizationId: string) {
   const [location] = await db.select().from(locations).where(eq(locations.id, locationId));
+  const t = await getTranslations("stockError");
   if (!location || !location.isBin) {
-    throw new Error("Bin not found");
+    throw new Error(t("binNotFound"));
   }
 
   const [facility] = await db
@@ -16,7 +18,7 @@ export async function requireOwnedBin(locationId: string, organizationId: string
     .from(facilities)
     .where(eq(facilities.id, location.facilityId));
   if (!facility || facility.organizationId !== organizationId) {
-    throw new Error("Bin not found");
+    throw new Error(t("binNotFound"));
   }
 
   return location;
@@ -25,14 +27,16 @@ export async function requireOwnedBin(locationId: string, organizationId: string
 export async function requireOwnedItem(itemId: string, organizationId: string) {
   const [item] = await db.select().from(items).where(eq(items.id, itemId));
   if (!item || item.organizationId !== organizationId) {
-    throw new Error("Item not found");
+    const t = await getTranslations("stockError");
+    throw new Error(t("itemNotFound"));
   }
   return item;
 }
 
-function requirePositiveQuantity(quantity: number) {
+async function requirePositiveQuantity(quantity: number) {
   if (!Number.isInteger(quantity) || quantity <= 0) {
-    throw new Error("Quantity must be a positive whole number");
+    const t = await getTranslations("stockError");
+    throw new Error(t("quantity"));
   }
 }
 
@@ -45,7 +49,7 @@ export async function receiveStockAt(
 ) {
   await requireOwnedBin(locationId, organizationId);
   await requireOwnedItem(itemId, organizationId);
-  requirePositiveQuantity(quantity);
+  await requirePositiveQuantity(quantity);
 
   await db.insert(movements).values({
     organizationId,
@@ -75,14 +79,15 @@ export async function pickStockAt(
 ) {
   await requireOwnedBin(locationId, organizationId);
   await requireOwnedItem(itemId, organizationId);
-  requirePositiveQuantity(quantity);
+  await requirePositiveQuantity(quantity);
 
   const [existing] = await db
     .select()
     .from(stock)
     .where(and(eq(stock.itemId, itemId), eq(stock.locationId, locationId)));
   if (!existing || existing.quantity < quantity) {
-    throw new Error("Not enough stock in this bin");
+    const t = await getTranslations("stockError");
+    throw new Error(t("notEnough"));
   }
 
   await db.insert(movements).values({

@@ -2,6 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { items } from "@/db/schema";
 import { requireOrgId } from "@/lib/session";
@@ -24,7 +25,8 @@ export async function createItem(_prevState: FormState, formData: FormData): Pro
   const category = formData.get("category")?.toString().trim();
 
   if (!name || !unitOfMeasure) {
-    return { error: "Name and unit of measure are required" };
+    const t = await getTranslations("items");
+    return { error: t("errorRequired") };
   }
 
   await db.insert(items).values({

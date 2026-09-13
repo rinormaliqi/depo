@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getFacilityLocations, getMyFacility } from "@/app/builder/actions";
 import { getMyItems } from "@/app/items/actions";
 import { auth } from "@/auth";
@@ -19,10 +20,11 @@ export default async function BinPage({
   const { locationId } = await params;
   const bin = await getBinInfo(locationId);
   const facility = await getMyFacility();
-  const [stockRows, myItems, allLocations] = await Promise.all([
+  const [stockRows, myItems, allLocations, t] = await Promise.all([
     getBinStock(locationId),
     getMyItems(),
     facility ? getFacilityLocations(facility.id) : Promise.resolve([]),
+    getTranslations(),
   ]);
   const byId = new Map(allLocations.map((l) => [l.id, l]));
   const path = locationLabel(locationId, byId);
@@ -32,7 +34,7 @@ export default async function BinPage({
       {facility && (
         <AppHeader
           facilityName={facility.name}
-          floorText={`${facility.widthM.toFixed(1)} × ${facility.heightM.toFixed(1)} m · metric`}
+          floorText={t("common.floorText", { width: facility.widthM.toFixed(1), height: facility.heightM.toFixed(1) })}
           userEmail={session.user.email ?? ""}
         />
       )}
@@ -40,10 +42,10 @@ export default async function BinPage({
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <div style={{ marginBottom: 6 }}>
             <Link href="/builder" style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>
-              ‹ Back to blueprint
+              {t("common.backToBlueprint")}
             </Link>
           </div>
-          <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--color-accent)" }}>Bin</div>
+          <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--color-accent)" }}>{t("bin.kicker")}</div>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 28, letterSpacing: ".03em", marginBottom: 4 }}>{bin.code}</div>
           <div style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)", marginBottom: 20 }}>{path}</div>
 
@@ -55,17 +57,17 @@ export default async function BinPage({
               </div>
             ))}
           </div>
-          {stockRows.length === 0 && <p className="text-muted" style={{ fontSize: 13, marginBottom: 20 }}>Nothing stored here yet.</p>}
+          {stockRows.length === 0 && <p className="text-muted" style={{ fontSize: 13, marginBottom: 20 }}>{t("bin.nothingStored")}</p>}
 
           <div style={{ height: 20 }} />
 
           {myItems.length === 0 ? (
             <p className="text-muted" style={{ fontSize: 13 }}>
-              No items in your catalog yet —{" "}
+              {t("bin.noItemsYet")}{" "}
               <Link href="/items" className="underline">
-                add one
+                {t("bin.addOne")}
               </Link>{" "}
-              first.
+              {t("bin.first")}
             </p>
           ) : (
             <StockForm locationId={locationId} items={myItems} />

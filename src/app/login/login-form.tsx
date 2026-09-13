@@ -1,24 +1,26 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { login } from "./actions";
 
 export function LoginForm() {
+  const t = useTranslations("auth");
   const [state, formAction, isPending] = useActionState(login, undefined);
 
   return (
     <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div className="field">
-        <label>Email</label>
+        <label>{t("email")}</label>
         <input className="input" name="email" type="email" placeholder="you@company.com" required />
       </div>
       <div className="field">
-        <label>Password</label>
+        <label>{t("password")}</label>
         <input className="input" name="password" type="password" placeholder="••••••••" required />
       </div>
       {state?.error && <p style={{ fontSize: 13, color: "var(--color-accent-800)" }}>{state.error}</p>}
       <button type="submit" className="btn btn-primary btn-block" disabled={isPending}>
-        {isPending ? "Signing in…" : "Sign in"}
+        {isPending ? t("login.signingIn") : t("login.signIn")}
       </button>
     </form>
   );

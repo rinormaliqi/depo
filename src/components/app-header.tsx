@@ -1,16 +1,11 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { logout } from "@/lib/actions/auth";
-
-const TABS = [
-  { href: "/builder", label: "Blueprint" },
-  { href: "/stock", label: "Stock" },
-  { href: "/metrics", label: "Metrics" },
-  { href: "/scanner", label: "Scanner" },
-];
+import { LocaleSwitcher } from "./locale-switcher";
 
 export function AppHeader({
   facilityName,
@@ -21,9 +16,17 @@ export function AppHeader({
   floorText: string;
   userEmail: string;
 }) {
+  const t = useTranslations();
   const pathname = usePathname();
   const router = useRouter();
   const [query, setQuery] = useState("");
+
+  const tabs = [
+    { href: "/builder", label: t("nav.blueprint") },
+    { href: "/stock", label: t("nav.stock") },
+    { href: "/metrics", label: t("nav.metrics") },
+    { href: "/scanner", label: t("nav.scanner") },
+  ];
 
   return (
     <div
@@ -79,7 +82,7 @@ export function AppHeader({
       </div>
 
       <div className="seg" style={{ marginLeft: 8 }}>
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(tab.href + "/");
           return (
             <Link
@@ -104,7 +107,7 @@ export function AppHeader({
         <input
           className="input"
           type="search"
-          placeholder="Find an item, SKU or location"
+          placeholder={t("common.searchPlaceholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -115,8 +118,9 @@ export function AppHeader({
           style={{ flex: "1 1 160px", minWidth: 120, maxWidth: 250 }}
         />
         <Link href="/items" className="btn btn-secondary">
-          Items
+          {t("common.items")}
         </Link>
+        <LocaleSwitcher />
         <span
           style={{
             fontSize: 11,
@@ -127,7 +131,7 @@ export function AppHeader({
           {userEmail}
         </span>
         <button className="btn btn-ghost" onClick={() => logout()}>
-          Sign out
+          {t("common.signOut")}
         </button>
       </div>
     </div>

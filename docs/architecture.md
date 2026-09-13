@@ -72,6 +72,28 @@ than a wholesale rebuild:
   pass.
 - **Light theme only**, matching the source design exactly (it defines no dark-mode tokens).
 
+## Internationalization
+
+**next-intl**, cookie-based (`NEXT_LOCALE`), no URL locale prefixes — this is a logged-in
+tool, not a public site needing per-locale SEO, so `/sq/...` / `/en/...` routing would be
+pure overhead. Default locale is **Albanian** (`sq`), the primary target market, with English
+as the switch-to option via a header toggle. Messages live in `messages/en.json` and
+`messages/sq.json`, organized by page/feature namespace.
+
+Every static UI string and every user-facing server-action error/validation message is
+translated (the latter via `getTranslations()` called server-side, so a thrown `Error`'s
+`.message` is already in the caller's locale by the time the client displays it — no
+client-side error-code mapping needed). Not translated, deliberately: anything the user
+themselves typed (item names, location codes, facility names) — only the app's own chrome.
+
+One deliberate design choice: a new location's auto-generated default `name` (e.g. "ZONË" vs
+"ZONE") is resolved in the *creating user's current locale* and then stored as a normal
+editable field — so it's immediately usable without the admin having to rename every object,
+but it does **not** retroactively change if they later switch languages (same as any other
+user-entered text). Location **codes** (e.g. `A-01`) are deliberately generated from a fixed,
+locale-independent scheme regardless of UI language, since they're operational identifiers
+that need to stay stable and predictable, not translated labels.
+
 No canvas/diagramming library (Konva, React Flow, etc.) — plain absolutely-positioned React
 elements are enough for boxes-on-a-grid and keep bundle size down.
 

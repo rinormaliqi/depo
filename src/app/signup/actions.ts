@@ -3,6 +3,7 @@
 import { hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { AuthError } from "next-auth";
+import { getTranslations } from "next-intl/server";
 import { signIn } from "@/auth";
 import { db } from "@/db";
 import { facilities, memberships, organizations, plans, users } from "@/db/schema";
@@ -10,26 +11,27 @@ import { facilities, memberships, organizations, plans, users } from "@/db/schem
 type FormState = { error?: string } | undefined;
 
 export async function signUp(_prevState: FormState, formData: FormData): Promise<FormState> {
+  const t = await getTranslations("auth.signup");
   const name = formData.get("name")?.toString().trim();
   const companyName = formData.get("companyName")?.toString().trim();
   const email = formData.get("email")?.toString().trim().toLowerCase();
   const password = formData.get("password")?.toString();
 
   if (!name || !companyName || !email || !password) {
-    return { error: "All fields are required" };
+    return { error: t("errorRequired") };
   }
   if (password.length < 8) {
-    return { error: "Password must be at least 8 characters" };
+    return { error: t("errorPasswordLength") };
   }
 
   const [existing] = await db.select().from(users).where(eq(users.email, email));
   if (existing) {
-    return { error: "An account with that email already exists" };
+    return { error: t("errorEmailExists") };
   }
 
   const [businessPlan] = await db.select().from(plans).where(eq(plans.key, "business"));
   if (!businessPlan) {
-    return { error: "Plans aren't seeded yet — run pnpm db:seed" };
+    return { error: t("errorPlansNotSeeded") };
   }
 
   const passwordHash = await hash(password, 12);
@@ -55,7 +57,7 @@ export async function signUp(_prevState: FormState, formData: FormData): Promise
     await signIn("credentials", { email, password, redirectTo: "/builder" });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: "Account created, but sign-in failed — try logging in" };
+      return { error: t("errorSignInFailed") };
     }
     throw error;
   }

@@ -2,6 +2,7 @@
 
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { db } from "@/db";
 import { items, locations, movements } from "@/db/schema";
@@ -11,18 +12,19 @@ import { receiveStockAt } from "@/lib/stock";
 
 export async function commitScan(itemId: string, quantity: number, code: string) {
   const { userId, organizationId } = await requireSession();
+  const t = await getTranslations("scanner");
   const facility = await getMyFacility();
-  if (!facility) throw new Error("No facility found");
+  if (!facility) throw new Error(t("errorNoFacility"));
 
   const trimmedCode = code.trim().toUpperCase();
-  if (!trimmedCode) throw new Error("Enter a location, e.g. A-01-3");
+  if (!trimmedCode) throw new Error(t("errorEnterLocation"));
 
   const [location] = await db
     .select()
     .from(locations)
     .where(and(eq(locations.facilityId, facility.id), eq(locations.code, trimmedCode)));
   if (!location || !location.isBin) {
-    throw new Error(`${trimmedCode} is not a location on this floor`);
+    throw new Error(t("errorLocationNotFound", { code: trimmedCode }));
   }
 
   await receiveStockAt(organizationId, userId, location.id, itemId, quantity);

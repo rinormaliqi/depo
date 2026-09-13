@@ -2,6 +2,7 @@
 
 import { and, eq, gt, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { facilities, locations, stock, type LocationKind } from "@/db/schema";
 import { bayCode, LOCATION_TYPES, nextCode, round2 } from "@/lib/blueprint-types";
@@ -14,7 +15,8 @@ async function requireOwnedFacility(facilityId: string) {
 
   const [facility] = await db.select().from(facilities).where(eq(facilities.id, facilityId));
   if (!facility || facility.organizationId !== organizationId) {
-    throw new Error("Facility not found");
+    const t = await getTranslations("builder.error");
+    throw new Error(t("facilityNotFound"));
   }
 
   return facility;
@@ -22,16 +24,17 @@ async function requireOwnedFacility(facilityId: string) {
 
 async function requireOwnedLocation(locationId: string) {
   const organizationId = await requireOrgId();
+  const t = await getTranslations("builder.error");
 
   const [location] = await db.select().from(locations).where(eq(locations.id, locationId));
-  if (!location) throw new Error("Location not found");
+  if (!location) throw new Error(t("locationNotFound"));
 
   const [facility] = await db
     .select()
     .from(facilities)
     .where(eq(facilities.id, location.facilityId));
   if (!facility || facility.organizationId !== organizationId) {
-    throw new Error("Location not found");
+    throw new Error(t("locationNotFound"));
   }
 
   return location;
@@ -59,7 +62,10 @@ export async function updateFacility(
   const values: Partial<typeof facilities.$inferInsert> = {};
   if (patch.name !== undefined) {
     const trimmed = patch.name.trim();
-    if (!trimmed) throw new Error("Name is required");
+    if (!trimmed) {
+      const t = await getTranslations("builder.error");
+      throw new Error(t("nameRequired"));
+    }
     values.name = trimmed;
   }
   if (patch.widthM !== undefined) values.widthM = Math.max(6, round2(patch.widthM));
@@ -95,13 +101,14 @@ function binChildren(
   parentId: string,
   parentCode: string,
   count: number,
+  binLabel: string,
   offset = 0,
 ) {
   return Array.from({ length: count }, (_, i) => ({
     facilityId,
     parentId,
     kind: "bin" as LocationKind,
-    name: "BIN",
+    name: binLabel,
     code: bayCode(parentCode, offset + i + 1),
     isBin: true,
     xM: 0,
@@ -140,13 +147,15 @@ export async function createEntity(
   const code = nextCode(kind, containingZone?.code ?? null, existingCodes);
   const isLeaf = type.spatial === "store" && type.bays <= 1;
 
+  const tKind = await getTranslations("builder.kind");
+
   const [created] = await db
     .insert(locations)
     .values({
       facilityId,
       parentId: containingZone?.id ?? null,
       kind,
-      name: type.label.toUpperCase(),
+      name: tKind(kind).toUpperCase(),
       code,
       isBin: isLeaf,
       xM: box.xM,
@@ -158,7 +167,8 @@ export async function createEntity(
     .returning();
 
   if (type.spatial === "store" && type.bays > 1) {
-    await db.insert(locations).values(binChildren(facilityId, created.id, code, type.bays));
+    const binLabel = tKind("bin").toUpperCase();
+    await db.insert(locations).values(binChildren(facilityId, created.id, code, type.bays, binLabel));
   }
 
   revalidatePath("/builder");
@@ -179,22 +189,23 @@ export async function updateEntity(
 ) {
   const location = await requireOwnedLocation(id);
   const type = LOCATION_TYPES[location.kind as LocationKind];
+  const t = await getTranslations("builder.error");
 
   const values: Partial<typeof locations.$inferInsert> = {};
   if (patch.name !== undefined) {
     const trimmed = patch.name.trim();
-    if (!trimmed) throw new Error("Name is required");
+    if (!trimmed) throw new Error(t("nameRequired"));
     values.name = trimmed;
   }
   if (patch.code !== undefined) {
     const trimmed = patch.code.trim().toUpperCase();
-    if (!trimmed) throw new Error("Code is required");
+    if (!trimmed) throw new Error(t("codeRequired"));
     const clash = await db
       .select()
       .from(locations)
       .where(and(eq(locations.facilityId, location.facilityId), eq(locations.code, trimmed)));
     if (clash.some((c) => c.id !== id)) {
-      throw new Error(`${trimmed} is already in use on this floor`);
+      throw new Error(t("codeInUse", { code: trimmed }));
     }
     values.code = trimmed;
   }
@@ -219,17 +230,19 @@ export async function updateEntity(
         .from(stock)
         .where(and(inArray(stock.locationId, ids), gt(stock.quantity, 0)));
       if (withStock.length > 0) {
-        throw new Error("Can't reduce bays — some of them still hold stock");
+        throw new Error(t("baysReduce"));
       }
       await db.delete(locations).where(inArray(locations.id, ids));
       values.isBin = true;
     } else if (bays > children.length) {
       const code = patch.code?.trim().toUpperCase() ?? location.code ?? location.name;
+      const tKind = await getTranslations("builder.kind");
       const toAdd = binChildren(
         location.facilityId,
         id,
         code,
         bays - children.length,
+        tKind("bin").toUpperCase(),
         children.length,
       );
       await db.insert(locations).values(toAdd);
@@ -242,7 +255,7 @@ export async function updateEntity(
         .from(stock)
         .where(and(inArray(stock.locationId, ids), gt(stock.quantity, 0)));
       if (withStock.length > 0) {
-        throw new Error("Can't reduce bays — some of them still hold stock");
+        throw new Error(t("baysReduce"));
       }
       await db.delete(locations).where(inArray(locations.id, ids));
     }
@@ -279,7 +292,8 @@ export async function deleteEntity(id: string) {
     .from(stock)
     .where(and(inArray(stock.locationId, ids), gt(stock.quantity, 0)));
   if (withStock.length > 0) {
-    throw new Error("Can't delete — this still holds stock. Remove it first.");
+    const t = await getTranslations("builder.error");
+    throw new Error(t("deleteHasStock"));
   }
 
   await db.delete(locations).where(eq(locations.id, id));

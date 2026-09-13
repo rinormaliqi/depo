@@ -2,18 +2,58 @@
 
 import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
 import { db } from "@/db";
-import { facilities, locations } from "@/db/schema";
+import { facilities, locations, memberships } from "@/db/schema";
 
 export type LocationRow = typeof locations.$inferSelect;
 
-// Placeholder until auth/org-scoping exists: grabs the single demo facility.
-export async function getDemoFacility() {
-  const [facility] = await db.select().from(facilities).limit(1);
+async function requireOwnedFacility(facilityId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  const [membership] = await db
+    .select()
+    .from(memberships)
+    .where(eq(memberships.userId, session.user.id))
+    .limit(1);
+  if (!membership) {
+    throw new Error("No organization membership");
+  }
+
+  const [facility] = await db.select().from(facilities).where(eq(facilities.id, facilityId));
+  if (!facility || facility.organizationId !== membership.organizationId) {
+    throw new Error("Facility not found");
+  }
+
+  return facility;
+}
+
+// Assumes one facility per org for now — multi-facility switching isn't built yet.
+export async function getMyFacility() {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const [membership] = await db
+    .select()
+    .from(memberships)
+    .where(eq(memberships.userId, session.user.id))
+    .limit(1);
+  if (!membership) return null;
+
+  const [facility] = await db
+    .select()
+    .from(facilities)
+    .where(eq(facilities.organizationId, membership.organizationId))
+    .limit(1);
   return facility ?? null;
 }
 
 export async function getChildren(facilityId: string, parentId: string | null) {
+  await requireOwnedFacility(facilityId);
+
   return db
     .select()
     .from(locations)
@@ -32,6 +72,8 @@ export async function createLocation(
   name: string,
   isBin: boolean,
 ) {
+  await requireOwnedFacility(facilityId);
+
   const trimmed = name.trim();
   if (!trimmed) {
     throw new Error("Name is required");

@@ -1,6 +1,7 @@
 import "dotenv/config";
+import { eq } from "drizzle-orm";
 import { db } from "./index";
-import { plans } from "./schema";
+import { plans, organizations, facilities } from "./schema";
 
 const planRows: (typeof plans.$inferInsert)[] = [
   {
@@ -37,4 +38,29 @@ for (const plan of planRows) {
 }
 
 console.log("Seeded plans:", planRows.map((p) => p.key).join(", "));
+
+// Demo org/facility — placeholder until auth exists to scope these per real signup.
+const [businessPlan] = await db.select().from(plans).where(eq(plans.key, "business"));
+
+let [org] = await db.select().from(organizations).limit(1);
+if (!org) {
+  [org] = await db
+    .insert(organizations)
+    .values({ name: "Demo Company", planId: businessPlan.id, subscriptionStatus: "trialing" })
+    .returning();
+  console.log("Seeded demo organization:", org.name);
+}
+
+let [facility] = await db
+  .select()
+  .from(facilities)
+  .where(eq(facilities.organizationId, org.id));
+if (!facility) {
+  [facility] = await db
+    .insert(facilities)
+    .values({ organizationId: org.id, name: "Demo Warehouse" })
+    .returning();
+  console.log("Seeded demo facility:", facility.name);
+}
+
 process.exit(0);

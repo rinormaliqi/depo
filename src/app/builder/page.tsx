@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth, signOut } from "@/auth";
-import { getChildren, getMyFacility } from "./actions";
-import { LocationBuilder } from "./location-builder";
+import { auth } from "@/auth";
+import { AppHeader } from "@/components/app-header";
+import { getBlueprint, getMyFacility } from "./actions";
+import { BlueprintCanvas } from "./blueprint-canvas";
 
 export default async function BuilderPage() {
   const session = await auth();
@@ -14,45 +14,26 @@ export default async function BuilderPage() {
 
   if (!facility) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-        <p className="text-neutral-500">No facility found for your organization yet.</p>
+      <main style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
+        <p className="text-muted">No facility found for your organization yet.</p>
       </main>
     );
   }
 
-  const rootLocations = await getChildren(facility.id, null);
+  const { locations, occupiedBinIds } = await getBlueprint(facility.id);
 
   return (
-    <main className="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <div className="mx-auto flex max-w-2xl items-center justify-between px-4 pt-6">
-        <span className="text-xs text-neutral-400">{session.user.email}</span>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/items"
-            className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
-          >
-            Items
-          </Link>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/" });
-            }}
-          >
-            <button
-              type="submit"
-              className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </div>
-      <LocationBuilder
-        facilityId={facility.id}
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
+      <AppHeader
         facilityName={facility.name}
-        initialLocations={rootLocations}
+        floorText={`${facility.widthM.toFixed(1)} × ${facility.heightM.toFixed(1)} m · metric`}
+        userEmail={session.user.email ?? ""}
       />
-    </main>
+      <BlueprintCanvas
+        facility={{ id: facility.id, name: facility.name, widthM: facility.widthM, heightM: facility.heightM }}
+        initialLocations={locations}
+        initialOccupiedBinIds={occupiedBinIds}
+      />
+    </div>
   );
 }

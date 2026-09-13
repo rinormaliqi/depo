@@ -1,48 +1,34 @@
 import Link from "next/link";
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
+import { logout } from "@/lib/actions/auth";
 
 export default async function Home() {
   const session = await auth();
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-2 bg-white px-6 text-center text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <h1 className="text-2xl font-medium">SmartDepo</h1>
-      <p className="text-neutral-500">Digitize your storage. Find anything in seconds.</p>
+    <main style={{ display: "flex", minHeight: "100vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: "0 24px", textAlign: "center" }}>
+      <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 26, letterSpacing: ".06em" }}>
+        SMART<span style={{ color: "var(--color-accent)" }}>/</span>DEPO
+      </div>
+      <p className="text-muted">Digitize your storage. Find anything in seconds.</p>
 
       {session?.user ? (
-        <div className="mt-4 flex flex-col items-center gap-2">
-          <Link
-            href="/builder"
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500"
-          >
-            Open location builder
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <Link href="/builder" className="btn btn-primary">
+            Open the blueprint
           </Link>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/" });
-            }}
-          >
-            <button
-              type="submit"
-              className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
-            >
+          <form action={async () => { "use server"; await logout(); }}>
+            <button type="submit" className="btn btn-ghost" style={{ fontSize: 12 }}>
               Sign out ({session.user.email})
             </button>
           </form>
         </div>
       ) : (
-        <div className="mt-4 flex gap-2">
-          <Link
-            href="/login"
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500"
-          >
+        <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+          <Link href="/login" className="btn btn-secondary">
             Log in
           </Link>
-          <Link
-            href="/signup"
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-          >
+          <Link href="/signup" className="btn btn-primary">
             Sign up
           </Link>
         </div>

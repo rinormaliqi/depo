@@ -1,1 +1,21 @@
+@import "./ds.css";
 @import "tailwindcss";
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+}
+::-webkit-scrollbar-track {
+  background: var(--color-neutral-100);
+}
+
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}

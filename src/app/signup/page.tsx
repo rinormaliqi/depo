@@ -8,13 +8,13 @@ export default async function SignupPage() {
   if (session?.user) redirect("/builder");
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-white px-6 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <div className="w-full max-w-sm">
-        <h1 className="mb-6 text-center text-xl font-medium">Start your trial</h1>
+    <main style={{ display: "flex", minHeight: "100vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24, padding: "0 24px" }}>
+      <div style={{ width: "100%", maxWidth: 360 }}>
+        <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, textAlign: "center", marginBottom: 24 }}>Start your trial</div>
         <SignupForm />
-        <p className="mt-4 text-center text-sm text-neutral-500">
+        <p className="text-muted" style={{ marginTop: 16, textAlign: "center", fontSize: 13 }}>
           Already have an account?{" "}
-          <Link href="/login" className="underline">
+          <Link href="/login" style={{ color: "var(--color-accent)" }}>
             Log in
           </Link>
         </p>

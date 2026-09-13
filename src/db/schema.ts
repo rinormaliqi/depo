@@ -3,6 +3,7 @@ import {
   uuid,
   text,
   integer,
+  real,
   boolean,
   timestamp,
   uniqueIndex,
@@ -74,10 +75,27 @@ export const facilities = pgTable(
       .notNull()
       .references(() => organizations.id),
     name: text("name").notNull(),
+    widthM: real("width_m").notNull().default(40), // floor envelope, metres
+    heightM: real("height_m").notNull().default(24),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("facilities_org_idx").on(table.organizationId)],
 );
+
+// Single subdivision axis (bays) — no multi-level shelving yet. A "store" kind
+// location with bays > 1 has that many auto-generated kind='bin' children;
+// with bays = 1 it holds stock directly.
+export const locationKinds = [
+  "zone",
+  "aisle",
+  "rack",
+  "platform",
+  "pallet",
+  "bin",
+  "dock",
+  "wall",
+] as const;
+export type LocationKind = (typeof locationKinds)[number];
 
 export const locations = pgTable(
   "locations",
@@ -86,14 +104,24 @@ export const locations = pgTable(
     facilityId: uuid("facility_id")
       .notNull()
       .references(() => facilities.id),
-    parentId: uuid("parent_id").references((): AnyPgColumn => locations.id),
+    parentId: uuid("parent_id").references((): AnyPgColumn => locations.id, {
+      onDelete: "cascade",
+    }),
+    kind: text("kind", { enum: locationKinds }).notNull().default("bin"),
     name: text("name").notNull(),
+    code: text("code"), // short label shown on the blueprint, e.g. "A-01"
     isBin: boolean("is_bin").notNull().default(false),
+    xM: real("x_m").notNull().default(0), // position + size, metres
+    yM: real("y_m").notNull().default(0),
+    widthM: real("width_m").notNull().default(1),
+    heightM: real("height_m").notNull().default(1),
+    bays: integer("bays").notNull().default(1),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     index("locations_facility_idx").on(table.facilityId),
     index("locations_parent_idx").on(table.parentId),
+    index("locations_code_idx").on(table.facilityId, table.code),
   ],
 );
 
@@ -125,7 +153,7 @@ export const stock = pgTable(
       .references(() => items.id),
     locationId: uuid("location_id")
       .notNull()
-      .references(() => locations.id),
+      .references(() => locations.id, { onDelete: "cascade" }),
     quantity: integer("quantity").notNull().default(0),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -145,8 +173,12 @@ export const movements = pgTable(
     itemId: uuid("item_id")
       .notNull()
       .references(() => items.id),
-    fromLocationId: uuid("from_location_id").references(() => locations.id),
-    toLocationId: uuid("to_location_id").references(() => locations.id),
+    fromLocationId: uuid("from_location_id").references(() => locations.id, {
+      onDelete: "set null",
+    }),
+    toLocationId: uuid("to_location_id").references(() => locations.id, {
+      onDelete: "set null",
+    }),
     quantity: integer("quantity").notNull(),
     reason: text("reason", {
       enum: ["receive", "pick", "relocate", "adjust"],

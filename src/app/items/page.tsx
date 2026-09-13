@@ -1,44 +1,51 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getMyFacility } from "@/app/builder/actions";
+import { auth } from "@/auth";
+import { AppHeader } from "@/components/app-header";
 import { getMyItems } from "./actions";
 import { ItemForm } from "./item-form";
 
 export default async function ItemsPage() {
-  const myItems = await getMyItems();
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
+  const [facility, myItems] = await Promise.all([getMyFacility(), getMyItems()]);
 
   return (
-    <main className="min-h-screen bg-white px-4 py-8 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <div className="mx-auto max-w-2xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-medium">Items</h1>
-          <Link
-            href="/builder"
-            className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-          >
-            ‹ Back to builder
-          </Link>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
+      {facility && (
+        <AppHeader
+          facilityName={facility.name}
+          floorText={`${facility.widthM.toFixed(1)} × ${facility.heightM.toFixed(1)} m · metric`}
+          userEmail={session.user.email ?? ""}
+        />
+      )}
+      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 26 }}>
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+          <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, marginBottom: 16 }}>Items</div>
+
+          <ItemForm />
+
+          <div style={{ marginTop: 20, display: "flex", flexDirection: "column" }}>
+            {myItems.map((item) => (
+              <div
+                key={item.id}
+                style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--color-divider)", fontSize: 13 }}
+              >
+                <span>{item.name}</span>
+                <span style={{ color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>
+                  {item.unitOfMeasure}
+                  {item.category ? ` · ${item.category}` : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {myItems.length === 0 && (
+            <p className="text-muted" style={{ marginTop: 20, textAlign: "center", fontSize: 13 }}>No items yet.</p>
+          )}
         </div>
-
-        <ItemForm />
-
-        <ul className="mt-6 flex flex-col gap-1">
-          {myItems.map((item) => (
-            <li
-              key={item.id}
-              className="flex justify-between border-b border-neutral-200 py-2 text-sm dark:border-neutral-800"
-            >
-              <span>{item.name}</span>
-              <span className="text-neutral-500">
-                {item.unitOfMeasure}
-                {item.category ? ` · ${item.category}` : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        {myItems.length === 0 && (
-          <p className="mt-6 text-center text-sm text-neutral-400">No items yet.</p>
-        )}
       </div>
-    </main>
+    </div>
   );
 }

@@ -45,18 +45,35 @@ route handlers/middleware — no external authorization service.
 
 ## QR codes
 
-Generated on request with the `qrcode` npm package (SVG/PNG output for printing). Nothing is
-persisted — no blob storage needed for MVP at all. If item photos are added later, use
-Cloudflare R2 (zero egress fees) over Azure Blob (tender-ai's choice, which bills per
-download — bad fit for something phones fetch repeatedly).
+Not implemented yet. The Scanner page (below) currently takes a typed location `code`
+instead of a camera scan — real QR/barcode scanning is deferred, not abandoned. When it's
+built: generated on request with the `qrcode` npm package (SVG/PNG for printing), nothing
+persisted — no blob storage needed. If item photos are added later, use Cloudflare R2 (zero
+egress fees) over Azure Blob (tender-ai's choice, which bills per download — bad fit for
+something phones fetch repeatedly).
 
-## Visual builder
+## Visual builder — the Depot Blueprint import
 
-Plain React state + CSS grid/flex — boxes nested inside boxes, matching the interactive
-mockup already built (search highlights the matching bin; click a bin to see contents).
-No canvas/diagramming library (Konva, React Flow, etc.) — not justified for boxes-on-a-grid,
-and every such library is bundle size and complexity this MVP doesn't need. Confirmed
-interaction: tap-to-zoom into a box on mobile, breadcrumb bar at the top to navigate back out.
+Superseded the original "boxes nested inside boxes" drill-down builder: a Claude Design
+project (`Depot Blueprint.dc.html`) was imported and re-implemented as a real, spatial 2D
+floor-plan canvas — zones/racks/platforms/pallets/bins/docks/walls positioned by `x/y/width/
+height` in metres, not a text tree. Brought over from the design: the full visual language
+(Barlow/Barlow Condensed, the ink-blue "blueprint" palette in `src/app/ds.css`, hairline
+corner-bracket cards), the four-tab structure (Blueprint / Stock / Metrics / Scanner), and
+real bay subdivision (a rack with 8 bays becomes 8 actual `locations` rows, not virtual
+string keys like the source design used).
+
+Deliberately cut from the source design, to keep this a schema-realistic first pass rather
+than a wholesale rebuild:
+- **No multi-level shelving** (`levels`) — bays only, one subdivision axis.
+- **No expiry/shelf-life tracking** — not in `items`/`stock`, a separate feature.
+- **No freehand mouse drag-to-move/resize** — numeric fields in the inspector instead. Precise
+  metre input suits a blueprint tool and avoids a drag-engine's usual bug surface for a first
+  pass.
+- **Light theme only**, matching the source design exactly (it defines no dark-mode tokens).
+
+No canvas/diagramming library (Konva, React Flow, etc.) — plain absolutely-positioned React
+elements are enough for boxes-on-a-grid and keep bundle size down.
 
 ## Background jobs
 

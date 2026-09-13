@@ -7,35 +7,13 @@ export function ItemForm() {
   const [state, formAction, isPending] = useActionState(createItem, undefined);
 
   return (
-    <form action={formAction} className="flex flex-wrap gap-2">
-      <input
-        name="name"
-        placeholder="Name"
-        required
-        className="rounded border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-      />
-      <input
-        name="unitOfMeasure"
-        placeholder="Unit (pcs, kg, bags…)"
-        required
-        className="rounded border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-      />
-      <input
-        name="sku"
-        placeholder="SKU (optional)"
-        className="rounded border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-      />
-      <input
-        name="category"
-        placeholder="Category (optional)"
-        className="rounded border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-      />
-      {state?.error && <p className="w-full text-sm text-red-600 dark:text-red-400">{state.error}</p>}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded bg-neutral-900 px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
-      >
+    <form action={formAction} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end" }}>
+      <input className="input" name="name" placeholder="Name" required style={{ width: 160 }} />
+      <input className="input" name="unitOfMeasure" placeholder="Unit (pcs, kg, bags…)" required style={{ width: 160 }} />
+      <input className="input" name="sku" placeholder="SKU (optional)" style={{ width: 140 }} />
+      <input className="input" name="category" placeholder="Category (optional)" style={{ width: 160 }} />
+      {state?.error && <p style={{ width: "100%", fontSize: 13, color: "var(--color-accent-800)" }}>{state.error}</p>}
+      <button type="submit" className="btn btn-primary" disabled={isPending}>
         {isPending ? "Adding…" : "Add item"}
       </button>
     </form>

@@ -7,40 +7,25 @@ export function SignupForm() {
   const [state, formAction, isPending] = useActionState(signUp, undefined);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
-      <input
-        name="companyName"
-        placeholder="Company name"
-        required
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-      />
-      <input
-        name="name"
-        placeholder="Your name"
-        required
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-      />
-      <input
-        name="email"
-        type="email"
-        placeholder="Email"
-        required
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-      />
-      <input
-        name="password"
-        type="password"
-        placeholder="Password (min. 8 characters)"
-        required
-        minLength={8}
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-      />
-      {state?.error && <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
-      >
+    <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="field">
+        <label>Company name</label>
+        <input className="input" name="companyName" placeholder="Acme Yard" required />
+      </div>
+      <div className="field">
+        <label>Your name</label>
+        <input className="input" name="name" placeholder="Jane Smith" required />
+      </div>
+      <div className="field">
+        <label>Email</label>
+        <input className="input" name="email" type="email" placeholder="you@company.com" required />
+      </div>
+      <div className="field">
+        <label>Password</label>
+        <input className="input" name="password" type="password" placeholder="Min. 8 characters" required minLength={8} />
+      </div>
+      {state?.error && <p style={{ fontSize: 13, color: "var(--color-accent-800)" }}>{state.error}</p>}
+      <button type="submit" className="btn btn-primary btn-block" disabled={isPending}>
         {isPending ? "Creating account…" : "Create account"}
       </button>
     </form>

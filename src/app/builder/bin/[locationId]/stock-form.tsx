@@ -33,13 +33,9 @@ export function StockForm({ locationId, items }: { locationId: string; items: It
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
-        <select
-          value={itemId}
-          onChange={(e) => setItemId(e.target.value)}
-          className="rounded border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-        >
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <select className="input" value={itemId} onChange={(e) => setItemId(e.target.value)} style={{ flex: 1, minWidth: 160 }}>
           {items.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name} ({item.unitOfMeasure})
@@ -47,29 +43,22 @@ export function StockForm({ locationId, items }: { locationId: string; items: It
           ))}
         </select>
         <input
+          className="input"
           type="number"
           min={1}
           step={1}
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
-          className="w-20 rounded border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+          style={{ width: 80 }}
         />
-        <button
-          onClick={() => handle(receiveStock)}
-          disabled={isPending}
-          className="rounded bg-neutral-900 px-3 py-1 text-sm text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
-        >
+        <button className="btn btn-primary" onClick={() => handle(receiveStock)} disabled={isPending}>
           Add
         </button>
-        <button
-          onClick={() => handle(pickStock)}
-          disabled={isPending}
-          className="rounded border border-neutral-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-neutral-700"
-        >
+        <button className="btn btn-secondary" onClick={() => handle(pickStock)} disabled={isPending}>
           Remove
         </button>
       </div>
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p style={{ fontSize: 13, color: "var(--color-accent-800)" }}>{error}</p>}
     </div>
   );
 }

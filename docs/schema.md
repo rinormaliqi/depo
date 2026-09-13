@@ -30,13 +30,19 @@ memberships                            -- which orgs a user belongs to, with wha
   role ('admin' | 'manager' | 'worker'), created_at
 
 facilities                             -- a company can have more than one physical site
-  id, organization_id → organizations, name, created_at
+  id, organization_id → organizations, name,
+  width_m, height_m (real, default 40 × 24) -- floor envelope for the blueprint canvas
+  created_at
 
-locations                              -- the tree: zones/racks/shelves/bins, recursive
-  id, facility_id → facilities,
-  parent_id → locations (nullable, null = top-level),
+locations                              -- the tree: zones/racks/shelves/bins, recursive,
+  id, facility_id → facilities,        -- now with real spatial position for the blueprint
+  parent_id → locations (nullable, null = top-level; cascades on delete),
+  kind ('zone' | 'aisle' | 'rack' | 'platform' | 'pallet' | 'bin' | 'dock' | 'wall'),
   name,                                -- company-chosen label, e.g. "Zone A", "Rack 2"
+  code (nullable text),                -- short label shown on the blueprint, e.g. "A-01"
   is_bin (boolean),                    -- true = leaf node that can actually hold stock
+  x_m, y_m, width_m, height_m (real, metres) -- position + size on the blueprint canvas
+  bays (integer, default 1),           -- single subdivision axis, no multi-level shelving
   created_at
 
 items                                  -- the catalog
@@ -46,17 +52,24 @@ items                                  -- the catalog
 
 stock                                  -- current on-hand: item × bin × quantity (a snapshot,
   id, item_id → items,                 -- derivable from movements but kept live for fast
-  location_id → locations,             -- search-to-locate lookups)
+  location_id → locations (cascades on delete), -- search-to-locate lookups)
   quantity, updated_at
   UNIQUE (item_id, location_id)
 
 movements                              -- append-only audit log — source of truth for stats
   id, organization_id → organizations, item_id → items,
-  from_location_id → locations (nullable, null = external receipt),
-  to_location_id → locations (nullable, null = consumed/disposed),
+  from_location_id → locations (nullable, null = external receipt; set null on delete),
+  to_location_id → locations (nullable, null = consumed/disposed; set null on delete),
   quantity, reason ('receive' | 'pick' | 'relocate' | 'adjust'),
   performed_by → users, created_at
 ```
+
+A `store`-kind location (rack/platform/pallet/bin) with `bays > 1` is a pure shape on the
+canvas (`is_bin = false`) with that many real `kind = 'bin'` child rows auto-generated
+(`code` like `A-01-1`..`A-01-8`) — not virtual string keys. `bays = 1` means the location
+itself is the leaf (`is_bin = true`). A location's `parent_id` is set to whichever `zone`
+location's bounding box contains its centre point at creation/placement time, computed once
+and persisted rather than recomputed on every read.
 
 ## Indexes that matter
 - `organization_id` on every tenant-scoped table — every query filters on it.

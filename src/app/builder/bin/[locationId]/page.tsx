@@ -1,5 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getFacilityLocations, getMyFacility } from "@/app/builder/actions";
 import { getMyItems } from "@/app/items/actions";
+import { auth } from "@/auth";
+import { AppHeader } from "@/components/app-header";
+import { locationLabel } from "@/lib/location-path";
 import { getBinInfo, getBinStock } from "./actions";
 import { StockForm } from "./stock-form";
 
@@ -8,53 +13,65 @@ export default async function BinPage({
 }: {
   params: Promise<{ locationId: string }>;
 }) {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
   const { locationId } = await params;
   const bin = await getBinInfo(locationId);
-  const stockRows = await getBinStock(locationId);
-  const myItems = await getMyItems();
+  const facility = await getMyFacility();
+  const [stockRows, myItems, allLocations] = await Promise.all([
+    getBinStock(locationId),
+    getMyItems(),
+    facility ? getFacilityLocations(facility.id) : Promise.resolve([]),
+  ]);
+  const byId = new Map(allLocations.map((l) => [l.id, l]));
+  const path = locationLabel(locationId, byId);
 
   return (
-    <main className="min-h-screen bg-white px-4 py-8 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <div className="mx-auto max-w-2xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-medium">{bin.name}</h1>
-          <Link
-            href="/builder"
-            className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-          >
-            ‹ Back to builder
-          </Link>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
+      {facility && (
+        <AppHeader
+          facilityName={facility.name}
+          floorText={`${facility.widthM.toFixed(1)} × ${facility.heightM.toFixed(1)} m · metric`}
+          userEmail={session.user.email ?? ""}
+        />
+      )}
+      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 26 }}>
+        <div style={{ maxWidth: 560, margin: "0 auto" }}>
+          <div style={{ marginBottom: 6 }}>
+            <Link href="/builder" style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>
+              ‹ Back to blueprint
+            </Link>
+          </div>
+          <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--color-accent)" }}>Bin</div>
+          <div style={{ fontFamily: "var(--font-heading)", fontSize: 28, letterSpacing: ".03em", marginBottom: 4 }}>{bin.code}</div>
+          <div style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)", marginBottom: 20 }}>{path}</div>
+
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {stockRows.map((row) => (
+              <div key={row.itemId} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--color-divider)", fontSize: 13 }}>
+                <span>{row.name}</span>
+                <span style={{ color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>{row.quantity} {row.unitOfMeasure}</span>
+              </div>
+            ))}
+          </div>
+          {stockRows.length === 0 && <p className="text-muted" style={{ fontSize: 13, marginBottom: 20 }}>Nothing stored here yet.</p>}
+
+          <div style={{ height: 20 }} />
+
+          {myItems.length === 0 ? (
+            <p className="text-muted" style={{ fontSize: 13 }}>
+              No items in your catalog yet —{" "}
+              <Link href="/items" className="underline">
+                add one
+              </Link>{" "}
+              first.
+            </p>
+          ) : (
+            <StockForm locationId={locationId} items={myItems} />
+          )}
         </div>
-
-        <ul className="mb-6 flex flex-col gap-1">
-          {stockRows.map((row) => (
-            <li
-              key={row.itemId}
-              className="flex justify-between border-b border-neutral-200 py-2 text-sm dark:border-neutral-800"
-            >
-              <span>{row.name}</span>
-              <span className="text-neutral-500">
-                {row.quantity} {row.unitOfMeasure}
-              </span>
-            </li>
-          ))}
-        </ul>
-        {stockRows.length === 0 && (
-          <p className="mb-6 text-sm text-neutral-400">Nothing stored here yet.</p>
-        )}
-
-        {myItems.length === 0 ? (
-          <p className="text-sm text-neutral-400">
-            No items in your catalog yet —{" "}
-            <Link href="/items" className="underline">
-              add one
-            </Link>{" "}
-            first.
-          </p>
-        ) : (
-          <StockForm locationId={locationId} items={myItems} />
-        )}
       </div>
-    </main>
+    </div>
   );
 }

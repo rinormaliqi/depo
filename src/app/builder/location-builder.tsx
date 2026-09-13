@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createLocation, getChildren, type LocationRow } from "./actions";
 
@@ -14,6 +15,7 @@ export function LocationBuilder({
   facilityName: string;
   initialLocations: LocationRow[];
 }) {
+  const router = useRouter();
   const [path, setPath] = useState<Crumb[]>([{ id: null, name: facilityName }]);
   const [children, setChildren] = useState<LocationRow[]>(initialLocations);
   const [isPending, startTransition] = useTransition();
@@ -32,7 +34,10 @@ export function LocationBuilder({
   }
 
   function enter(location: LocationRow) {
-    if (location.isBin) return;
+    if (location.isBin) {
+      router.push(`/builder/bin/${location.id}`);
+      return;
+    }
     setPath((p) => [...p, { id: location.id, name: location.name }]);
     loadChildren(location.id);
   }
@@ -94,17 +99,14 @@ export function LocationBuilder({
           <button
             key={loc.id}
             onClick={() => enter(loc)}
-            disabled={loc.isBin}
             className={`flex h-24 flex-col items-center justify-center gap-1 rounded-xl border p-3 text-center ${
               loc.isBin
-                ? "cursor-default border-dashed border-neutral-300 dark:border-neutral-700"
+                ? "border-dashed border-neutral-300 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500"
                 : "border-neutral-200 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600"
             }`}
           >
             <span className="text-sm font-medium">{loc.name}</span>
-            <span className="text-xs text-neutral-500">
-              {loc.isBin ? "Bin" : "Section ›"}
-            </span>
+            <span className="text-xs text-neutral-500">{loc.isBin ? "Bin ›" : "Section ›"}</span>
           </button>
         ))}
 

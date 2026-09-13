@@ -2,29 +2,17 @@
 
 import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { db } from "@/db";
-import { facilities, locations, memberships } from "@/db/schema";
+import { facilities, locations } from "@/db/schema";
+import { getMyOrgId, requireOrgId } from "@/lib/session";
 
 export type LocationRow = typeof locations.$inferSelect;
 
 async function requireOwnedFacility(facilityId: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const [membership] = await db
-    .select()
-    .from(memberships)
-    .where(eq(memberships.userId, session.user.id))
-    .limit(1);
-  if (!membership) {
-    throw new Error("No organization membership");
-  }
+  const organizationId = await requireOrgId();
 
   const [facility] = await db.select().from(facilities).where(eq(facilities.id, facilityId));
-  if (!facility || facility.organizationId !== membership.organizationId) {
+  if (!facility || facility.organizationId !== organizationId) {
     throw new Error("Facility not found");
   }
 
@@ -33,20 +21,13 @@ async function requireOwnedFacility(facilityId: string) {
 
 // Assumes one facility per org for now — multi-facility switching isn't built yet.
 export async function getMyFacility() {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-
-  const [membership] = await db
-    .select()
-    .from(memberships)
-    .where(eq(memberships.userId, session.user.id))
-    .limit(1);
-  if (!membership) return null;
+  const organizationId = await getMyOrgId();
+  if (!organizationId) return null;
 
   const [facility] = await db
     .select()
     .from(facilities)
-    .where(eq(facilities.organizationId, membership.organizationId))
+    .where(eq(facilities.organizationId, organizationId))
     .limit(1);
   return facility ?? null;
 }

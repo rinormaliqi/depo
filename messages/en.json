@@ -71,7 +71,7 @@
   },
   "builder": {
     "entities": "Entities",
-    "entitiesHint": "Click to drop onto the floor, then position it exactly on the right.",
+    "entitiesHint": "Click to drop onto the floor, then drag it into place or fine-tune the exact numbers on the right.",
     "kind": {
       "zone": "Zone",
       "aisle": "Aisle",
@@ -108,10 +108,21 @@
     "gridOff": "GRID OFF",
     "emptyFloorTitle": "EMPTY FLOOR",
     "emptyFloorBody": "Add a zone from the palette to block out your first section, then fill it with racks, platforms and pallet positions.",
+    "templatePrompt": "or start from a template:",
+    "template": {
+      "simple": {
+        "name": "Simple storage room",
+        "description": "One zone, two racks — good for a single room or small yard."
+      },
+      "yard": {
+        "name": "Yard with racking & loading",
+        "description": "A racking zone, a bulk-floor zone, and a loading dock."
+      }
+    },
     "stocked": "stocked",
     "empty": "empty",
     "nothingSelected": "Nothing selected",
-    "nothingSelectedBody": "Click an object on the floor to edit its dimensions, its code and how many bays it's split into.",
+    "nothingSelectedBody": "Click an object to select it — drag to move, drag the corner to resize, or edit exact numbers on the right.",
     "composition": "Composition",
     "label": "Label",
     "locationCode": "Location code",
@@ -148,7 +159,8 @@
       "couldntSave": "Couldn't save that change",
       "couldntDelete": "Couldn't delete that",
       "couldntDuplicate": "Couldn't duplicate that",
-      "couldntSaveFloor": "Couldn't save the floor"
+      "couldntSaveFloor": "Couldn't save the floor",
+      "couldntApplyTemplate": "Couldn't apply that template"
     }
   },
   "bin": {

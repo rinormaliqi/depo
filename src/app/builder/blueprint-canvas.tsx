@@ -4,8 +4,9 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
-import { LOCATION_TYPES } from "@/lib/blueprint-types";
+import { LOCATION_TYPES, TEMPLATE_KEYS, type TemplateKey } from "@/lib/blueprint-types";
 import {
+  applyTemplate,
   createEntity,
   deleteEntity,
   duplicateEntity,
@@ -16,7 +17,13 @@ import {
 } from "./actions";
 
 const PPM = 26;
+const SNAP = 0.25;
 type Facility = { id: string; name: string; widthM: number; heightM: number };
+type Box = { xM: number; yM: number; widthM: number; heightM: number };
+
+type Drag =
+  | { kind: "move"; id: string; pointerStart: { x: number; y: number }; origin: Box }
+  | { kind: "resize"; id: string; pointerStart: { x: number; y: number }; origin: Box };
 
 const PALETTE_KINDS: LocationKind[] = [
   "zone",
@@ -28,6 +35,10 @@ const PALETTE_KINDS: LocationKind[] = [
   "dock",
   "wall",
 ];
+
+function snap(v: number) {
+  return Math.round(v / SNAP) * SNAP;
+}
 
 function defaultPosition(count: number) {
   return { x: 1 + (count % 8) * 1.5, y: 1 + Math.floor(count / 8) * 1.5 };
@@ -65,8 +76,11 @@ export function BlueprintCanvas({
     widthM: String(facility.widthM),
     heightM: String(facility.heightM),
   });
+  const [localOverride, setLocalOverride] = useState<Record<string, Box>>({});
 
   const wrapRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<Drag | null>(null);
 
   const selected = useMemo(
     () => locations.find((l) => l.id === selectedId) ?? null,
@@ -195,6 +209,19 @@ export function BlueprintCanvas({
     }
   }
 
+  async function handleApplyTemplate(key: TemplateKey) {
+    setBusy(true);
+    setError(null);
+    try {
+      await applyTemplate(facility.id, key);
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("error.couldntApplyTemplate"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function paletteHint(kind: LocationKind) {
     const type = LOCATION_TYPES[kind];
     if (type.spatial === "area") return t(`hint.${kind}` as "hint.zone" | "hint.aisle");
@@ -204,6 +231,89 @@ export function BlueprintCanvas({
   }
 
   const z = zoom * PPM;
+
+  function pointFromEvent(ev: { clientX: number; clientY: number }) {
+    const el = canvasRef.current;
+    if (!el) return { x: 0, y: 0 };
+    const r = el.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) / z, y: (ev.clientY - r.top) / z };
+  }
+
+  function computeDragBox(d: Drag, ev: { clientX: number; clientY: number }): Box {
+    const p = pointFromEvent(ev);
+    const deltaX = p.x - d.pointerStart.x;
+    const deltaY = p.y - d.pointerStart.y;
+    if (d.kind === "move") {
+      return {
+        xM: Math.max(0, snap(d.origin.xM + deltaX)),
+        yM: Math.max(0, snap(d.origin.yM + deltaY)),
+        widthM: d.origin.widthM,
+        heightM: d.origin.heightM,
+      };
+    }
+    return {
+      xM: d.origin.xM,
+      yM: d.origin.yM,
+      widthM: Math.max(0.3, snap(d.origin.widthM + deltaX)),
+      heightM: Math.max(0.3, snap(d.origin.heightM + deltaY)),
+    };
+  }
+
+  function startDrag(kind: Drag["kind"], ev: React.MouseEvent, entity: LocationRow) {
+    ev.stopPropagation();
+    ev.preventDefault();
+    setSelectedId(entity.id);
+    dragRef.current = {
+      kind,
+      id: entity.id,
+      pointerStart: pointFromEvent(ev),
+      origin: { xM: entity.xM, yM: entity.yM, widthM: entity.widthM, heightM: entity.heightM },
+    } as Drag;
+  }
+
+  useEffect(() => {
+    function onMove(ev: MouseEvent) {
+      const d = dragRef.current;
+      if (!d) return;
+      setLocalOverride((o) => ({ ...o, [d.id]: computeDragBox(d, ev) }));
+    }
+    function onUp(ev: MouseEvent) {
+      const d = dragRef.current;
+      if (!d) return;
+      dragRef.current = null;
+      const box = computeDragBox(d, ev);
+      setLocalOverride((o) => {
+        const next = { ...o };
+        delete next[d.id];
+        return next;
+      });
+      // A plain click (mousedown+mouseup with no real movement) also starts a
+      // drag — skip the round-trip when nothing actually changed.
+      const unchanged =
+        d.kind === "move"
+          ? box.xM === d.origin.xM && box.yM === d.origin.yM
+          : box.widthM === d.origin.widthM && box.heightM === d.origin.heightM;
+      if (unchanged) return;
+
+      const patch = d.kind === "move" ? { xM: box.xM, yM: box.yM } : { widthM: box.widthM, heightM: box.heightM };
+      setBusy(true);
+      updateEntity(d.id, patch)
+        .then(() => reload())
+        .catch((e) => setError(e instanceof Error ? e.message : t("error.couldntSave")))
+        .finally(() => setBusy(false));
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    // z (via pointFromEvent) is the only reactive value these handlers depend
+    // on — dragRef carries everything else, so it survives this effect
+    // re-registering without losing an in-progress drag.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [z]);
+
   const topLevel = locations.filter((l) => {
     if (!l.parentId) return true;
     const parent = locations.find((p) => p.id === l.parentId);
@@ -281,6 +391,7 @@ export function BlueprintCanvas({
         <div ref={wrapRef} style={{ flex: 1, minHeight: 0, position: "relative", overflow: "auto" }} onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}>
           <div style={{ display: "inline-block", padding: "30px 22px 22px 34px", position: "relative" }}>
             <div
+              ref={canvasRef}
               style={{
                 position: "relative", width: facility.widthM * z, height: facility.heightM * z,
                 background: "#fff", border: "1.5px solid var(--color-accent-900)", boxShadow: "var(--shadow-md)",
@@ -292,19 +403,36 @@ export function BlueprintCanvas({
               onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}
             >
               {topLevel.length === 0 && (
-                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, textAlign: "center", pointerEvents: "none", padding: 20 }}>
-                  <div style={{ fontFamily: "var(--font-heading)", fontSize: 21, letterSpacing: ".08em", color: "var(--color-accent-700)" }}>{t("emptyFloorTitle")}</div>
-                  <div style={{ fontSize: 13, maxWidth: 320, color: "color-mix(in srgb,var(--color-text) 60%,transparent)" }}>
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center", padding: 20 }}>
+                  <div style={{ fontFamily: "var(--font-heading)", fontSize: 21, letterSpacing: ".08em", color: "var(--color-accent-700)", pointerEvents: "none" }}>{t("emptyFloorTitle")}</div>
+                  <div style={{ fontSize: 13, maxWidth: 320, color: "color-mix(in srgb,var(--color-text) 60%,transparent)", pointerEvents: "none" }}>
                     {t("emptyFloorBody")}
+                  </div>
+                  <div style={{ fontSize: 11, color: "color-mix(in srgb,var(--color-text) 55%,transparent)", marginTop: 6, pointerEvents: "none" }}>
+                    {t("templatePrompt")}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                    {TEMPLATE_KEYS.map((key) => (
+                      <button
+                        key={key}
+                        className="btn btn-secondary"
+                        onClick={() => handleApplyTemplate(key)}
+                        disabled={busy}
+                        title={t(`template.${key}.description`)}
+                      >
+                        {t(`template.${key}.name`)}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
               {topLevel.map((e) => {
                 const type = LOCATION_TYPES[e.kind as LocationKind];
                 const isSel = e.id === selectedId;
+                const live = localOverride[e.id] ?? e;
                 const box: React.CSSProperties = {
-                  position: "absolute", left: e.xM * z, top: e.yM * z, width: e.widthM * z, height: e.heightM * z,
-                  cursor: "pointer",
+                  position: "absolute", left: live.xM * z, top: live.yM * z, width: live.widthM * z, height: live.heightM * z,
+                  cursor: "move",
                 };
                 if (type.spatial === "area") {
                   box.border = "1px dashed var(--color-accent-500)";
@@ -328,9 +456,9 @@ export function BlueprintCanvas({
                   : [];
 
                 return (
-                  <div key={e.id} style={box} onMouseDown={(ev) => { ev.stopPropagation(); setSelectedId(e.id); }} title={`${e.code ?? e.name} · ${e.name}`}>
+                  <div key={e.id} style={box} onMouseDown={(ev) => startDrag("move", ev, e)} title={`${e.code ?? e.name} · ${e.name}`}>
                     <div
-                      onMouseDown={(ev) => { ev.stopPropagation(); setSelectedId(e.id); }}
+                      onMouseDown={(ev) => startDrag("move", ev, e)}
                       style={{
                         position: "absolute", left: 0, top: -3, transform: "translateY(-100%)",
                         fontFamily: "var(--font-heading)", fontSize: type.spatial === "area" ? 11 : 9,
@@ -370,6 +498,13 @@ export function BlueprintCanvas({
                         style={{ display: "block", width: "100%", height: "100%", background: occupied.has(e.id) ? "var(--color-accent-200)" : undefined }}
                       />
                     ) : null}
+
+                    {isSel && (
+                      <div
+                        onMouseDown={(ev) => startDrag("resize", ev, e)}
+                        style={{ position: "absolute", right: -5, bottom: -5, width: 10, height: 10, background: "var(--color-accent)", cursor: "nwse-resize", zIndex: 9 }}
+                      />
+                    )}
                   </div>
                 );
               })}

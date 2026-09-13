@@ -5,7 +5,15 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { facilities, locations, stock, type LocationKind } from "@/db/schema";
-import { bayCode, LOCATION_TYPES, nextCode, round2 } from "@/lib/blueprint-types";
+import {
+  bayCode,
+  buildTemplate,
+  findContainingZone,
+  LOCATION_TYPES,
+  nextCode,
+  round2,
+  type TemplateKey,
+} from "@/lib/blueprint-types";
 import { getMyOrgId, requireOrgId } from "@/lib/session";
 
 export type LocationRow = typeof locations.$inferSelect;
@@ -119,33 +127,21 @@ function binChildren(
   }));
 }
 
-export async function createEntity(
+async function createEntityAt(
   facilityId: string,
   kind: LocationKind,
-  xM: number,
-  yM: number,
+  box: { xM: number; yM: number; widthM: number; heightM: number },
+  bays: number,
 ) {
-  await requireOwnedFacility(facilityId);
-
   const type = LOCATION_TYPES[kind];
   const existing = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
   const zones = existing.filter((l) => l.kind === "zone");
-  const box = { xM: round2(xM), yM: round2(yM), widthM: type.w, heightM: type.h };
 
-  const containingZone =
-    kind === "zone"
-      ? null
-      : (zones.find(
-          (z) =>
-            box.xM + box.widthM / 2 >= z.xM &&
-            box.xM + box.widthM / 2 <= z.xM + z.widthM &&
-            box.yM + box.heightM / 2 >= z.yM &&
-            box.yM + box.heightM / 2 <= z.yM + z.heightM,
-        ) ?? null);
+  const containingZone = kind === "zone" ? null : findContainingZone(zones, box);
 
   const existingCodes = existing.map((l) => l.code).filter((c): c is string => !!c);
   const code = nextCode(kind, containingZone?.code ?? null, existingCodes);
-  const isLeaf = type.spatial === "store" && type.bays <= 1;
+  const isLeaf = type.spatial === "store" && bays <= 1;
 
   const tKind = await getTranslations("builder.kind");
 
@@ -162,17 +158,61 @@ export async function createEntity(
       yM: box.yM,
       widthM: box.widthM,
       heightM: box.heightM,
-      bays: type.spatial === "store" ? type.bays : 1,
+      bays: type.spatial === "store" ? bays : 1,
     })
     .returning();
 
-  if (type.spatial === "store" && type.bays > 1) {
+  if (type.spatial === "store" && bays > 1) {
     const binLabel = tKind("bin").toUpperCase();
-    await db.insert(locations).values(binChildren(facilityId, created.id, code, type.bays, binLabel));
+    await db.insert(locations).values(binChildren(facilityId, created.id, code, bays, binLabel));
   }
+
+  return created;
+}
+
+export async function createEntity(
+  facilityId: string,
+  kind: LocationKind,
+  xM: number,
+  yM: number,
+) {
+  await requireOwnedFacility(facilityId);
+
+  const type = LOCATION_TYPES[kind];
+  const created = await createEntityAt(
+    facilityId,
+    kind,
+    { xM: round2(xM), yM: round2(yM), widthM: type.w, heightM: type.h },
+    type.bays,
+  );
 
   revalidatePath("/builder");
   return created;
+}
+
+export async function applyTemplate(facilityId: string, templateKey: TemplateKey) {
+  const facility = await requireOwnedFacility(facilityId);
+
+  const existingCount = await db
+    .select({ id: locations.id })
+    .from(locations)
+    .where(eq(locations.facilityId, facilityId));
+  if (existingCount.length > 0) {
+    // Templates are only meant for an empty floor — never overwrite work in progress.
+    return;
+  }
+
+  const specs = buildTemplate(templateKey, facility.widthM, facility.heightM);
+  for (const spec of specs) {
+    await createEntityAt(
+      facilityId,
+      spec.kind,
+      { xM: spec.xM, yM: spec.yM, widthM: spec.widthM, heightM: spec.heightM },
+      spec.bays,
+    );
+  }
+
+  revalidatePath("/builder");
 }
 
 export async function updateEntity(
@@ -213,6 +253,31 @@ export async function updateEntity(
   if (patch.yM !== undefined) values.yM = Math.max(0, round2(patch.yM));
   if (patch.widthM !== undefined) values.widthM = Math.max(0.3, round2(patch.widthM));
   if (patch.heightM !== undefined) values.heightM = Math.max(0.3, round2(patch.heightM));
+
+  // Dragging (or typing new coordinates) can move a non-zone entity into a
+  // different zone's bounds, or out of any zone — re-derive its parent from
+  // the new position rather than leaving it pointing at a zone it no longer
+  // visually sits in. Its code is untouched: moving doesn't rename it.
+  if (
+    location.kind !== "zone" &&
+    (patch.xM !== undefined || patch.yM !== undefined || patch.widthM !== undefined || patch.heightM !== undefined)
+  ) {
+    const box = {
+      xM: values.xM ?? location.xM,
+      yM: values.yM ?? location.yM,
+      widthM: values.widthM ?? location.widthM,
+      heightM: values.heightM ?? location.heightM,
+    };
+    const zones = await db
+      .select()
+      .from(locations)
+      .where(and(eq(locations.facilityId, location.facilityId), eq(locations.kind, "zone")));
+    const containingZone = findContainingZone(zones, box);
+    const newParentId = containingZone?.id ?? null;
+    if (newParentId !== location.parentId) {
+      values.parentId = newParentId;
+    }
+  }
 
   if (patch.bays !== undefined && type.spatial === "store") {
     const bays = Math.max(1, Math.min(48, Math.round(patch.bays)));

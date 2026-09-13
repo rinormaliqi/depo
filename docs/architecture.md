@@ -67,10 +67,46 @@ Deliberately cut from the source design, to keep this a schema-realistic first p
 than a wholesale rebuild:
 - **No multi-level shelving** (`levels`) — bays only, one subdivision axis.
 - **No expiry/shelf-life tracking** — not in `items`/`stock`, a separate feature.
-- **No freehand mouse drag-to-move/resize** — numeric fields in the inspector instead. Precise
-  metre input suits a blueprint tool and avoids a drag-engine's usual bug surface for a first
-  pass.
 - **Light theme only**, matching the source design exactly (it defines no dark-mode tokens).
+
+### Drag-to-move/resize, and starter templates
+
+Originally shipped numeric-fields-only ("precise metre input suits a blueprint tool"), then
+added real mouse drag-to-move and drag-to-resize (a corner handle) alongside — not instead of
+— the numeric inspector fields, after direct feedback that non-technical warehouse staff find
+typing x/y coordinates unapproachable. Both input methods write through the same
+`updateEntity` action, so they can never drift out of sync with each other.
+
+Mechanics: a drag captures the pointer's start position and the entity's starting box once,
+in a ref (not React state) at `mousedown` — every subsequent `mousemove` computes the new box
+from that fixed origin plus the cursor delta, avoiding the stale-closure bugs that plague
+naive drag implementations in React. A snap-to-0.25 m grid keeps positions tidy. Persisting
+only fires on `mouseup`, and only if the box actually changed — a plain click starts and ends
+a zero-distance "drag," and skipping the no-op save avoids a server round-trip on every single
+selection click.
+
+Real correctness gap this exposed: once dragging made moving something between zones a normal
+action (not just a rare manual-coordinate edit), `updateEntity` needed to recompute which
+zone's bounds a moved entity now falls in and update `parentId` accordingly — otherwise a rack
+dragged from Zone A into Zone B would keep reporting to Zone A (wrong parent for occupancy
+stats, and wrong cascade target on delete). Zones themselves are exempt — moving a zone
+doesn't try to re-home its contents.
+
+**Starter templates** address the "blank canvas is intimidating" half of the same feedback:
+`buildTemplate()` in `blueprint-types.ts` generates a small set of entities (positions/sizes
+as fractions of the facility's actual width/height, so it fits whatever floor size the user
+already configured) for a company to land on and then adjust, rather than starting from
+nothing. Applied via the same `createEntityAt` core used for normal manual placement — not a
+separate insert path — so a templated zone is indistinguishable from a hand-drawn one. Offered
+only on a genuinely empty floor, alongside the palette (never forced) so a confident user can
+still just start drawing.
+
+Bug caught by the template feature specifically (not something manual single-entity testing
+had ever exercised): `nextCode()`'s sibling-counting used `startsWith(stem)`, which also
+matched a sibling rack's own auto-generated bay children (`"A-01-1"` starts with `"A-"` too) —
+inflating the count and skipping codes (a zone's second rack came out `"A-08"` instead of
+`"A-02"`). Templates create multiple racks in one zone in quick succession, which surfaced it
+immediately; fixed by requiring the remainder after the stem to be pure digits.
 
 ## Internationalization
 

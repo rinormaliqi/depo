@@ -65,10 +65,67 @@ export function nextCode(
   const pre = zoneCode ?? LOCATION_TYPES[kind].label.charAt(0).toUpperCase();
   const suf = CODE_SUFFIX[kind] ?? "";
   const stem = pre + "-" + suf;
-  const n = existingCodes.filter((c) => c.startsWith(stem)).length + 1;
+  // Match direct siblings only (stem + digits, nothing more) — a plain
+  // startsWith would also match a sibling's own auto-generated bay children
+  // (e.g. "A-01-1" starts with "A-" too), inflating the count.
+  const n =
+    existingCodes.filter((c) => c.startsWith(stem) && /^\d+$/.test(c.slice(stem.length))).length +
+    1;
   return stem + (suf ? String(n) : String(n).padStart(2, "0"));
 }
 
 export function bayCode(parentCode: string, bay: number) {
   return `${parentCode}-${bay}`;
+}
+
+export interface TemplateEntitySpec {
+  kind: LocationKind;
+  xM: number;
+  yM: number;
+  widthM: number;
+  heightM: number;
+  bays: number;
+}
+
+export const TEMPLATE_KEYS = ["simple", "yard"] as const;
+export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
+
+// Positions/sizes are fractions of the facility's actual width/height, so a
+// template fits whatever floor envelope the user already set up — except a
+// "store" kind's depth (height), which stays at its real-world default
+// (LOCATION_TYPES[kind].h) rather than stretching with the floor, since a
+// rack is always ~1.2 m deep regardless of how big the building is. Zones
+// scale freely in both dimensions since they're arbitrary boundaries, not
+// physical objects. Entities are ordered zones-first so each subsequent
+// "store" entity's centre already falls inside its intended zone, letting
+// the normal containment/code-generation logic in createEntityAt just work.
+export function buildTemplate(key: TemplateKey, floorW: number, floorH: number): TemplateEntitySpec[] {
+  const rackH = LOCATION_TYPES.rack.h;
+
+  if (key === "simple") {
+    const zone = { xM: round2(0.05 * floorW), yM: round2(0.08 * floorH), widthM: round2(0.9 * floorW), heightM: round2(0.84 * floorH) };
+    const rackW = round2(0.35 * floorW);
+    const rackX = round2(zone.xM + 0.08 * floorW);
+    const gapY = Math.max(0.6, round2(0.1 * floorH));
+    return [
+      { kind: "zone", ...zone, bays: 1 },
+      { kind: "rack", xM: rackX, yM: round2(zone.yM + gapY), widthM: rackW, heightM: rackH, bays: 6 },
+      { kind: "rack", xM: rackX, yM: round2(zone.yM + gapY * 2 + rackH), widthM: rackW, heightM: rackH, bays: 6 },
+    ];
+  }
+
+  // "yard": a racking zone, a bulk-floor zone, and a standalone loading dock.
+  const zoneA = { xM: round2(0.04 * floorW), yM: round2(0.06 * floorH), widthM: round2(0.5 * floorW), heightM: round2(0.5 * floorH) };
+  const zoneB = { xM: round2(0.04 * floorW), yM: round2(0.62 * floorH), widthM: round2(0.5 * floorW), heightM: round2(0.32 * floorH) };
+  const rackW = round2(0.18 * floorW);
+  const dock = LOCATION_TYPES.dock;
+
+  return [
+    { kind: "zone", ...zoneA, bays: 1 },
+    { kind: "rack", xM: round2(zoneA.xM + 0.06 * floorW), yM: round2(zoneA.yM + 0.1 * floorH), widthM: rackW, heightM: rackH, bays: 6 },
+    { kind: "rack", xM: round2(zoneA.xM + 0.28 * floorW), yM: round2(zoneA.yM + 0.1 * floorH), widthM: rackW, heightM: rackH, bays: 6 },
+    { kind: "zone", ...zoneB, bays: 1 },
+    { kind: "platform", xM: round2(zoneB.xM + 0.06 * floorW), yM: round2(zoneB.yM + 0.08 * floorH), widthM: round2(0.4 * floorW), heightM: round2(0.5 * zoneB.heightM), bays: 4 },
+    { kind: "dock", xM: round2(0.62 * floorW), yM: round2(0.3 * floorH), widthM: dock.w, heightM: dock.h, bays: 1 },
+  ];
 }

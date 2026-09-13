@@ -71,7 +71,7 @@
   },
   "builder": {
     "entities": "Elementet",
-    "entitiesHint": "Kliko për ta vendosur në planimetri, pastaj pozicionoje saktësisht në të djathtë.",
+    "entitiesHint": "Kliko për ta vendosur në planimetri, pastaj tërhiqe në vend ose rregulloje saktësisht me numra në të djathtë.",
     "kind": {
       "zone": "Zonë",
       "aisle": "Korridor",
@@ -108,10 +108,21 @@
     "gridOff": "RRJETA JOAKTIVE",
     "emptyFloorTitle": "PLANIMETRI BOSHE",
     "emptyFloorBody": "Shto një zonë nga paleta për të përcaktuar seksionin tënd të parë, pastaj mbushe me rafte, platforma dhe pozicione paletash.",
+    "templatePrompt": "ose fillo nga një shabllon:",
+    "template": {
+      "simple": {
+        "name": "Dhomë e thjeshtë ruajtjeje",
+        "description": "Një zonë, dy rafte — e mirë për një dhomë të vetme ose një oborr të vogël."
+      },
+      "yard": {
+        "name": "Oborr me rafte dhe ngarkim",
+        "description": "Një zonë me rafte, një zonë dyshemeje për ngarkesa të mëdha, dhe një dok ngarkimi."
+      }
+    },
     "stocked": "me stok",
     "empty": "bosh",
     "nothingSelected": "Asgjë e zgjedhur",
-    "nothingSelectedBody": "Kliko një objekt në planimetri për të ndryshuar përmasat, kodin dhe në sa hapësira ndahet.",
+    "nothingSelectedBody": "Kliko një objekt për ta zgjedhur — tërhiqe për ta lëvizur, tërhiq qoshen për ta ripërmasuar, ose redakto numrat e saktë në të djathtë.",
     "composition": "Përbërja",
     "label": "Etiketa",
     "locationCode": "Kodi i vendndodhjes",
@@ -148,7 +159,8 @@
       "couldntSave": "Ndryshimi nuk u ruajt dot",
       "couldntDelete": "Nuk u fshi dot",
       "couldntDuplicate": "Nuk u dyfishua dot",
-      "couldntSaveFloor": "Planimetria nuk u ruajt dot"
+      "couldntSaveFloor": "Planimetria nuk u ruajt dot",
+      "couldntApplyTemplate": "Shablloni nuk u aplikua dot"
     }
   },
   "bin": {

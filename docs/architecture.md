@@ -43,31 +43,52 @@ a bigger box or a second managed service. Auth.js adds zero infrastructure.
 Roles (Admin / Manager / Worker) are a column on the user-organization membership, checked in
 route handlers/middleware — no external authorization service.
 
-### Team invites — link-sharing, not email
+### Team invites, roles and permissions
 
-Signup only ever created the first (admin) user for an org — there was no way to add a second
-person, which mattered because workers, not admins, are the product's primary daily user.
-`invites` (`src/db/schema.ts`) is a pending-seat table keyed by a random bearer token rather
-than requiring the invitee to already have an account: an admin/manager picks an email and a
-role on `/team`, the app generates a `/invite/<token>` link, and — deliberately — **no email is
-actually sent**. The inviting admin copies the link and shares it however they already reach
-that person (Slack, WhatsApp, texting it directly), rather than this project standing up
-transactional email infrastructure (sender domain, deliverability, a provider account) before
-there's a single paying customer. `/invite/<token>` detects whether the invited email already
-has an account and renders a sign-in-to-accept or create-account-to-accept form accordingly;
-either path writes the `membership` row and marks the invite accepted before establishing the
-session — for the sign-in path specifically, the password is verified directly (not solely via
-`signIn()`) because `signIn()`'s own redirect-on-success means no code after a successful call
-would run, so the membership write has to happen before it, and it has to happen only *after*
-the password is confirmed correct.
+Signup only ever creates the first (admin) user for an org; everyone else arrives through
+`invites` (`src/db/schema.ts`) — a pending-seat table keyed by a random bearer token, so the
+invitee doesn't need an account yet. An admin/manager picks an email and a role on `/team`; the
+app **emails** a `/invite/<token>` link (`sendInviteEmail` in `src/app/team/actions.ts`, via the
+same `src/lib/email.ts` Resend path as password reset — it originally did *not* send mail, on
+the grounds of not standing up email infra before a paying customer, but reset needed that infra
+anyway, so the reason expired). The link is still shown on `/team` with a copy button: a
+floor worker's inbox is not always reliable, and a mail-provider failure returns a translated
+"created but couldn't send — share the link" error rather than throwing the seat away. Resend
+re-sends the mail and extends the 7-day expiry; expired-but-unaccepted invites stay listed with
+an "Expired" marker so they can be resent, not silently vanish.
 
-An invite's role is capped at what the inviter can grant: a manager can invite a worker or
-another manager, but not an admin — only an existing admin can create a new one. Revoke/resend
-exist per pending invite (resend just extends its 7-day expiry and re-surfaces the link, since
-there's no email to actually redeliver). Full role-based *permission* enforcement elsewhere in
-the app (what a worker vs. admin can actually do once they've joined) is a separate, not-yet-
-built piece — right now, joining with a role is tracked, but only this invite flow itself
-checks it.
+`/invite/<token>` detects whether the invited email already has an account (compared on
+`normalized_email`, so an invite to `me+work@gmail.com` finds `me@gmail.com`) and renders a
+sign-in-to-accept or create-account-to-accept form. Either path writes the `membership` row,
+marks the invite accepted and marks the user's email verified — the link reached that inbox,
+which is the same proof signup's verification asks for — *before* calling `signIn()`, whose
+redirect-on-success means nothing after it runs; the sign-in path checks the password directly
+first for the same reason.
+
+**Permissions** (`src/lib/permissions.ts`) are a small table, not scattered `if (role === …)`
+checks: `moveStock` (everyone), `editLayout` / `manageItems` / `manageTeam` (admin + manager),
+`manageBilling` (admin). `requirePermission(p)` is what every mutating server action now calls
+instead of `requireActiveOrg()` — it runs the same lock check and then the role check, throwing a
+translated message either way, so the lockout and the permission gate are one call site. Wired
+into all of `builder/actions.ts`, `items/actions.ts`'s `createItem`, the scanner/bin stock
+actions, and every `team/actions.ts` mutation. The split follows how a depot runs: workers move
+stock all day and must not be able to reshape the layout by accident; managers run the depot
+(layout, catalog, staffing) but not the company's wallet; admins own the account.
+
+The UI mirrors the table rather than letting people discover a rule by hitting an error:
+`getMyPermissions()` drives a `readOnly` prop on `BlueprintCanvas` (palette, templates, floor
+settings, undo/redo, duplicate/delete hidden; drag and destructive shortcuts no-op'd; the
+inspector wrapped in a disabled `<fieldset>` so numbers stay visible but uneditable) and hides
+the item form for workers. Server enforcement is the real gate — verified by calling
+`addSector` directly with a worker session and getting the permission error back.
+
+`/team` also does member management: change role (a select per row) and remove. Rules, in
+`changeMemberRole` / `removeMember`: the target must belong to this org; a manager can't touch
+an admin seat in either direction (same cap as inviting — only an admin creates an admin);
+nobody removes themselves; and **an org can never be left without an admin**
+(`assertNotLastAdmin`), or nobody could manage the team or billing again. Removing deletes only
+the membership row — the user, any other org they're in, and the `user_id` on movements they
+logged all stay, so history remains attributable.
 
 ### Password reset
 

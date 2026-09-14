@@ -29,6 +29,7 @@ export default async function TeamPage() {
             members={team.members}
             pendingInvites={team.pendingInvites}
             canManage={team.canManage}
+            isAdmin={team.isAdmin}
             myUserId={team.myUserId}
           />
         </div>

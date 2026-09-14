@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { items } from "@/db/schema";
-import { requireActiveOrg, requireOrgId } from "@/lib/session";
+import { requirePermission } from "@/lib/permissions";
+import { requireOrgId } from "@/lib/session";
 
 export type ItemRow = typeof items.$inferSelect;
 
@@ -19,7 +20,7 @@ type FormState = { error?: string } | undefined;
 export async function createItem(_prevState: FormState, formData: FormData): Promise<FormState> {
   let organizationId: string;
   try {
-    organizationId = (await requireActiveOrg()).organizationId;
+    organizationId = (await requirePermission("manageItems")).organizationId;
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) };
   }

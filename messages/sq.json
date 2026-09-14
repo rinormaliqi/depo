@@ -107,7 +107,8 @@
     "adding": "Duke shtuar…",
     "addItem": "Shto artikull",
     "noItems": "Ende nuk ka artikuj.",
-    "errorRequired": "Emri dhe njësia matëse janë të detyrueshme"
+    "errorRequired": "Emri dhe njësia matëse janë të detyrueshme",
+    "viewOnly": "Vetëm menaxherët dhe administratorët mund të shtojnë artikuj në katalog."
   },
   "team": {
     "title": "Ekipi",
@@ -135,7 +136,24 @@
       "required": "Emaili dhe roli janë të detyrueshëm",
       "onlyAdminCanInviteAdmin": "Vetëm një admin mund të ftojë një admin tjetër",
       "alreadyMember": "Ai person është tashmë anëtar i kësaj organizate",
-      "inviteNotFound": "Kjo ftesë nuk ekziston më"
+      "inviteNotFound": "Kjo ftesë nuk ekziston më",
+      "emailFailed": "Ftesa u krijua, por email-i nuk u dërgua — kopjo lidhjen më poshtë dhe ndaje direkt.",
+      "memberNotFound": "Ai anëtar nuk ekziston më",
+      "lastAdmin": "Një organizatë duhet të ketë të paktën një administrator",
+      "onlyAdminCanChangeAdmin": "Vetëm një administrator mund të ndryshojë ose heqë një administrator tjetër",
+      "cannotRemoveSelf": "Nuk mund ta heqësh veten — pyet një administrator tjetër"
+    },
+    "expired": "Skadoi më {date}",
+    "remove": "Hiq",
+    "removeConfirm": "Të hiqet {name} nga kjo organizatë? Do të humbasë qasjen menjëherë.",
+    "roleHint": {
+      "admin": "Qasje e plotë: planimetri, artikuj, stok, ekip dhe faturim.",
+      "manager": "Drejton depon: planimetri, artikuj, stok dhe ekip. Pa faturim.",
+      "worker": "Staf i depos: gjen dhe lëviz stokun. Nuk mund të ndryshojë planimetrinë ose artikujt."
+    },
+    "email": {
+      "subject": "Je ftuar në {org} në SmartDepo",
+      "body": "{inviter} të ftoi të bashkohesh me {org} në SmartDepo si {role}.\n\nPranoje ftesën këtu:\n\n{url}\n\nLidhja skadon pas {days} ditësh. Nëse nuk e prisje këtë, mund ta injorosh këtë email."
     }
   },
   "invite": {
@@ -317,7 +335,10 @@
       "couldntRedo": "Nuk u ribë dot",
       "couldntSaveFloor": "Planimetria nuk u ruajt dot",
       "couldntApplyTemplate": "Shablloni nuk u aplikua dot"
-    }
+    },
+    "viewOnly": "Vetëm shikim",
+    "viewOnlyHint": "Punëtorët mund të kërkojnë dhe lëvizin stokun, por jo të ndryshojnë planimetrinë. Pyet një menaxher ose administrator nëse diçka duhet ndryshuar.",
+    "emptyFloorBodyReadOnly": "Ende nuk është hartuar asgjë. Një menaxher ose administrator e ndërton planimetrinë."
   },
   "bin": {
     "kicker": "Kuti",
@@ -410,5 +431,12 @@
       "subject": "Verifiko email-in tënd në SmartDepo",
       "body": "Mirë se erdhe në SmartDepo. Konfirmo që kjo është adresa jote e email-it për të filluar provën 30-ditore:\n\n{url}\n\nLidhja funksionon vetëm një herë dhe skadon pas 24 orësh. Nëse nuk je regjistruar ti, injoroje këtë email."
     }
+  },
+  "permission": {
+    "moveStock": "Nuk ke leje për të lëvizur stokun",
+    "editLayout": "Vetëm menaxherët dhe administratorët mund të ndryshojnë planimetrinë",
+    "manageItems": "Vetëm menaxherët dhe administratorët mund të shtojnë artikuj",
+    "manageTeam": "Vetëm menaxherët dhe administratorët mund të menaxhojnë ekipin",
+    "manageBilling": "Vetëm një administrator mund të menaxhojë faturimin"
   }
 }

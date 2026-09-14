@@ -107,7 +107,8 @@
     "adding": "Adding…",
     "addItem": "Add item",
     "noItems": "No items yet.",
-    "errorRequired": "Name and unit of measure are required"
+    "errorRequired": "Name and unit of measure are required",
+    "viewOnly": "Only managers and admins can add items to the catalog."
   },
   "team": {
     "title": "Team",
@@ -135,7 +136,24 @@
       "required": "Email and role are required",
       "onlyAdminCanInviteAdmin": "Only an admin can invite another admin",
       "alreadyMember": "That person is already a member of this organization",
-      "inviteNotFound": "That invite no longer exists"
+      "inviteNotFound": "That invite no longer exists",
+      "emailFailed": "The invite was created but the email couldn't be sent — copy the link below and share it directly.",
+      "memberNotFound": "That member no longer exists",
+      "lastAdmin": "An organization needs at least one admin",
+      "onlyAdminCanChangeAdmin": "Only an admin can change or remove another admin",
+      "cannotRemoveSelf": "You can't remove yourself — ask another admin"
+    },
+    "expired": "Expired {date}",
+    "remove": "Remove",
+    "removeConfirm": "Remove {name} from this organization? They'll lose access immediately.",
+    "roleHint": {
+      "admin": "Full access: layout, items, stock, team and billing.",
+      "manager": "Runs the depot: layout, items, stock and team. No billing.",
+      "worker": "Floor staff: find and move stock. Can't change the layout or items."
+    },
+    "email": {
+      "subject": "You've been invited to {org} on SmartDepo",
+      "body": "{inviter} invited you to join {org} on SmartDepo as {role}.\n\nAccept the invite here:\n\n{url}\n\nThe link expires in {days} days. If you weren't expecting this, you can ignore this email."
     }
   },
   "invite": {
@@ -317,7 +335,10 @@
       "couldntRedo": "Couldn't redo that",
       "couldntSaveFloor": "Couldn't save the floor",
       "couldntApplyTemplate": "Couldn't apply that template"
-    }
+    },
+    "viewOnly": "View only",
+    "viewOnlyHint": "Workers can look up and move stock but not change the layout. Ask a manager or admin if something needs to change.",
+    "emptyFloorBodyReadOnly": "Nothing has been mapped yet. A manager or admin sets up the floor plan."
   },
   "bin": {
     "kicker": "Bin",
@@ -410,5 +431,12 @@
       "subject": "Verify your SmartDepo email",
       "body": "Welcome to SmartDepo. Confirm this is your email address to start your 30-day trial:\n\n{url}\n\nThe link works once and expires in 24 hours. If you didn't sign up, you can ignore this email."
     }
+  },
+  "permission": {
+    "moveStock": "You don't have permission to move stock",
+    "editLayout": "Only managers and admins can change the layout",
+    "manageItems": "Only managers and admins can add items",
+    "manageTeam": "Only managers and admins can manage the team",
+    "manageBilling": "Only an admin can manage billing"
   }
 }

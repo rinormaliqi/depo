@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { formatDate } from "@/lib/format-date";
-import { createInvite, getTeam, resendInvite, revokeInvite } from "./actions";
+import { changeMemberRole, createInvite, getTeam, removeMember, resendInvite, revokeInvite } from "./actions";
 
 type TeamData = Awaited<ReturnType<typeof getTeam>>;
 type Member = TeamData["members"][number];
@@ -37,6 +37,7 @@ function PendingInviteRow({ invite, canManage }: { invite: PendingInvite; canMan
   const t = useTranslations("team");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const expired = new Date(invite.expiresAt).getTime() < Date.now();
 
   async function handle(action: (id: string) => Promise<void>) {
     setBusy(true);
@@ -57,8 +58,8 @@ function PendingInviteRow({ invite, canManage }: { invite: PendingInvite; canMan
         <span className="tag tag-outline">{t(`role.${invite.role}`)}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 4 }}>
-        <span style={{ fontSize: 11, color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
-          {t("expires", { date: formatDate(invite.expiresAt) })}
+        <span style={{ fontSize: 11, color: expired ? "var(--color-accent-800)" : "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
+          {expired ? t("expired", { date: formatDate(invite.expiresAt) }) : t("expires", { date: formatDate(invite.expiresAt) })}
         </span>
         <div style={{ display: "flex", gap: 4 }}>
           <InviteLink token={invite.token} />
@@ -79,19 +80,95 @@ function PendingInviteRow({ invite, canManage }: { invite: PendingInvite; canMan
   );
 }
 
+function MemberRow({
+  member,
+  isMe,
+  canManage,
+  isAdmin,
+}: {
+  member: Member;
+  isMe: boolean;
+  canManage: boolean;
+  isAdmin: boolean;
+}) {
+  const t = useTranslations("team");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Mirrors the server's rules so the controls only appear where they'd
+  // work: managers can't touch admins, nobody removes themselves.
+  const editable = canManage && !isMe && (isAdmin || member.role !== "admin");
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("error.notAuthorized"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: "8px 0", borderBottom: "1px solid var(--color-divider)", fontSize: 13 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+          {member.name}{" "}
+          <span style={{ color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>· {member.email}</span>
+          {isMe && <span style={{ color: "var(--color-accent)" }}> ({t("you")})</span>}
+        </span>
+        {editable ? (
+          <div style={{ display: "flex", gap: 4, alignItems: "center", flex: "none" }}>
+            <select
+              className="input"
+              value={member.role}
+              disabled={busy}
+              onChange={(e) => run(() => changeMemberRole(member.id, e.target.value))}
+              style={{ fontSize: 11, padding: "2px 6px", width: 110 }}
+              aria-label={t("roleLabel")}
+            >
+              {ROLES.filter((r) => isAdmin || r !== "admin").map((r) => (
+                <option key={r} value={r}>{t(`role.${r}`)}</option>
+              ))}
+            </select>
+            <button
+              className="btn btn-ghost"
+              disabled={busy}
+              onClick={() => {
+                if (window.confirm(t("removeConfirm", { name: member.name }))) void run(() => removeMember(member.id));
+              }}
+              style={{ fontSize: 11, color: "var(--color-accent-800)" }}
+            >
+              {t("remove")}
+            </button>
+          </div>
+        ) : (
+          <span className="tag tag-outline">{t(`role.${member.role}`)}</span>
+        )}
+      </div>
+      {error && <p style={{ fontSize: 11, color: "var(--color-accent-800)", marginTop: 4 }}>{error}</p>}
+    </div>
+  );
+}
+
 export function TeamClient({
   members,
   pendingInvites,
   canManage,
+  isAdmin,
   myUserId,
 }: {
   members: Member[];
   pendingInvites: PendingInvite[];
   canManage: boolean;
+  isAdmin: boolean;
   myUserId: string;
 }) {
   const t = useTranslations("team");
   const [state, formAction, isPending] = useActionState(createInvite, undefined);
+  const [inviteRole, setInviteRole] = useState<(typeof ROLES)[number]>("worker");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -107,8 +184,8 @@ export function TeamClient({
             </div>
             <div className="field" style={{ width: 140 }}>
               <label>{t("roleLabel")}</label>
-              <select className="input" name="role" defaultValue="worker">
-                {ROLES.map((r) => (
+              <select className="input" name="role" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as (typeof ROLES)[number])}>
+                {ROLES.filter((r) => isAdmin || r !== "admin").map((r) => (
                   <option key={r} value={r}>{t(`role.${r}`)}</option>
                 ))}
               </select>
@@ -117,6 +194,7 @@ export function TeamClient({
               {isPending ? t("inviting") : t("sendInvite")}
             </button>
           </form>
+          <p className="text-muted" style={{ fontSize: 12, marginTop: 6 }}>{t(`roleHint.${inviteRole}`)}</p>
           {state?.error && <p style={{ fontSize: 13, color: "var(--color-accent-800)", marginTop: 6 }}>{state.error}</p>}
         </div>
       )}
@@ -126,15 +204,13 @@ export function TeamClient({
           {t("members", { n: members.length })}
         </div>
         {members.map((m) => (
-          <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 0", borderBottom: "1px solid var(--color-divider)", fontSize: 13 }}>
-            <span>
-              {m.name}{" "}
-              <span style={{ color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>· {m.email}</span>
-              {m.userId === myUserId && <span style={{ color: "var(--color-accent)" }}> ({t("you")})</span>}
-            </span>
-            <span className="tag tag-outline">{t(`role.${m.role}`)}</span>
-          </div>
+          <MemberRow key={m.id} member={m} isMe={m.userId === myUserId} canManage={canManage} isAdmin={isAdmin} />
         ))}
+        <div style={{ fontSize: 11, marginTop: 10, color: "color-mix(in srgb,var(--color-text) 55%,transparent)", lineHeight: 1.5 }}>
+          {ROLES.map((r) => (
+            <div key={r}><strong>{t(`role.${r}`)}</strong> — {t(`roleHint.${r}`)}</div>
+          ))}
+        </div>
       </div>
 
       {pendingInvites.length > 0 && (

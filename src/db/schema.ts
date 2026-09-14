@@ -118,11 +118,10 @@ export const memberships = pgTable(
 );
 
 // A pending seat on an org, keyed by a bearer token rather than requiring
-// the invitee to already have an account. No email is actually sent for
-// now — the inviting admin/manager copies the /invite/<token> link and
-// shares it themselves (Slack, WhatsApp, whatever they already use) rather
-// than this project standing up transactional email infrastructure before
-// there's a single paying customer. acceptedAt null = still pending.
+// the invitee to already have an account. The /invite/<token> link is
+// emailed on create and resend (src/app/team/actions.ts) and also shown
+// on /team as a copyable fallback for teammates without a reliable inbox.
+// acceptedAt null = still pending.
 export const invites = pgTable(
   "invites",
   {

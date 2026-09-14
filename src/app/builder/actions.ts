@@ -19,7 +19,8 @@ import {
   type TemplateKey,
 } from "@/lib/blueprint-types";
 import { assertCanAddBins } from "@/lib/plan-limits";
-import { getMyOrgId, requireActiveOrg, requireOrgId } from "@/lib/session";
+import { requirePermission } from "@/lib/permissions";
+import { getMyOrgId, requireOrgId } from "@/lib/session";
 
 export type LocationRow = typeof locations.$inferSelect;
 
@@ -73,7 +74,7 @@ export async function updateFacility(
   facilityId: string,
   patch: { name?: string; widthM?: number; heightM?: number },
 ) {
-  await requireActiveOrg();
+  await requirePermission("editLayout");
   await requireOwnedFacility(facilityId);
 
   const values: Partial<typeof facilities.$inferInsert> = {};
@@ -211,7 +212,7 @@ export async function createEntity(
   xM: number,
   yM: number,
 ) {
-  await requireActiveOrg();
+  await requirePermission("editLayout");
   const facility = await requireOwnedFacility(facilityId);
 
   const type = LOCATION_TYPES[kind];
@@ -232,7 +233,7 @@ export async function createEntity(
 }
 
 export async function applyTemplate(facilityId: string, templateKey: TemplateKey, replace: boolean) {
-  await requireActiveOrg();
+  await requirePermission("editLayout");
   const facility = await requireOwnedFacility(facilityId);
 
   const existing = await db.select({ id: locations.id }).from(locations).where(eq(locations.facilityId, facilityId));
@@ -277,7 +278,7 @@ export async function applyTemplate(facilityId: string, templateKey: TemplateKey
 // Scoped to zones and their own children — an aisle or dock placed
 // independently of any zone is left where it is.
 export async function addSector(facilityId: string) {
-  await requireActiveOrg();
+  await requirePermission("editLayout");
   const facility = await requireOwnedFacility(facilityId);
 
   const all = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
@@ -402,7 +403,7 @@ export async function updateEntity(
     levels?: number;
   },
 ) {
-  await requireActiveOrg();
+  await requirePermission("editLayout");
   const location = await requireOwnedLocation(id);
   const type = LOCATION_TYPES[location.kind as LocationKind];
   const t = await getTranslations("builder.error");
@@ -498,7 +499,7 @@ async function descendantIds(rootId: string): Promise<string[]> {
 }
 
 export async function deleteEntity(id: string) {
-  await requireActiveOrg();
+  await requirePermission("editLayout");
   await requireOwnedLocation(id);
 
   const ids = [id, ...(await descendantIds(id))];
@@ -509,7 +510,7 @@ export async function deleteEntity(id: string) {
 }
 
 export async function duplicateEntity(id: string) {
-  await requireActiveOrg();
+  await requirePermission("editLayout");
   const location = await requireOwnedLocation(id);
   if (LOCATION_TYPES[location.kind as LocationKind].spatial === "store") {
     await assertCanAddBins(location.organizationId, location.bays * location.levels);
@@ -534,7 +535,7 @@ export async function restoreEntity(
   facilityId: string,
   spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number },
 ) {
-  await requireActiveOrg();
+  await requirePermission("editLayout");
   const facility = await requireOwnedFacility(facilityId);
   if (LOCATION_TYPES[spec.kind].spatial === "store") {
     await assertCanAddBins(facility.organizationId, spec.bays * spec.levels);

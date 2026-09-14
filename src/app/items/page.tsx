@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
+import { getMyPermissions } from "@/lib/permissions";
 import { getMyItems } from "./actions";
 import { ItemForm } from "./item-form";
 
@@ -10,9 +11,10 @@ export default async function ItemsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [facility, myItems, t] = await Promise.all([
+  const [facility, myItems, permissions, t] = await Promise.all([
     getMyFacility(),
     getMyItems(),
+    getMyPermissions(),
     getTranslations(),
   ]);
 
@@ -29,7 +31,11 @@ export default async function ItemsPage() {
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, marginBottom: 16 }}>{t("items.title")}</div>
 
-          <ItemForm />
+          {permissions.manageItems ? (
+            <ItemForm />
+          ) : (
+            <p className="text-muted" style={{ fontSize: 12 }}>{t("items.viewOnly")}</p>
+          )}
 
           <div style={{ marginTop: 20, display: "flex", flexDirection: "column" }}>
             {myItems.map((item) => (

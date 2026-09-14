@@ -36,9 +36,55 @@ export const organizations = pgTable("organizations", {
     .notNull()
     .default("trialing"),
   trialEndsAt: timestamp("trial_ends_at"),
+  // Billing is prepaid periods, not a running subscription (docs/pricing.md
+  // "Billing v2"): each successful payment pushes this forward by the
+  // months bought. Null while trialing. On an `active` org, null means
+  // "paid indefinitely" — the founder's manual override on /internal.
+  paidUntil: timestamp("paid_until"),
+  // The paid_until (or trial_ends_at) value the last "expiring soon" email
+  // was sent for — lets the lazy reminder in src/lib/billing-reminders.ts
+  // send exactly one mail per period without a scheduler.
+  expiryReminderSentFor: timestamp("expiry_reminder_sent_for"),
   stripeCustomerId: text("stripe_customer_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const paymentStatuses = ["pending", "paid", "failed", "canceled"] as const;
+export type PaymentStatus = (typeof paymentStatuses)[number];
+
+// One row per checkout attempt, whichever way the money moves: `paysera`
+// rows are created when an admin clicks "Pay" on /billing and flipped to
+// paid by the signed callback; `manual` rows are the founder recording a
+// bank transfer on /internal. The row's id doubles as the Paysera
+// `orderid`, so a callback maps back to exactly one attempt.
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => plans.id),
+    months: integer("months").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    status: text("status", { enum: paymentStatuses }).notNull().default("pending"),
+    provider: text("provider", { enum: ["paysera", "manual"] }).notNull(),
+    // Paysera's own `requestid` from the callback, for support lookups.
+    providerReference: text("provider_reference"),
+    payerEmail: text("payer_email"),
+    note: text("note"), // manual payments: "bank transfer 2026-09-15" etc.
+    // Where paid_until stood before/after this payment applied — the
+    // audit trail for "why does my access end on this date".
+    periodStart: timestamp("period_start"),
+    periodEnd: timestamp("period_end"),
+    paidAt: timestamp("paid_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("payments_org_idx").on(table.organizationId)],
+);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),

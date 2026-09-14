@@ -160,43 +160,62 @@ middleware's public-prefix list, same as reset links: the click can come from a 
 with no session. `appBaseUrl()` (`src/lib/app-url.ts`) is the request-host-derived base every
 emailed link now uses, pulled out of the reset flow so this one didn't copy it.
 
-## Billing — manual activation, not Stripe
+## Billing — prepaid periods via Paysera, with manual activation kept
 
-`docs/pricing.md` defines real tiers/limits, but the fastest path to actual revenue for the
-first customers is a founder manually flipping a plan after a conversation, not building a
-full self-serve Stripe integration before there's a single paying customer (see that doc's
-"Billing v1" section for the reasoning). Two small, deliberately asymmetric pieces:
+`docs/pricing.md` ("Billing v2") has the why: Paysera because Stripe won't onboard a Kosovo
+business; prepaid 1/3/12-month periods because Paysera's recurring billing is merchant-initiated
+token charging that isn't worth building before there's renewal volume. The pieces:
 
-- **`/internal`** — a founder-only, cross-tenant console listing every organization with
-  inline plan/status/trial-end editing. Gated by `requirePlatformAdmin()`
-  (`src/lib/platform-admin.ts`), which checks the signed-in email against a
-  `PLATFORM_ADMIN_EMAILS` env var allowlist — not a `users`/`memberships` role, since a DB-level
-  "platform admin" concept is premature generalization for what is, for now, exactly one
-  person. Never linked from the app's own nav, and deliberately English-only: it's operated by
-  the founder, not shown to a customer, so translating it buys nothing (the one place in this
-  otherwise fully-translated app where that trade was made deliberately).
-- **`/billing`** — the org-scoped, customer-facing counterpart: current plan, subscription
-  status, trial countdown, and live usage (users/facilities/bins) against the plan's limits.
-  Read-only for everyone (no self-serve upgrade exists yet) with a "contact us" line gated by
-  an optional `NEXT_PUBLIC_SUPPORT_EMAIL` env var — left unset, the line still renders without
-  a dead/fabricated address. `AppHeader` also surfaces a small trial/plan pill
-  (`src/app/billing/actions.ts`'s `getBillingSummary()`, fetched client-side on mount rather
-  than threaded as a prop through the ~7 different page types that render `AppHeader`) that
-  links to this page.
+- **`src/lib/paysera.ts`** — the Checkout Classic (WebToPay) protocol as two pure functions,
+  ported from Paysera's own `lib-webtopay` rather than adding a dependency: `data` is url-safe
+  base64 of a query string, `sign`/`ss1` is `md5(data + project password)`. Unit-tested
+  (`paysera.test.ts`, `pnpm test`). Config is `PAYSERA_PROJECT_ID` / `PAYSERA_SIGN_PASSWORD` /
+  `PAYSERA_TEST_MODE`; with them unset `/billing` shows the bank-transfer/contact path only,
+  the same degrade-gracefully pattern as email without `RESEND_API_KEY`.
+- **`payments`** (`src/db/schema.ts`) — one row per attempt, `provider` = `paysera` or
+  `manual`. Its id is the Paysera `orderid`, so a callback maps to exactly one attempt.
+  `period_start`/`period_end` record what the payment actually bought — the answer to "why does
+  my access end on that date".
+- **`startCheckout`** (`src/app/billing/actions.ts`) — admin-only (a locked org must still be
+  able to pay its way out, so it checks the role but not the lock), refuses a plan the org's
+  current usage already exceeds (`limitsExceeded` — a 700-bin depot can't buy Starter and lock
+  itself out of its own racks), inserts a pending row and redirects to Paysera.
+- **`/api/billing/paysera/callback`** — the only path that grants access. Verifies `ss1`,
+  checks the project id, refuses a test-mode/live mismatch, and on `status=1` checks the
+  *paid* amount and currency against the row before calling `applyPaidPayment()`. Answers a
+  plain `OK` for every recognised callback, including ones it ignores, because Paysera retries
+  anything else. Had to be added to the middleware's public-prefix list — Paysera's servers have
+  no session, and the first curl came back as a 307 to `/login`. `/billing/return` (the
+  customer-facing redirect) only *displays* what the callback recorded; it never trusts the
+  redirect itself, which anyone could type into a browser.
+- **`applyPaidPayment()`** (`src/lib/billing.ts`) — the single place `paid_until` moves,
+  used by both the callback and `/internal`'s "+ Payment" (a bank transfer the founder saw
+  land). Idempotent per payment row (callbacks get redelivered). The new period starts from the
+  current `paid_until` when the org is active on the same plan and still inside it — paying
+  early extends — and from now otherwise. Sets `plan_id`, `subscription_status = active`,
+  clears `trial_ends_at`.
+- **Lockout** — `getOrgLockReason()` gained `"expired"`: `active` with a past `paid_until`. A
+  null `paid_until` on an active org means "paid indefinitely", the founder's override on
+  `/internal` (which now also edits `paid_until` directly).
+- **Reminders without a scheduler** — `src/lib/billing-reminders.ts`. There's no cron in
+  this app (see Background jobs), so `getBillingSummary()` — which every page's header calls —
+  runs the check: within 7 days of the trial end / `paid_until`, and
+  `expiry_reminder_sent_for` doesn't already equal that date, claim the date (an UPDATE, before
+  sending, so two concurrent loads can't both mail) and email the admins. The honest trade-off:
+  an org nobody opens for a week gets no reminder, but that org isn't the one renewing on time
+  either.
+- **`/billing`** — plan cards (Starter/Business selectable, Enterprise "contact us"), period
+  selector with the total, Pay button, usage bars, and paid-payment history. Non-admins see
+  the status and usage and a note to ask an admin. The header pill now also shows "Renew in
+  Nd" inside the last week and "Expired" after.
 
-Actually *blocking* an action once a plan limit or an expired trial is hit — not yet built when
-this section was first written — now is: see "Plan-limit enforcement" and "Trial-expiry
-lockout" further down.
-
-Real bug this surfaced: `internal-client.tsx` and `team-client.tsx` originally formatted dates
-with `toLocaleDateString()`, which resolves using the runtime's ambient locale *and* timezone —
-values that can differ between the server that renders a page and the browser that hydrates
-it, producing a React hydration mismatch the moment a formatted date appears in a client
-component's initial render. Fixed with a small shared `formatDate()` (`src/lib/format-date.ts`)
-that uses the `Date` object's UTC getters specifically, not just a pinned locale string —
-needed because the server and a viewer's browser can also be in genuinely different
-timezones, and only reading UTC components guarantees both compute the same calendar date for
-the same instant no matter where each one executes.
+Verified end to end against the local dev server with dummy Paysera credentials: checkout
+redirects to `bank.paysera.com` with a correctly signed request; a locally signed `status=1`
+callback activates the org for exactly the months bought, a replay is a no-op, a tampered
+signature is a 400, a wrong `payamount` marks the row failed without granting access, a second
+purchase chains from the previous `period_end`, an expired `paid_until` locks writes with the
+"paid period has ended" message, and the reminder marker is claimed on the first page load
+inside the 7-day window.
 
 ## Plan-limit enforcement
 

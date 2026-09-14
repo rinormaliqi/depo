@@ -20,7 +20,9 @@
       "relocate": "MOVE",
       "adjust": "ADJUST"
     },
-    "verifyEmail": "Verify your email"
+    "verifyEmail": "Verify your email",
+    "planExpired": "{plan} · Expired",
+    "planRenewSoon": "{plan} · Renew in {n}d"
   },
   "nav": {
     "blueprint": "Blueprint",
@@ -186,23 +188,83 @@
   "billing": {
     "title": "Billing",
     "subtitle": "Your organization's plan and usage.",
-    "priceLine": "${price}/mo",
+    "priceLine": "€{price}/mo",
     "usage": "Usage",
     "usageUsers": "Users",
     "usageFacilities": "Facilities",
     "usageBins": "Bins",
     "trialDaysLeft": "{n} days left in your trial",
     "trialEnded": "Your trial has ended",
-    "changePlan": "Want to change your plan? Get in touch with whoever set up your account.",
-    "changePlanWithEmail": "Want to change your plan? Email {email}.",
     "status": {
       "trialing": "Trialing",
       "active": "Active",
       "past_due": "Past due",
-      "canceled": "Canceled"
+      "canceled": "Canceled",
+      "expired": "Expired"
     },
     "trialNotStarted": "Your 30-day trial starts once you verify your email.",
-    "verifyNow": "Verify now"
+    "verifyNow": "Verify now",
+    "paidUntil": "Paid until {date} ({n} days left)",
+    "paidExpired": "Your paid period ended on {date}",
+    "paidIndefinitely": "Active — no renewal needed",
+    "pastDueBody": "A payment is outstanding. Buy a new period below to restore access.",
+    "canceledBody": "This plan was canceled. Buy a new period below to reactivate.",
+    "choosePlan": "Plan & payment",
+    "adminOnlyBody": "Only an admin can change the plan or pay. Ask one of your organization's admins.",
+    "currentPlan": "Current",
+    "unlimited": "Unlimited",
+    "limitUsers": "{n} users",
+    "limitFacilities": "{n} facilities",
+    "limitBins": "{n} bins",
+    "blockedBy": "You already use more {what} than this plan allows.",
+    "enterprisePrice": "from €449/mo",
+    "enterpriseBody": "Unlimited users, facilities and bins, with movement history kept forever. Priced per customer.",
+    "contactUs": "Contact us",
+    "periodLabel": "Pay for",
+    "months": "{n, plural, =1 {1 month} other {# months}}",
+    "total": "Total €{amount}",
+    "totalHint": "{plan} × {n, plural, =1 {1 month} other {# months}}, paid up front. Extends your current period if it hasn't ended yet.",
+    "payWithPaysera": "Pay with Paysera",
+    "redirecting": "Redirecting…",
+    "payOffline": "Online payment isn't available here yet — get in touch with whoever set up your account to pay by bank transfer.",
+    "payOfflineWithEmail": "Online payment isn't available here yet — email {email} to pay by bank transfer.",
+    "bankTransferHint": "Paysera accepts cards and bank payments. Prefer an invoice and bank transfer? Get in touch with whoever set up your account.",
+    "bankTransferHintWithEmail": "Paysera accepts cards and bank payments. Prefer an invoice and bank transfer? Email {email}.",
+    "checkoutCanceled": "Payment canceled — nothing was charged.",
+    "history": "Payments",
+    "historyLine": "{months, plural, =1 {1 month} other {# months}} · {provider}",
+    "historyUntil": "until {date}",
+    "provider": {
+      "paysera": "Paysera",
+      "manual": "Bank transfer"
+    },
+    "error": {
+      "adminOnly": "Only an admin can pay for the organization",
+      "notConfigured": "Online payment isn't set up in this environment",
+      "invalidChoice": "Pick a plan and a period",
+      "overLimits": "Your organization already exceeds the {plan} plan's limits — reduce usage first or pick a larger plan"
+    },
+    "return": {
+      "paidTitle": "Payment received",
+      "paidBody": "Thanks — your organization is active until {until}.",
+      "openApp": "Open SmartDepo",
+      "failedTitle": "Payment didn't go through",
+      "failedBody": "Nothing was charged. You can try again from the billing page.",
+      "pendingTitle": "Waiting for confirmation",
+      "pendingBody": "Paysera hasn't confirmed this payment yet. Bank payments can take a moment — refresh in a few seconds.",
+      "refresh": "Refresh",
+      "backToBilling": "Back to billing"
+    },
+    "reminderEmail": {
+      "trial": {
+        "subject": "Your SmartDepo trial for {org} ends in {days} days",
+        "body": "The free trial for {org} ends in {days} days. To keep making changes after that, pick a plan and pay here:\n\n{url}\n\nEverything you've set up is kept either way — after the trial ends the account becomes read-only until a plan is active."
+      },
+      "paid": {
+        "subject": "SmartDepo: {org}'s paid period ends in {days} days",
+        "body": "The paid period for {org} ends in {days} days. Renew here to avoid the account going read-only:\n\n{url}"
+      }
+    }
   },
   "planLimit": {
     "users": "This plan allows up to {max} users. Visit Billing to upgrade.",
@@ -213,7 +275,8 @@
     "trialEnded": "Your trial has ended. Visit Billing to keep making changes.",
     "pastDue": "This organization's payment is past due. Visit Billing to resolve it.",
     "canceled": "This organization's plan was canceled. Visit Billing to reactivate.",
-    "unverified": "Verify your email address to start your trial and make changes."
+    "unverified": "Verify your email address to start your trial and make changes.",
+    "expired": "Your paid period has ended. Visit Billing to renew."
   },
   "builder": {
     "entities": "Entities",

@@ -155,6 +155,11 @@
     "facilities": "Ky plan lejon deri në {max} depo. Vizito Faturimin për ta përmirësuar.",
     "bins": "Ky plan lejon deri në {max} kuti. Vizito Faturimin për ta përmirësuar."
   },
+  "orgLocked": {
+    "trialEnded": "Prova jote ka përfunduar. Vizito Faturimin për të vazhduar ndryshimet.",
+    "pastDue": "Pagesa e kësaj organizate është e vonuar. Vizito Faturimin për ta zgjidhur.",
+    "canceled": "Plani i kësaj organizate u anulua. Vizito Faturimin për ta riaktivizuar."
+  },
   "builder": {
     "entities": "Elementet",
     "entitiesHint": "Kliko për ta vendosur në planimetri, pastaj tërhiqe në vend ose rregulloje saktësisht me numra në të djathtë.",

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { items } from "@/db/schema";
-import { requireOrgId } from "@/lib/session";
+import { requireActiveOrg, requireOrgId } from "@/lib/session";
 
 export type ItemRow = typeof items.$inferSelect;
 
@@ -17,7 +17,12 @@ export async function getMyItems() {
 type FormState = { error?: string } | undefined;
 
 export async function createItem(_prevState: FormState, formData: FormData): Promise<FormState> {
-  const organizationId = await requireOrgId();
+  let organizationId: string;
+  try {
+    organizationId = (await requireActiveOrg()).organizationId;
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
 
   const name = formData.get("name")?.toString().trim();
   const unitOfMeasure = formData.get("unitOfMeasure")?.toString().trim();

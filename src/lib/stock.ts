@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { facilities, items, locations, movements, stock } from "@/db/schema";
+import { getOrgLockReason } from "@/lib/session";
 
 // Shared by both the bin detail page and the Scanner — not itself a server
 // action, just the core receive/pick logic called from ones that are.
@@ -33,6 +34,18 @@ export async function requireOwnedItem(itemId: string, organizationId: string) {
   return item;
 }
 
+// receiveStockAt/pickStockAt already take organizationId from their caller,
+// so this checks lock status directly rather than going through
+// requireActiveOrg() (which would re-derive organizationId from the
+// session — redundant when it's already in hand).
+async function requireOrgNotLocked(organizationId: string) {
+  const reason = await getOrgLockReason(organizationId);
+  if (reason) {
+    const t = await getTranslations("orgLocked");
+    throw new Error(t(reason));
+  }
+}
+
 async function requirePositiveQuantity(quantity: number) {
   if (!Number.isInteger(quantity) || quantity <= 0) {
     const t = await getTranslations("stockError");
@@ -47,6 +60,7 @@ export async function receiveStockAt(
   itemId: string,
   quantity: number,
 ) {
+  await requireOrgNotLocked(organizationId);
   await requireOwnedBin(locationId, organizationId);
   await requireOwnedItem(itemId, organizationId);
   await requirePositiveQuantity(quantity);
@@ -77,6 +91,7 @@ export async function pickStockAt(
   itemId: string,
   quantity: number,
 ) {
+  await requireOrgNotLocked(organizationId);
   await requireOwnedBin(locationId, organizationId);
   await requireOwnedItem(itemId, organizationId);
   await requirePositiveQuantity(quantity);

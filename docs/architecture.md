@@ -143,6 +143,50 @@ temporarily lowering a plan's limits below the test org's actual usage and confi
 new-entity create and a bays/levels grow are rejected with no partial write, then confirming
 normal operation resumes once limits are restored.
 
+## Trial-expiry lockout
+
+`organizations.trial_ends_at`/`subscription_status` were set at signup and then never read
+again — a trial that "ended" had no actual effect. `docs/pricing.md`: a trial that ends without
+payment moves the org to "a locked/read-only state (data preserved, not deleted)". `src/lib/
+session.ts`'s `getOrgLockReason()` is the single source of truth for whether an org is locked,
+and it's broader than the ticket's title suggests: not just an expired trial, but any status
+that isn't an active paid plan —
+- `active` → never locked, `trial_ends_at` becomes irrelevant once actually paying.
+- `trialing` → locked only once `trial_ends_at` has passed.
+- `past_due` / `canceled` → locked immediately, no grace period. There's no automatic dunning
+  or payment-retry system in this manual-activation v1 (see the Billing section above) — these
+  statuses are only ever set by the founder by hand on `/internal`, so if they've set one,
+  they clearly intend it to take effect right away.
+
+`requireActiveOrg()` is the write-path counterpart to `requireSession()`/`requireOrgId()` —
+call it instead at the top of anything that mutates org-scoped data; reads stay on the plain
+session helpers so a locked org can still view everything it already built. Wired into every
+actual write path in the app (confirmed by grepping every file for `db.insert`/`db.update`/
+`db.delete` and checking each one): all of `builder/actions.ts`'s mutations (including
+`restoreEntity`, undo/redo's own recreate path — locked blocks that too, consistently, since
+it's still a write), `items/actions.ts`'s `createItem`, and `team/actions.ts`'s
+`createInvite`/`revokeInvite`/`resendInvite`. `receiveStockAt`/`pickStockAt`
+(`src/lib/stock.ts`) check once in the shared core rather than at each caller, which covers
+both the Scanner and the bin-detail page's add/remove-stock forms from a single call site.
+Accepting an invite (`src/app/invite/[token]/actions.ts`) has no session yet at that point in
+the flow — it checks the *invited org's* lock status directly via `getOrgLockReason()` rather
+than through `requireActiveOrg()`, using the token, not `requireActiveOrg()`'s session lookup.
+
+Deliberately untouched: `/internal`'s `updateOrgBilling` — it's the only way to *unlock* an
+org, gated separately by `requirePlatformAdmin()`, and would be useless if it could lock itself
+out. Also untouched: signup (a brand-new org has no lock status yet), login/logout, and the
+locale-switch cookie action (a per-viewer preference, not org data).
+
+The trial/plan pill already added to `AppHeader` for the Billing ticket doubles as this
+ticket's required banner — no separate banner needed, it already shows "Trial ended" (or "N
+days left", urgent-styled once ≤5 remain) with a link to `/billing`.
+
+Verified live end to end, not just by reading the code: expired the test org's trial and
+confirmed every write path above is blocked with the correct translated message while
+`/metrics` (a pure read) still renders fully; separately spot-checked `past_due` produces its
+own distinct message; confirmed zero partial writes against Postgres directly, not just the
+UI; then restored the org and confirmed normal writes resume immediately.
+
 ## QR codes
 
 Not implemented yet. The Scanner page (below) currently takes a typed location `code`

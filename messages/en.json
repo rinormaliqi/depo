@@ -155,6 +155,11 @@
     "facilities": "This plan allows up to {max} facilities. Visit Billing to upgrade.",
     "bins": "This plan allows up to {max} bins. Visit Billing to upgrade."
   },
+  "orgLocked": {
+    "trialEnded": "Your trial has ended. Visit Billing to keep making changes.",
+    "pastDue": "This organization's payment is past due. Visit Billing to resolve it.",
+    "canceled": "This organization's plan was canceled. Visit Billing to reactivate."
+  },
   "builder": {
     "entities": "Entities",
     "entitiesHint": "Click to drop onto the floor, then drag it into place or fine-tune the exact numbers on the right.",

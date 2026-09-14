@@ -7,6 +7,7 @@ import { getTranslations } from "next-intl/server";
 import { signIn } from "@/auth";
 import { db } from "@/db";
 import { invites, memberships, users } from "@/db/schema";
+import { getOrgLockReason } from "@/lib/session";
 
 type FormState = { error?: string } | undefined;
 
@@ -18,6 +19,16 @@ async function loadValidInvite(token: string) {
   return invite ?? null;
 }
 
+// No signed-in session exists yet on this page (that's the whole point of
+// an invite link) — check the *invited org's* lock status directly rather
+// than through requireActiveOrg(), which needs a session.
+async function orgLockError(organizationId: string) {
+  const reason = await getOrgLockReason(organizationId);
+  if (!reason) return null;
+  const t = await getTranslations("orgLocked");
+  return t(reason);
+}
+
 export async function acceptInviteAsExistingUser(_prevState: FormState, formData: FormData): Promise<FormState> {
   const t = await getTranslations("invite.error");
   const token = formData.get("token")?.toString();
@@ -26,6 +37,8 @@ export async function acceptInviteAsExistingUser(_prevState: FormState, formData
 
   const invite = await loadValidInvite(token);
   if (!invite) return { error: t("invalid") };
+  const lockError = await orgLockError(invite.organizationId);
+  if (lockError) return { error: lockError };
 
   const [user] = await db.select().from(users).where(eq(users.email, invite.email));
   if (!user || !user.passwordHash || !(await compare(password, user.passwordHash))) {
@@ -57,6 +70,8 @@ export async function acceptInviteAsNewUser(_prevState: FormState, formData: For
 
   const invite = await loadValidInvite(token);
   if (!invite) return { error: t("invalid") };
+  const lockError = await orgLockError(invite.organizationId);
+  if (lockError) return { error: lockError };
 
   const [existing] = await db.select().from(users).where(eq(users.email, invite.email));
   if (existing) return { error: t("accountExists") };

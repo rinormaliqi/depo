@@ -7,7 +7,7 @@ import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { invites, memberships, type MembershipRole, users } from "@/db/schema";
 import { assertCanAddSeats } from "@/lib/plan-limits";
-import { requireSession } from "@/lib/session";
+import { requireActiveOrg, requireSession } from "@/lib/session";
 
 const INVITE_VALID_DAYS = 7;
 
@@ -42,7 +42,12 @@ export async function getTeam() {
 
 export async function createInvite(_prevState: { error?: string } | undefined, formData: FormData) {
   const t = await getTranslations("team.error");
-  const session = await requireSession();
+  let session: Awaited<ReturnType<typeof requireSession>>;
+  try {
+    session = await requireActiveOrg();
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
   if (!isManager(session.role)) return { error: t("notAuthorized") };
 
   const email = formData.get("email")?.toString().trim().toLowerCase();
@@ -92,7 +97,7 @@ export async function createInvite(_prevState: { error?: string } | undefined, f
 
 export async function revokeInvite(inviteId: string) {
   const t = await getTranslations("team.error");
-  const session = await requireSession();
+  const session = await requireActiveOrg();
   if (!isManager(session.role)) throw new Error(t("notAuthorized"));
 
   const [invite] = await db.select().from(invites).where(eq(invites.id, inviteId));
@@ -104,7 +109,7 @@ export async function revokeInvite(inviteId: string) {
 
 export async function resendInvite(inviteId: string) {
   const t = await getTranslations("team.error");
-  const session = await requireSession();
+  const session = await requireActiveOrg();
   if (!isManager(session.role)) throw new Error(t("notAuthorized"));
 
   const [invite] = await db.select().from(invites).where(eq(invites.id, inviteId));

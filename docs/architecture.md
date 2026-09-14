@@ -43,6 +43,32 @@ a bigger box or a second managed service. Auth.js adds zero infrastructure.
 Roles (Admin / Manager / Worker) are a column on the user-organization membership, checked in
 route handlers/middleware — no external authorization service.
 
+### Team invites — link-sharing, not email
+
+Signup only ever created the first (admin) user for an org — there was no way to add a second
+person, which mattered because workers, not admins, are the product's primary daily user.
+`invites` (`src/db/schema.ts`) is a pending-seat table keyed by a random bearer token rather
+than requiring the invitee to already have an account: an admin/manager picks an email and a
+role on `/team`, the app generates a `/invite/<token>` link, and — deliberately — **no email is
+actually sent**. The inviting admin copies the link and shares it however they already reach
+that person (Slack, WhatsApp, texting it directly), rather than this project standing up
+transactional email infrastructure (sender domain, deliverability, a provider account) before
+there's a single paying customer. `/invite/<token>` detects whether the invited email already
+has an account and renders a sign-in-to-accept or create-account-to-accept form accordingly;
+either path writes the `membership` row and marks the invite accepted before establishing the
+session — for the sign-in path specifically, the password is verified directly (not solely via
+`signIn()`) because `signIn()`'s own redirect-on-success means no code after a successful call
+would run, so the membership write has to happen before it, and it has to happen only *after*
+the password is confirmed correct.
+
+An invite's role is capped at what the inviter can grant: a manager can invite a worker or
+another manager, but not an admin — only an existing admin can create a new one. Revoke/resend
+exist per pending invite (resend just extends its 7-day expiry and re-surfaces the link, since
+there's no email to actually redeliver). Full role-based *permission* enforcement elsewhere in
+the app (what a worker vs. admin can actually do once they've joined) is a separate, not-yet-
+built piece — right now, joining with a role is tracked, but only this invite flow itself
+checks it.
+
 ## QR codes
 
 Not implemented yet. The Scanner page (below) currently takes a typed location `code`

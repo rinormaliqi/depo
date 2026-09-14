@@ -48,6 +48,9 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const membershipRoles = ["admin", "manager", "worker"] as const;
+export type MembershipRole = (typeof membershipRoles)[number];
+
 export const memberships = pgTable(
   "memberships",
   {
@@ -58,13 +61,39 @@ export const memberships = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id),
-    role: text("role", { enum: ["admin", "manager", "worker"] }).notNull(),
+    role: text("role", { enum: membershipRoles }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("memberships_user_org_idx").on(table.userId, table.organizationId),
     index("memberships_org_idx").on(table.organizationId),
   ],
+);
+
+// A pending seat on an org, keyed by a bearer token rather than requiring
+// the invitee to already have an account. No email is actually sent for
+// now — the inviting admin/manager copies the /invite/<token> link and
+// shares it themselves (Slack, WhatsApp, whatever they already use) rather
+// than this project standing up transactional email infrastructure before
+// there's a single paying customer. acceptedAt null = still pending.
+export const invites = pgTable(
+  "invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: text("role", { enum: membershipRoles }).notNull(),
+    token: text("token").notNull().unique(),
+    invitedBy: uuid("invited_by")
+      .notNull()
+      .references(() => users.id),
+    expiresAt: timestamp("expires_at").notNull(),
+    acceptedAt: timestamp("accepted_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("invites_org_idx").on(table.organizationId)],
 );
 
 export const facilities = pgTable(

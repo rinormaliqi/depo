@@ -15,6 +15,13 @@
       "when": 1789338881071,
       "tag": "0001_thin_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789393321347,
+      "tag": "0002_quick_joystick",
+      "breakpoints": true
     }
   ]
 }

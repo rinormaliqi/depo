@@ -120,6 +120,9 @@ export function AppHeader({
         <Link href="/items" className="btn btn-secondary">
           {t("common.items")}
         </Link>
+        <Link href="/team" className="btn btn-secondary">
+          {t("common.team")}
+        </Link>
         <LocaleSwitcher />
         <span
           style={{

@@ -29,6 +29,11 @@ memberships                            -- which orgs a user belongs to, with wha
   id, user_id → users, organization_id → organizations,
   role ('admin' | 'manager' | 'worker'), created_at
 
+invites                                -- a pending seat, keyed by bearer token not account
+  id, organization_id → organizations, email, role ('admin' | 'manager' | 'worker'),
+  token (unique, random — the /invite/<token> link, no email is actually sent),
+  invited_by → users, expires_at, accepted_at (nullable — null = still pending), created_at
+
 facilities                             -- a company can have more than one physical site
   id, organization_id → organizations, name,
   width_m, height_m (real, default 40 × 24) -- floor envelope for the blueprint canvas

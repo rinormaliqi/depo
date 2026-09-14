@@ -15,7 +15,7 @@ export async function getMySession() {
     .limit(1);
   if (!membership) return null;
 
-  return { userId: session.user.id, organizationId: membership.organizationId };
+  return { userId: session.user.id, organizationId: membership.organizationId, role: membership.role };
 }
 
 export async function requireSession() {

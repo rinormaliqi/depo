@@ -3,6 +3,7 @@
     "appName": "SmartDepo",
     "signOut": "Sign out",
     "items": "Items",
+    "team": "Team",
     "backToBlueprint": "‹ Back to blueprint",
     "noFacility": "No facility found for your organization yet.",
     "searchPlaceholder": "Find an item, SKU or location",
@@ -68,6 +69,62 @@
     "addItem": "Add item",
     "noItems": "No items yet.",
     "errorRequired": "Name and unit of measure are required"
+  },
+  "team": {
+    "title": "Team",
+    "subtitle": "Invite teammates and manage who has access to this organization.",
+    "invite": "Invite a teammate",
+    "emailLabel": "Email",
+    "roleLabel": "Role",
+    "sendInvite": "Send invite",
+    "inviting": "Sending…",
+    "members": "Members ({n})",
+    "pending": "Pending invites ({n})",
+    "you": "you",
+    "copyLink": "Copy link",
+    "linkCopied": "Copied!",
+    "resend": "Resend",
+    "revoke": "Revoke",
+    "expires": "Expires {date}",
+    "role": {
+      "admin": "Admin",
+      "manager": "Manager",
+      "worker": "Worker"
+    },
+    "error": {
+      "notAuthorized": "You don't have permission to manage the team",
+      "required": "Email and role are required",
+      "onlyAdminCanInviteAdmin": "Only an admin can invite another admin",
+      "alreadyMember": "That person is already a member of this organization",
+      "inviteNotFound": "That invite no longer exists"
+    }
+  },
+  "invite": {
+    "title": "Join {org}",
+    "joinAs": "Invited as {role} — {email}",
+    "yourName": "Your name",
+    "yourNamePlaceholder": "Jane Smith",
+    "password": "Password",
+    "passwordExistingHint": "Your password",
+    "passwordNewHint": "Min. 8 characters",
+    "acceptExisting": "Accept & sign in",
+    "acceptNew": "Accept & create account",
+    "joining": "Joining…",
+    "invalidTitle": "Invite not found",
+    "invalidBody": "This invite link is invalid, expired, or has already been used. Ask whoever invited you to send a new one.",
+    "role": {
+      "admin": "Admin",
+      "manager": "Manager",
+      "worker": "Worker"
+    },
+    "error": {
+      "required": "All fields are required",
+      "invalid": "This invite is invalid or has expired",
+      "wrongPassword": "Incorrect password",
+      "passwordLength": "Password must be at least 8 characters",
+      "accountExists": "An account with that email already exists — try accepting from the login link instead",
+      "signInFailed": "Joined, but sign-in failed — try logging in"
+    }
   },
   "builder": {
     "entities": "Entities",

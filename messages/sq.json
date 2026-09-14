@@ -3,6 +3,7 @@
     "appName": "SmartDepo",
     "signOut": "Dilni",
     "items": "Artikujt",
+    "team": "Ekipi",
     "backToBlueprint": "‹ Kthehu te skema",
     "noFacility": "Ende nuk u gjet asnjë depo për organizatën tuaj.",
     "searchPlaceholder": "Kërko një artikull, SKU ose vendndodhje",
@@ -68,6 +69,62 @@
     "addItem": "Shto artikull",
     "noItems": "Ende nuk ka artikuj.",
     "errorRequired": "Emri dhe njësia matëse janë të detyrueshme"
+  },
+  "team": {
+    "title": "Ekipi",
+    "subtitle": "Fto kolegë dhe menaxho kush ka qasje në këtë organizatë.",
+    "invite": "Fto një koleg",
+    "emailLabel": "Email",
+    "roleLabel": "Roli",
+    "sendInvite": "Dërgo ftesën",
+    "inviting": "Duke dërguar…",
+    "members": "Anëtarët ({n})",
+    "pending": "Ftesa në pritje ({n})",
+    "you": "ti",
+    "copyLink": "Kopjo lidhjen",
+    "linkCopied": "U kopjua!",
+    "resend": "Ridërgo",
+    "revoke": "Anulo",
+    "expires": "Skadon më {date}",
+    "role": {
+      "admin": "Admin",
+      "manager": "Menaxher",
+      "worker": "Punëtor"
+    },
+    "error": {
+      "notAuthorized": "Nuk ke leje të menaxhosh ekipin",
+      "required": "Emaili dhe roli janë të detyrueshëm",
+      "onlyAdminCanInviteAdmin": "Vetëm një admin mund të ftojë një admin tjetër",
+      "alreadyMember": "Ai person është tashmë anëtar i kësaj organizate",
+      "inviteNotFound": "Kjo ftesë nuk ekziston më"
+    }
+  },
+  "invite": {
+    "title": "Bashkohu me {org}",
+    "joinAs": "Ftuar si {role} — {email}",
+    "yourName": "Emri yt",
+    "yourNamePlaceholder": "Jane Smith",
+    "password": "Fjalëkalimi",
+    "passwordExistingHint": "Fjalëkalimi yt",
+    "passwordNewHint": "Min. 8 karaktere",
+    "acceptExisting": "Prano & hyr",
+    "acceptNew": "Prano & krijo llogari",
+    "joining": "Duke u bashkuar…",
+    "invalidTitle": "Ftesa nuk u gjet",
+    "invalidBody": "Kjo lidhje ftese është e pavlefshme, ka skaduar, ose është përdorur tashmë. Kërkoji personit që të ftoi të dërgojë një të re.",
+    "role": {
+      "admin": "Admin",
+      "manager": "Menaxher",
+      "worker": "Punëtor"
+    },
+    "error": {
+      "required": "Të gjitha fushat janë të detyrueshme",
+      "invalid": "Kjo ftesë është e pavlefshme ose ka skaduar",
+      "wrongPassword": "Fjalëkalim i gabuar",
+      "passwordLength": "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
+      "accountExists": "Ekziston tashmë një llogari me atë email — provo ta pranosh nga lidhja e hyrjes",
+      "signInFailed": "U bashkua, por hyrja dështoi — provo të hysh"
+    }
   },
   "builder": {
     "entities": "Elementet",

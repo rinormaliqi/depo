@@ -48,6 +48,26 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// A short-lived, single-use token for self-serve password recovery —
+// deliberately a much shorter window than invites.expiresAt (1 hour, not
+// 7 days), since unlike an invite link an admin hands out on purpose, this
+// one is only ever meant to be used once, immediately, by whoever it was
+// actually emailed to. usedAt null = still redeemable.
+export const passwordResets = pgTable(
+  "password_resets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("password_resets_user_idx").on(table.userId)],
+);
+
 export const membershipRoles = ["admin", "manager", "worker"] as const;
 export type MembershipRole = (typeof membershipRoles)[number];
 

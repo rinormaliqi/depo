@@ -43,6 +43,7 @@
       "signIn": "Sign in",
       "noAccount": "Don't have an account?",
       "signUpLink": "Sign up",
+      "forgotPassword": "Forgot password?",
       "errorRequired": "Email and password are required",
       "errorInvalid": "Invalid email or password"
     },
@@ -62,6 +63,37 @@
       "errorEmailExists": "An account with that email already exists",
       "errorPlansNotSeeded": "Plans aren't seeded yet — run pnpm db:seed",
       "errorSignInFailed": "Account created, but sign-in failed — try logging in"
+    }
+  },
+  "forgotPassword": {
+    "title": "Reset your password",
+    "subtitle": "Enter the email on your account and we'll send you a reset link.",
+    "emailLabel": "Email",
+    "sendLink": "Send reset link",
+    "sending": "Sending…",
+    "sent": "If that email has an account, a reset link is on its way.",
+    "backToLogin": "‹ Back to log in",
+    "error": {
+      "required": "Email is required"
+    },
+    "email": {
+      "subject": "Reset your SmartDepo password",
+      "body": "Someone (hopefully you) asked to reset the password on this SmartDepo account. This link works once and expires in an hour:\n\n{url}\n\nIf you didn't request this, you can ignore this email."
+    }
+  },
+  "resetPassword": {
+    "title": "Set a new password",
+    "newPassword": "New password",
+    "passwordHint": "Min. 8 characters",
+    "resetButton": "Reset password",
+    "resetting": "Resetting…",
+    "invalidTitle": "Link expired",
+    "invalidBody": "This reset link is invalid or has expired. Request a new one from the login page.",
+    "error": {
+      "required": "All fields are required",
+      "invalid": "This reset link is invalid or has expired",
+      "passwordLength": "Password must be at least 8 characters",
+      "signInFailed": "Password reset, but sign-in failed — try logging in"
     }
   },
   "items": {

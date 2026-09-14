@@ -34,6 +34,11 @@ invites                                -- a pending seat, keyed by bearer token 
   token (unique, random — the /invite/<token> link, no email is actually sent),
   invited_by → users, expires_at, accepted_at (nullable — null = still pending), created_at
 
+password_resets                        -- short-lived, single-use — see docs/architecture.md
+  id, user_id → users, token (unique, random — the /reset-password/<token> link),
+  expires_at (1 hour, far shorter than an invite's), used_at (nullable — null = still
+  redeemable), created_at
+
 facilities                             -- a company can have more than one physical site
   id, organization_id → organizations, name,
   width_m, height_m (real, default 40 × 24) -- floor envelope for the blueprint canvas

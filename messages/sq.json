@@ -43,6 +43,7 @@
       "signIn": "Kyçu",
       "noAccount": "Nuk keni llogari?",
       "signUpLink": "Regjistrohu",
+      "forgotPassword": "Harruat fjalëkalimin?",
       "errorRequired": "Emaili dhe fjalëkalimi janë të detyrueshëm",
       "errorInvalid": "Email ose fjalëkalim i pasaktë"
     },
@@ -62,6 +63,37 @@
       "errorEmailExists": "Ekziston tashmë një llogari me këtë email",
       "errorPlansNotSeeded": "Planet ende nuk janë ngarkuar — ekzekutoni pnpm db:seed",
       "errorSignInFailed": "Llogaria u krijua, por kyçja dështoi — provoni të kyçeni përsëri"
+    }
+  },
+  "forgotPassword": {
+    "title": "Rivendos fjalëkalimin",
+    "subtitle": "Shkruaj emailin e llogarisë tënde dhe do të të dërgojmë një lidhje rivendosjeje.",
+    "emailLabel": "Email",
+    "sendLink": "Dërgo lidhjen",
+    "sending": "Duke dërguar…",
+    "sent": "Nëse ai email ka një llogari, një lidhje rivendosjeje është në rrugë.",
+    "backToLogin": "‹ Kthehu te kyçja",
+    "error": {
+      "required": "Emaili është i detyrueshëm"
+    },
+    "email": {
+      "subject": "Rivendos fjalëkalimin tënd të SmartDepo",
+      "body": "Dikush (shpresojmë ti) kërkoi të rivendosë fjalëkalimin e kësaj llogarie SmartDepo. Kjo lidhje funksionon një herë dhe skadon pas një ore:\n\n{url}\n\nNëse nuk e kërkove këtë, mund ta shpërfillësh këtë email."
+    }
+  },
+  "resetPassword": {
+    "title": "Vendos një fjalëkalim të ri",
+    "newPassword": "Fjalëkalimi i ri",
+    "passwordHint": "Min. 8 karaktere",
+    "resetButton": "Rivendos fjalëkalimin",
+    "resetting": "Duke rivendosur…",
+    "invalidTitle": "Lidhja ka skaduar",
+    "invalidBody": "Kjo lidhje rivendosjeje është e pavlefshme ose ka skaduar. Kërko një të re nga faqja e kyçjes.",
+    "error": {
+      "required": "Të gjitha fushat janë të detyrueshme",
+      "invalid": "Kjo lidhje rivendosjeje është e pavlefshme ose ka skaduar",
+      "passwordLength": "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
+      "signInFailed": "Fjalëkalimi u rivendos, por kyçja dështoi — provo të kyçesh"
     }
   },
   "items": {

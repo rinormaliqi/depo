@@ -69,6 +69,44 @@ the app (what a worker vs. admin can actually do once they've joined) is a separ
 built piece — right now, joining with a role is tracked, but only this invite flow itself
 checks it.
 
+### Password reset
+
+Unlike an invite link — which an admin deliberately hands to someone they already trust, so
+showing them the link directly is fine — a "forgot password" flow exists specifically for a
+user who's locked out with no one else in the loop, and handing the reset link to whoever
+merely *typed* an email address (rather than proving they own that inbox) would let anyone
+take over any account. That distinction is why invites could get away with no email
+infrastructure at all and this can't: it needed an actual send path, not just a copyable link.
+
+- **`src/lib/email.ts`** — a raw `fetch()` POST to Resend's REST API, not their SDK (the whole
+  integration is one request, so a new dependency buys nothing). Chosen over an SMTP relay for
+  the same reason Auth.js was chosen over Keycloak elsewhere in this doc: free tier, zero
+  separate paid infra. Without `RESEND_API_KEY` set — true of this repo's own local dev, and of
+  any environment before a sending domain is verified — it logs the email to the server console
+  instead of failing, so `/forgot-password` stays fully testable before that's set up.
+- **`password_resets`** (`src/db/schema.ts`) — a short-lived (1 hour, vs. an invite's 7 days),
+  single-use token table. `usedAt` is set the moment it's redeemed, so the same link can't be
+  replayed even within its window.
+- **`/forgot-password`** always reports the same generic "if that email has an account, a link
+  is on its way" outcome regardless of whether the email actually matches a user — confirming
+  or denying it would let the page be used to enumerate real accounts by email.
+- **`/reset-password/<token>`** mirrors the invite-accept page's shape (a valid/invalid split,
+  translated), and reuses the exact "write to the DB before calling `signIn()`, not after"
+  ordering the invite-accept flow established, for the same reason: `signIn()`'s own
+  redirect-on-success means nothing after a successful call ever runs.
+
+Real bug this surfaced, not really about password reset itself: `/forgot-password` and
+`/reset-password/<token>` (and, it turned out, the *existing* `/invite/<token>` from the
+invites work above) all returned a 307 to `/login` for a genuinely logged-out visitor.
+`src/middleware.ts` allowlists public paths by exact string match (`/`, `/login`, `/signup`)
+and redirects everything else unless a session exists — none of these token-bearing pages were
+ever added to that list. The invite flow's own earlier testing never caught it because it
+happened to run while still signed in as *some* user, which was enough to satisfy the
+middleware's only real check (`!req.auth`) even though that user had no relationship to the
+invite being tested. Fixed by adding an explicit public-prefix list (`/invite/`,
+`/reset-password/`) alongside the exact-match set, so a token in the URL — the entire point of
+being reachable while logged out — is never gated behind a login the visitor can't perform yet.
+
 ## Billing — manual activation, not Stripe
 
 `docs/pricing.md` defines real tiers/limits, but the fastest path to actual revenue for the
@@ -93,8 +131,9 @@ full self-serve Stripe integration before there's a single paying customer (see 
   than threaded as a prop through the ~7 different page types that render `AppHeader`) that
   links to this page.
 
-**Not yet built**, tracked separately: actually *blocking* an action once a plan limit or an
-expired trial is hit. `/billing` shows the numbers; nothing stops them from going over yet.
+Actually *blocking* an action once a plan limit or an expired trial is hit — not yet built when
+this section was first written — now is: see "Plan-limit enforcement" and "Trial-expiry
+lockout" further down.
 
 Real bug this surfaced: `internal-client.tsx` and `team-client.tsx` originally formatted dates
 with `toLocaleDateString()`, which resolves using the runtime's ambient locale *and* timezone —

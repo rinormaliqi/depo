@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useActionState } from "react";
 import { login } from "./actions";
 
@@ -15,7 +16,14 @@ export function LoginForm() {
         <input className="input" name="email" type="email" placeholder="you@company.com" required />
       </div>
       <div className="field">
-        <label>{t("password")}</label>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+          <label style={{ display: "block", marginBottom: 0, fontSize: 12, color: "color-mix(in srgb, var(--color-text) 70%, transparent)" }}>
+            {t("password")}
+          </label>
+          <Link href="/forgot-password" style={{ fontSize: 12, color: "var(--color-accent)" }}>
+            {t("login.forgotPassword")}
+          </Link>
+        </div>
         <input className="input" name="password" type="password" placeholder="••••••••" required />
       </div>
       {state?.error && <p style={{ fontSize: 13, color: "var(--color-accent-800)" }}>{state.error}</p>}

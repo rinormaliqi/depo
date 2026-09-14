@@ -107,6 +107,38 @@ invite being tested. Fixed by adding an explicit public-prefix list (`/invite/`,
 `/reset-password/`) alongside the exact-match set, so a token in the URL — the entire point of
 being reachable while logged out — is never gated behind a login the visitor can't perform yet.
 
+### Email verification — the trial starts when the inbox is proven
+
+Signup used to hand out a 30-day trial to whatever was typed into the email field. `users.email`
+was already `UNIQUE`, but nothing checked the inbox existed, and `me+1@gmail.com` / `me+2@gmail.com`
+were as good as different people — a free trial forever, one alias at a time. Three pieces:
+
+- **`users.normalized_email`** (`src/lib/email-normalize.ts`) — the alias-collapsed form: `+tag`
+  stripped, dots stripped for Gmail/Googlemail. Unique; it's what signup's duplicate check and the
+  invite-accept lookup compare on. The raw `email` is still what gets mail. Plus a short,
+  hand-picked disposable-domain list (`src/lib/disposable-domains.ts`) — not a scraped 10k-entry
+  blocklist, which goes stale and needs its own update job; extend it when an actual abuser shows
+  up on `/internal`.
+- **`email_verifications`** — the `password_resets` shape again (single-use bearer token), 24-hour
+  window. `sendVerificationEmail()` / `consumeVerificationToken()` / `markEmailVerified()` live in
+  `src/lib/email-verification.ts`. Resend from `/verify-email` has a 60-second floor so the button
+  can't be used to make us spam an inbox.
+- **The trial clock starts at verification, not signup.** Signup creates the org `trialing` with
+  `trial_ends_at = NULL`; `getOrgLockReason()` reads that as a new `"unverified"` lock reason — the
+  same read-only treatment as an expired trial (look around, save nothing), different message and
+  a different fix. `markEmailVerified()` then sets `trial_ends_at = now + 30d` on any org the user
+  founded (`memberships.role = 'admin'`, still `trialing`, no trial end yet). Doing it this way
+  instead of "verified = allowed" means an unverified signup can't quietly burn its own trial
+  before ever getting in, and it reuses the lockout rather than adding a second gate.
+
+Accepting an invite (`/invite/<token>`) marks the user verified too: the link reached that inbox,
+which is the same proof. Existing accounts were grandfathered in by the migration
+(`email_verified_at = created_at`, `normalized_email = lower(email)`) — locking every current
+customer out until they re-verify was never the goal. `/verify-email/<token>` is on the
+middleware's public-prefix list, same as reset links: the click can come from a phone's mail app
+with no session. `appBaseUrl()` (`src/lib/app-url.ts`) is the request-host-derived base every
+emailed link now uses, pulled out of the reset flow so this one didn't copy it.
+
 ## Billing — manual activation, not Stripe
 
 `docs/pricing.md` defines real tiers/limits, but the fastest path to actual revenue for the

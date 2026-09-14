@@ -43,10 +43,37 @@ export const organizations = pgTable("organizations", {
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
+  // The alias-collapsed form of `email` (see src/lib/email-normalize.ts):
+  // `+tag` stripped, dots stripped for Gmail. Unique so `me+1@gmail.com`
+  // and `me+2@gmail.com` can't each start their own 30-day trial — the
+  // raw `email` column stays what we actually send mail to.
+  normalizedEmail: text("normalized_email").notNull().unique(),
   passwordHash: text("password_hash"),
   name: text("name").notNull(),
+  // Null until the user clicks a verification link (signup) or accepts an
+  // invite (which proves the inbox the same way). A signup's org trial
+  // doesn't start until this is set — see getOrgLockReason().
+  emailVerifiedAt: timestamp("email_verified_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// Same shape as passwordResets: single-use, time-boxed bearer token, but
+// a 24-hour window instead of 1 hour — nothing is being taken over here,
+// the link only proves the signup owns the inbox they typed.
+export const emailVerifications = pgTable(
+  "email_verifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("email_verifications_user_idx").on(table.userId)],
+);
 
 // A short-lived, single-use token for self-serve password recovery —
 // deliberately a much shorter window than invites.expiresAt (1 hour, not

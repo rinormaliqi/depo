@@ -19,7 +19,8 @@
       "pick": "DALJE",
       "relocate": "ZHVENDOSJE",
       "adjust": "RREGULLIM"
-    }
+    },
+    "verifyEmail": "Verifiko email-in"
   },
   "nav": {
     "blueprint": "Skema",
@@ -62,7 +63,8 @@
       "errorPasswordLength": "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
       "errorEmailExists": "Ekziston tashmë një llogari me këtë email",
       "errorPlansNotSeeded": "Planet ende nuk janë ngarkuar — ekzekutoni pnpm db:seed",
-      "errorSignInFailed": "Llogaria u krijua, por kyçja dështoi — provoni të kyçeni përsëri"
+      "errorSignInFailed": "Llogaria u krijua, por kyçja dështoi — provoni të kyçeni përsëri",
+      "errorDisposableEmail": "Adresat e përkohshme të email-it nuk lejohen — përdor email-in e punës"
     }
   },
   "forgotPassword": {
@@ -180,7 +182,9 @@
       "active": "Aktiv",
       "past_due": "Pagesë e vonuar",
       "canceled": "Anuluar"
-    }
+    },
+    "trialNotStarted": "Prova 30-ditore fillon sapo të verifikosh email-in.",
+    "verifyNow": "Verifiko tani"
   },
   "planLimit": {
     "users": "Ky plan lejon deri në {max} përdorues. Vizito Faturimin për ta përmirësuar.",
@@ -190,7 +194,8 @@
   "orgLocked": {
     "trialEnded": "Prova jote ka përfunduar. Vizito Faturimin për të vazhduar ndryshimet.",
     "pastDue": "Pagesa e kësaj organizate është e vonuar. Vizito Faturimin për ta zgjidhur.",
-    "canceled": "Plani i kësaj organizate u anulua. Vizito Faturimin për ta riaktivizuar."
+    "canceled": "Plani i kësaj organizate u anulua. Vizito Faturimin për ta riaktivizuar.",
+    "unverified": "Verifiko adresën e email-it për të filluar provën dhe për të bërë ndryshime."
   },
   "builder": {
     "entities": "Elementet",
@@ -381,5 +386,29 @@
     "errorEnterLocation": "Shkruani një vendndodhje, p.sh. A-01-3",
     "errorLocationNotFound": "{code} nuk është një vendndodhje në këtë planimetri",
     "errorNoFacility": "Nuk u gjet asnjë depo"
+  },
+  "verifyEmail": {
+    "pendingTitle": "Kontrollo email-in",
+    "pendingBody": "Dërguam një lidhje verifikimi te {email}. Kliko atë për të filluar provën 30-ditore. Deri atëherë mund të shikosh, por asgjë nuk mund të ruhet.",
+    "resend": "Ridërgo email-in e verifikimit",
+    "resending": "Duke dërguar…",
+    "resent": "U dërgua — kontrollo inbox-in (dhe spam-in).",
+    "continueReadOnly": "Shiko përreth fillimisht",
+    "signOut": "Dil",
+    "doneTitle": "Email-i u verifikua",
+    "doneBody": "Prova jote ka filluar. Ke qasje të plotë për 30 ditët e ardhshme.",
+    "goToApp": "Hap SmartDepo",
+    "goToLogin": "Hyr",
+    "invalidTitle": "Kjo lidhje nuk është e vlefshme",
+    "invalidBody": "Mund të ketë skaduar (lidhjet zgjasin 24 orë) ose është përdorur tashmë.",
+    "requestNew": "Kërko një lidhje të re",
+    "error": {
+      "notSignedIn": "Të lutem hyr fillimisht",
+      "tooSoon": "Prit një minutë para se të kërkosh një email tjetër"
+    },
+    "email": {
+      "subject": "Verifiko email-in tënd në SmartDepo",
+      "body": "Mirë se erdhe në SmartDepo. Konfirmo që kjo është adresa jote e email-it për të filluar provën 30-ditore:\n\n{url}\n\nLidhja funksionon vetëm një herë dhe skadon pas 24 orësh. Nëse nuk je regjistruar ti, injoroje këtë email."
+    }
   }
 }

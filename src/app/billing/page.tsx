@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
@@ -67,6 +68,12 @@ export default async function BillingPage() {
             {org.subscriptionStatus === "trialing" && trialDaysLeft !== null && (
               <div style={{ fontSize: 13, marginTop: 10, color: trialDaysLeft <= 5 ? "var(--color-accent-800)" : "var(--color-text)" }}>
                 {trialDaysLeft > 0 ? tb("trialDaysLeft", { n: trialDaysLeft }) : tb("trialEnded")}
+              </div>
+            )}
+            {org.subscriptionStatus === "trialing" && trialDaysLeft === null && (
+              <div style={{ fontSize: 13, marginTop: 10, color: "var(--color-accent-800)" }}>
+                {tb("trialNotStarted")}{" "}
+                <Link href="/verify-email" style={{ color: "var(--color-accent)" }}>{tb("verifyNow")}</Link>
               </div>
             )}
           </div>

@@ -7,6 +7,8 @@ import { getTranslations } from "next-intl/server";
 import { signIn } from "@/auth";
 import { db } from "@/db";
 import { invites, memberships, users } from "@/db/schema";
+import { normalizeEmail } from "@/lib/email-normalize";
+import { markEmailVerified } from "@/lib/email-verification";
 import { getOrgLockReason } from "@/lib/session";
 
 type FormState = { error?: string } | undefined;
@@ -40,7 +42,7 @@ export async function acceptInviteAsExistingUser(_prevState: FormState, formData
   const lockError = await orgLockError(invite.organizationId);
   if (lockError) return { error: lockError };
 
-  const [user] = await db.select().from(users).where(eq(users.email, invite.email));
+  const [user] = await db.select().from(users).where(eq(users.normalizedEmail, normalizeEmail(invite.email)));
   if (!user || !user.passwordHash || !(await compare(password, user.passwordHash))) {
     return { error: t("wrongPassword") };
   }
@@ -51,9 +53,12 @@ export async function acceptInviteAsExistingUser(_prevState: FormState, formData
   // membership/invite writes have to happen first, not after.
   await db.insert(memberships).values({ userId: user.id, organizationId: invite.organizationId, role: invite.role });
   await db.update(invites).set({ acceptedAt: new Date() }).where(eq(invites.id, invite.id));
+  // Reaching this page means the invite link landed in that inbox — as
+  // good a proof as a verification link, so don't make them do both.
+  await markEmailVerified(user.id);
 
   try {
-    await signIn("credentials", { email: invite.email, password, redirectTo: "/builder" });
+    await signIn("credentials", { email: user.email, password, redirectTo: "/builder" });
   } catch (error) {
     if (error instanceof AuthError) return { error: t("signInFailed") };
     throw error;
@@ -73,11 +78,15 @@ export async function acceptInviteAsNewUser(_prevState: FormState, formData: For
   const lockError = await orgLockError(invite.organizationId);
   if (lockError) return { error: lockError };
 
-  const [existing] = await db.select().from(users).where(eq(users.email, invite.email));
+  const normalizedEmail = normalizeEmail(invite.email);
+  const [existing] = await db.select().from(users).where(eq(users.normalizedEmail, normalizedEmail));
   if (existing) return { error: t("accountExists") };
 
   const passwordHash = await hash(password, 12);
-  const [user] = await db.insert(users).values({ email: invite.email, passwordHash, name }).returning();
+  const [user] = await db
+    .insert(users)
+    .values({ email: invite.email, normalizedEmail, passwordHash, name, emailVerifiedAt: new Date() })
+    .returning();
   await db.insert(memberships).values({ userId: user.id, organizationId: invite.organizationId, role: invite.role });
   await db.update(invites).set({ acceptedAt: new Date() }).where(eq(invites.id, invite.id));
 

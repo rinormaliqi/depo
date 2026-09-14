@@ -19,7 +19,8 @@
       "pick": "OUT",
       "relocate": "MOVE",
       "adjust": "ADJUST"
-    }
+    },
+    "verifyEmail": "Verify your email"
   },
   "nav": {
     "blueprint": "Blueprint",
@@ -62,7 +63,8 @@
       "errorPasswordLength": "Password must be at least 8 characters",
       "errorEmailExists": "An account with that email already exists",
       "errorPlansNotSeeded": "Plans aren't seeded yet — run pnpm db:seed",
-      "errorSignInFailed": "Account created, but sign-in failed — try logging in"
+      "errorSignInFailed": "Account created, but sign-in failed — try logging in",
+      "errorDisposableEmail": "Disposable email addresses can't be used — please use your work email"
     }
   },
   "forgotPassword": {
@@ -180,7 +182,9 @@
       "active": "Active",
       "past_due": "Past due",
       "canceled": "Canceled"
-    }
+    },
+    "trialNotStarted": "Your 30-day trial starts once you verify your email.",
+    "verifyNow": "Verify now"
   },
   "planLimit": {
     "users": "This plan allows up to {max} users. Visit Billing to upgrade.",
@@ -190,7 +194,8 @@
   "orgLocked": {
     "trialEnded": "Your trial has ended. Visit Billing to keep making changes.",
     "pastDue": "This organization's payment is past due. Visit Billing to resolve it.",
-    "canceled": "This organization's plan was canceled. Visit Billing to reactivate."
+    "canceled": "This organization's plan was canceled. Visit Billing to reactivate.",
+    "unverified": "Verify your email address to start your trial and make changes."
   },
   "builder": {
     "entities": "Entities",
@@ -381,5 +386,29 @@
     "errorEnterLocation": "Enter a location, e.g. A-01-3",
     "errorLocationNotFound": "{code} is not a location on this floor",
     "errorNoFacility": "No facility found"
+  },
+  "verifyEmail": {
+    "pendingTitle": "Check your inbox",
+    "pendingBody": "We sent a verification link to {email}. Click it to start your 30-day trial. Until then you can look around, but nothing can be saved.",
+    "resend": "Resend verification email",
+    "resending": "Sending…",
+    "resent": "Sent — check your inbox (and spam folder).",
+    "continueReadOnly": "Look around first",
+    "signOut": "Sign out",
+    "doneTitle": "Email verified",
+    "doneBody": "Your trial has started. You have full access for the next 30 days.",
+    "goToApp": "Open SmartDepo",
+    "goToLogin": "Log in",
+    "invalidTitle": "This link isn't valid",
+    "invalidBody": "It may have expired (links last 24 hours) or already been used.",
+    "requestNew": "Request a new link",
+    "error": {
+      "notSignedIn": "Please log in first",
+      "tooSoon": "Please wait a minute before requesting another email"
+    },
+    "email": {
+      "subject": "Verify your SmartDepo email",
+      "body": "Welcome to SmartDepo. Confirm this is your email address to start your 30-day trial:\n\n{url}\n\nThe link works once and expires in 24 hours. If you didn't sign up, you can ignore this email."
+    }
   }
 }

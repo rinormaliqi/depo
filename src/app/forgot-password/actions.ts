@@ -2,9 +2,9 @@
 
 import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
+import { appBaseUrl } from "@/lib/app-url";
 import { passwordResets, users } from "@/db/schema";
 import { sendEmail } from "@/lib/email";
 
@@ -28,10 +28,7 @@ export async function requestPasswordReset(_prevState: FormState, formData: Form
     const expiresAt = new Date(Date.now() + RESET_VALID_MINUTES * 60 * 1000);
     await db.insert(passwordResets).values({ userId: user.id, token, expiresAt });
 
-    const headerList = await headers();
-    const host = headerList.get("host");
-    const protocol = host?.startsWith("localhost") || host?.startsWith("127.0.0.1") ? "http" : "https";
-    const resetUrl = `${protocol}://${host}/reset-password/${token}`;
+    const resetUrl = `${await appBaseUrl()}/reset-password/${token}`;
 
     await sendEmail({
       to: user.email,

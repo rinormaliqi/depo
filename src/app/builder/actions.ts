@@ -8,15 +8,22 @@ import { facilities, locations, stock, type LocationKind } from "@/db/schema";
 import {
   bayCode,
   buildTemplate,
+  computeZoneSlots,
+  detectOrientation,
   findContainingZone,
   LOCATION_TYPES,
   nextCode,
+  rescaleWithinZone,
   round2,
+  type Box,
   type TemplateKey,
 } from "@/lib/blueprint-types";
 import { getMyOrgId, requireOrgId } from "@/lib/session";
 
 export type LocationRow = typeof locations.$inferSelect;
+
+const MAX_BAYS = 48;
+const MAX_LEVELS = 4;
 
 async function requireOwnedFacility(facilityId: string) {
   const organizationId = await requireOrgId();
@@ -104,34 +111,59 @@ export async function getBlueprint(facilityId: string) {
   return { locations: rows, occupiedBinIds: occupied.map((o) => o.locationId) };
 }
 
-function binChildren(
+function gridBinRows(
   facilityId: string,
   parentId: string,
   parentCode: string,
-  count: number,
+  bays: number,
+  levels: number,
   binLabel: string,
-  offset = 0,
 ) {
-  return Array.from({ length: count }, (_, i) => ({
-    facilityId,
-    parentId,
-    kind: "bin" as LocationKind,
-    name: binLabel,
-    code: bayCode(parentCode, offset + i + 1),
-    isBin: true,
-    xM: 0,
-    yM: 0,
-    widthM: 1,
-    heightM: 1,
-    bays: 1,
-  }));
+  const rows: (typeof locations.$inferInsert)[] = [];
+  for (let level = 1; level <= levels; level++) {
+    for (let bay = 1; bay <= bays; bay++) {
+      rows.push({
+        facilityId,
+        parentId,
+        kind: "bin" as LocationKind,
+        name: binLabel,
+        code: bayCode(parentCode, level, bay, levels),
+        isBin: true,
+        xM: 0,
+        yM: 0,
+        widthM: 1,
+        heightM: 1,
+        bays: 1,
+        levels: 1,
+        bay,
+        level,
+      });
+    }
+  }
+  return rows;
+}
+
+async function checkNoStock(
+  ids: string[],
+  errorKey: "baysReduce" | "replaceHasStock" | "deleteHasStock" = "baysReduce",
+) {
+  if (ids.length === 0) return;
+  const withStock = await db
+    .select({ locationId: stock.locationId })
+    .from(stock)
+    .where(and(inArray(stock.locationId, ids), gt(stock.quantity, 0)));
+  if (withStock.length > 0) {
+    const t = await getTranslations("builder.error");
+    throw new Error(t(errorKey));
+  }
 }
 
 async function createEntityAt(
   facilityId: string,
   kind: LocationKind,
-  box: { xM: number; yM: number; widthM: number; heightM: number },
+  box: Box,
   bays: number,
+  levels: number,
 ) {
   const type = LOCATION_TYPES[kind];
   const existing = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
@@ -141,7 +173,7 @@ async function createEntityAt(
 
   const existingCodes = existing.map((l) => l.code).filter((c): c is string => !!c);
   const code = nextCode(kind, containingZone?.code ?? null, existingCodes);
-  const isLeaf = type.spatial === "store" && bays <= 1;
+  const isLeaf = type.spatial === "store" && bays <= 1 && levels <= 1;
 
   const tKind = await getTranslations("builder.kind");
 
@@ -159,12 +191,13 @@ async function createEntityAt(
       widthM: box.widthM,
       heightM: box.heightM,
       bays: type.spatial === "store" ? bays : 1,
+      levels: type.spatial === "store" ? levels : 1,
     })
     .returning();
 
-  if (type.spatial === "store" && bays > 1) {
+  if (type.spatial === "store" && !isLeaf) {
     const binLabel = tKind("bin").toUpperCase();
-    await db.insert(locations).values(binChildren(facilityId, created.id, code, bays, binLabel));
+    await db.insert(locations).values(gridBinRows(facilityId, created.id, code, bays, levels, binLabel));
   }
 
   return created;
@@ -184,22 +217,26 @@ export async function createEntity(
     kind,
     { xM: round2(xM), yM: round2(yM), widthM: type.w, heightM: type.h },
     type.bays,
+    type.levels,
   );
 
   revalidatePath("/builder");
   return created;
 }
 
-export async function applyTemplate(facilityId: string, templateKey: TemplateKey) {
+export async function applyTemplate(facilityId: string, templateKey: TemplateKey, replace: boolean) {
   const facility = await requireOwnedFacility(facilityId);
 
-  const existingCount = await db
-    .select({ id: locations.id })
-    .from(locations)
-    .where(eq(locations.facilityId, facilityId));
-  if (existingCount.length > 0) {
-    // Templates are only meant for an empty floor — never overwrite work in progress.
-    return;
+  const existing = await db.select({ id: locations.id }).from(locations).where(eq(locations.facilityId, facilityId));
+  if (existing.length > 0) {
+    if (!replace) {
+      const t = await getTranslations("builder.error");
+      throw new Error(t("confirmationRequired"));
+    }
+    // The scheme's structure can be freely replaced once confirmed — but
+    // real stock is never silently destroyed, confirmation or not.
+    await checkNoStock(existing.map((l) => l.id), "replaceHasStock");
+    await db.delete(locations).where(eq(locations.facilityId, facilityId));
   }
 
   const specs = buildTemplate(templateKey, facility.widthM, facility.heightM);
@@ -209,10 +246,128 @@ export async function applyTemplate(facilityId: string, templateKey: TemplateKey
       spec.kind,
       { xM: spec.xM, yM: spec.yM, widthM: spec.widthM, heightM: spec.heightM },
       spec.bays,
+      spec.levels,
     );
   }
 
   revalidatePath("/builder");
+}
+
+// Adds one more top-level zone by proportionally shrinking the existing
+// zones (and rescaling their direct contents along with them) to make room,
+// rather than just dropping a new zone on top of whatever's already there.
+// Scoped to zones and their own children — an aisle or dock placed
+// independently of any zone is left where it is.
+export async function addSector(facilityId: string) {
+  const facility = await requireOwnedFacility(facilityId);
+
+  const all = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
+  const zones = all.filter((l) => l.kind === "zone");
+
+  const orientation = detectOrientation(zones.map((z) => ({ xM: z.xM, yM: z.yM, widthM: z.widthM, heightM: z.heightM })));
+  const slots = computeZoneSlots(zones.length, facility.widthM, facility.heightM, orientation);
+
+  const sortedZones = [...zones].sort((a, b) => (orientation === "vertical" ? a.xM - b.xM : a.yM - b.yM));
+
+  for (let i = 0; i < sortedZones.length; i++) {
+    const zone = sortedZones[i];
+    const oldBox: Box = { xM: zone.xM, yM: zone.yM, widthM: zone.widthM, heightM: zone.heightM };
+    const newBox = slots[i];
+    if (
+      oldBox.xM === newBox.xM &&
+      oldBox.yM === newBox.yM &&
+      oldBox.widthM === newBox.widthM &&
+      oldBox.heightM === newBox.heightM
+    ) {
+      continue;
+    }
+
+    await db
+      .update(locations)
+      .set({ xM: newBox.xM, yM: newBox.yM, widthM: newBox.widthM, heightM: newBox.heightM })
+      .where(eq(locations.id, zone.id));
+
+    const children = all.filter((l) => l.parentId === zone.id);
+    for (const child of children) {
+      const rescaled = rescaleWithinZone(
+        { xM: child.xM, yM: child.yM, widthM: child.widthM, heightM: child.heightM },
+        oldBox,
+        newBox,
+      );
+      await db.update(locations).set(rescaled).where(eq(locations.id, child.id));
+    }
+  }
+
+  const newZoneBox = slots[slots.length - 1];
+  const created = await createEntityAt(facilityId, "zone", newZoneBox, 1, 1);
+
+  revalidatePath("/builder");
+  return created;
+}
+
+async function reshapeGrid(
+  parentId: string,
+  code: string,
+  currentLevels: number,
+  newBays: number,
+  newLevels: number,
+) {
+  const children = await db.select().from(locations).where(eq(locations.parentId, parentId));
+
+  if (newBays === 1 && newLevels === 1) {
+    await checkNoStock(children.map((c) => c.id));
+    if (children.length > 0) {
+      await db.delete(locations).where(inArray(locations.id, children.map((c) => c.id)));
+    }
+    return;
+  }
+
+  const toRemove = children.filter((c) => (c.level ?? 1) > newLevels || (c.bay ?? 1) > newBays);
+  await checkNoStock(toRemove.map((c) => c.id));
+  if (toRemove.length > 0) {
+    await db.delete(locations).where(inArray(locations.id, toRemove.map((c) => c.id)));
+  }
+
+  const formatChanged = currentLevels > 1 !== newLevels > 1;
+  const toKeep = children.filter((c) => (c.level ?? 1) <= newLevels && (c.bay ?? 1) <= newBays);
+  if (formatChanged) {
+    for (const c of toKeep) {
+      const newCode = bayCode(code, c.level ?? 1, c.bay ?? 1, newLevels);
+      if (newCode !== c.code) {
+        await db.update(locations).set({ code: newCode }).where(eq(locations.id, c.id));
+      }
+    }
+  }
+
+  const existingKeys = new Set(toKeep.map((c) => `${c.level ?? 1}-${c.bay ?? 1}`));
+  const toAdd: (typeof locations.$inferInsert)[] = [];
+  const tKind = await getTranslations("builder.kind");
+  const binLabel = tKind("bin").toUpperCase();
+  for (let level = 1; level <= newLevels; level++) {
+    for (let bay = 1; bay <= newBays; bay++) {
+      if (!existingKeys.has(`${level}-${bay}`)) {
+        toAdd.push({
+          facilityId: children[0]?.facilityId,
+          parentId,
+          kind: "bin" as LocationKind,
+          name: binLabel,
+          code: bayCode(code, level, bay, newLevels),
+          isBin: true,
+          xM: 0,
+          yM: 0,
+          widthM: 1,
+          heightM: 1,
+          bays: 1,
+          levels: 1,
+          bay,
+          level,
+        } as typeof locations.$inferInsert);
+      }
+    }
+  }
+  if (toAdd.length > 0) {
+    await db.insert(locations).values(toAdd);
+  }
 }
 
 export async function updateEntity(
@@ -225,6 +380,7 @@ export async function updateEntity(
     widthM?: number;
     heightM?: number;
     bays?: number;
+    levels?: number;
   },
 ) {
   const location = await requireOwnedLocation(id);
@@ -279,52 +435,16 @@ export async function updateEntity(
     }
   }
 
-  if (patch.bays !== undefined && type.spatial === "store") {
-    const bays = Math.max(1, Math.min(48, Math.round(patch.bays)));
-    const children = await db
-      .select()
-      .from(locations)
-      .where(eq(locations.parentId, id))
-      .orderBy(locations.code);
+  if ((patch.bays !== undefined || patch.levels !== undefined) && type.spatial === "store") {
+    const newBays = Math.max(1, Math.min(MAX_BAYS, Math.round(patch.bays ?? location.bays)));
+    const newLevels = Math.max(1, Math.min(MAX_LEVELS, Math.round(patch.levels ?? location.levels)));
+    const code = (values.code as string | undefined) ?? location.code ?? location.name;
 
-    if (bays === 1 && children.length > 0) {
-      // Collapsing back to a single leaf — the parent itself becomes the bin.
-      const ids = children.map((c) => c.id);
-      const withStock = await db
-        .select({ locationId: stock.locationId })
-        .from(stock)
-        .where(and(inArray(stock.locationId, ids), gt(stock.quantity, 0)));
-      if (withStock.length > 0) {
-        throw new Error(t("baysReduce"));
-      }
-      await db.delete(locations).where(inArray(locations.id, ids));
-      values.isBin = true;
-    } else if (bays > children.length) {
-      const code = patch.code?.trim().toUpperCase() ?? location.code ?? location.name;
-      const tKind = await getTranslations("builder.kind");
-      const toAdd = binChildren(
-        location.facilityId,
-        id,
-        code,
-        bays - children.length,
-        tKind("bin").toUpperCase(),
-        children.length,
-      );
-      await db.insert(locations).values(toAdd);
-      values.isBin = false;
-    } else if (bays < children.length) {
-      const removed = children.slice(bays);
-      const ids = removed.map((c) => c.id);
-      const withStock = await db
-        .select({ locationId: stock.locationId })
-        .from(stock)
-        .where(and(inArray(stock.locationId, ids), gt(stock.quantity, 0)));
-      if (withStock.length > 0) {
-        throw new Error(t("baysReduce"));
-      }
-      await db.delete(locations).where(inArray(locations.id, ids));
-    }
-    values.bays = bays;
+    await reshapeGrid(id, code, location.levels, newBays, newLevels);
+
+    values.bays = newBays;
+    values.levels = newLevels;
+    values.isBin = newBays === 1 && newLevels === 1;
   }
 
   if (Object.keys(values).length > 0) {
@@ -352,14 +472,7 @@ export async function deleteEntity(id: string) {
   await requireOwnedLocation(id);
 
   const ids = [id, ...(await descendantIds(id))];
-  const withStock = await db
-    .select({ locationId: stock.locationId })
-    .from(stock)
-    .where(and(inArray(stock.locationId, ids), gt(stock.quantity, 0)));
-  if (withStock.length > 0) {
-    const t = await getTranslations("builder.error");
-    throw new Error(t("deleteHasStock"));
-  }
+  await checkNoStock(ids, "deleteHasStock");
 
   await db.delete(locations).where(eq(locations.id, id));
   revalidatePath("/builder");
@@ -367,10 +480,34 @@ export async function deleteEntity(id: string) {
 
 export async function duplicateEntity(id: string) {
   const location = await requireOwnedLocation(id);
-  return createEntity(
+  const created = await createEntityAt(
     location.facilityId,
     location.kind as LocationKind,
-    round2(location.xM + 0.5),
-    round2(location.yM + 0.5),
+    { xM: round2(location.xM + 0.5), yM: round2(location.yM + 0.5), widthM: location.widthM, heightM: location.heightM },
+    location.bays,
+    location.levels,
   );
+  revalidatePath("/builder");
+  return created;
+}
+
+// Thin public wrapper around createEntityAt for the builder's undo/redo
+// stack: recreating a just-deleted (or since-undone) entity needs its exact
+// prior kind/box/bays/levels, not a kind's defaults — the same distinction
+// duplicateEntity above already gets right, just driven by a caller-supplied
+// spec instead of an existing row.
+export async function restoreEntity(
+  facilityId: string,
+  spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number },
+) {
+  await requireOwnedFacility(facilityId);
+  const created = await createEntityAt(
+    facilityId,
+    spec.kind,
+    { xM: spec.xM, yM: spec.yM, widthM: spec.widthM, heightM: spec.heightM },
+    spec.bays,
+    spec.levels,
+  );
+  revalidatePath("/builder");
+  return created;
 }

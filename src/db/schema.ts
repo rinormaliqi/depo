@@ -82,9 +82,13 @@ export const facilities = pgTable(
   (table) => [index("facilities_org_idx").on(table.organizationId)],
 );
 
-// Single subdivision axis (bays) — no multi-level shelving yet. A "store" kind
-// location with bays > 1 has that many auto-generated kind='bin' children;
-// with bays = 1 it holds stock directly.
+// Two subdivision axes: bays (lateral position) and levels (vertical tier —
+// e.g. ground pallets vs. an elevated platform above them at the SAME x/y
+// footprint). A "store" kind location with bays*levels > 1 has that many
+// auto-generated kind='bin' children; with exactly 1 of each it holds stock
+// directly. Levels are a height concept, invisible from the canvas's
+// top-down view — the UI shows one level at a time via a level selector,
+// never as a second spatial dimension on the floor.
 export const locationKinds = [
   "zone",
   "aisle",
@@ -116,6 +120,13 @@ export const locations = pgTable(
     widthM: real("width_m").notNull().default(1),
     heightM: real("height_m").notNull().default(1),
     bays: integer("bays").notNull().default(1),
+    levels: integer("levels").notNull().default(1),
+    // Grid position — set only on an auto-generated bin child (1-indexed),
+    // null otherwise. Lets a bays/levels resize tell "this exact cell
+    // already exists, preserve its stock" apart from "this cell is new"
+    // without parsing the display code, which a user may have edited.
+    bay: integer("bay"),
+    level: integer("level"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

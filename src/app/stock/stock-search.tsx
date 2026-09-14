@@ -56,35 +56,49 @@ export function StockSearch({
       {results.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {results.map((r, i) => (
-            <Link
-              key={i}
-              href={`/builder/bin/${r.locationId}`}
-              style={{
-                display: "block",
-                padding: "7px 8px",
-                border: "1px solid var(--color-divider)",
-                textDecoration: "none",
-                color: "inherit",
-              }}
-            >
-              <div style={{ fontSize: 12, lineHeight: 1.25 }}>
-                {r.itemName} · {r.quantity} {r.unitOfMeasure}
-              </div>
-              <div
+            <div key={i} style={{ border: "1px solid var(--color-divider)" }}>
+              <Link
+                href={`/builder?bin=${r.locationId}`}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 6,
-                  marginTop: 3,
-                  fontSize: 10,
-                  fontVariantNumeric: "tabular-nums",
-                  color: "color-mix(in srgb, var(--color-text) 55%, transparent)",
+                  display: "block",
+                  padding: "7px 8px",
+                  textDecoration: "none",
+                  color: "inherit",
                 }}
               >
-                <span>{r.sku ?? "—"}</span>
-                <span style={{ color: "var(--color-accent-700)" }}>{r.path}</span>
-              </div>
-            </Link>
+                <div style={{ fontSize: 12, lineHeight: 1.25 }}>
+                  {r.itemName} · {r.quantity} {r.unitOfMeasure}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 6,
+                    marginTop: 3,
+                    fontSize: 10,
+                    fontVariantNumeric: "tabular-nums",
+                    color: "color-mix(in srgb, var(--color-text) 55%, transparent)",
+                  }}
+                >
+                  <span>{r.sku ?? "—"}</span>
+                  <span style={{ color: "var(--color-accent-700)" }}>{r.path}</span>
+                </div>
+              </Link>
+              <Link
+                href={`/builder/bin/${r.locationId}`}
+                style={{
+                  display: "block",
+                  padding: "4px 8px 6px",
+                  fontSize: 10,
+                  textAlign: "right",
+                  color: "var(--color-accent)",
+                  textDecoration: "none",
+                  borderTop: "1px solid color-mix(in srgb, var(--color-text) 6%, transparent)",
+                }}
+              >
+                {t("manageStock")} ›
+              </Link>
+            </div>
           ))}
         </div>
       )}

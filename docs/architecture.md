@@ -65,9 +65,13 @@ string keys like the source design used).
 
 Deliberately cut from the source design, to keep this a schema-realistic first pass rather
 than a wholesale rebuild:
-- **No multi-level shelving** (`levels`) — bays only, one subdivision axis.
 - **No expiry/shelf-life tracking** — not in `items`/`stock`, a separate feature.
 - **Light theme only**, matching the source design exactly (it defines no dark-mode tokens).
+
+Multi-level shelving (`levels`) was cut in the first pass, then added back once the starter
+templates needed to represent realistic pallet racking (see below) — a rack in most physical
+depots is a metal frame with a ground level and an elevated platform above it at the same x/y
+footprint, not a single flat shelf.
 
 ### Drag-to-move/resize, and starter templates
 
@@ -108,6 +112,71 @@ inflating the count and skipping codes (a zone's second rack came out `"A-08"` i
 `"A-02"`). Templates create multiple racks in one zone in quick succession, which surfaced it
 immediately; fixed by requiring the remainder after the stem to be pure digits.
 
+### Two-axis subdivision: bays × levels, and the level selector
+
+A "store" location subdivides along two independent axes: `bays` (lateral position — always
+existed) and `levels` (vertical/height tier — a rack's ground pallets vs. an elevated metal
+platform above them at the same x/y footprint). Both live as explicit integer columns on
+`locations`, plus `bay`/`level` on each auto-generated bin child, so a bays/levels resize can
+tell "this exact cell already exists, preserve its stock" apart from "this cell is new"
+without parsing the display `code` (which a user may have hand-edited) — see `reshapeGrid()`
+in `src/app/builder/actions.ts`.
+
+The critical UI constraint: **levels are invisible from a top-down floor plan.** Rendering
+them as a second spatial grid axis would visually stretch a rack's real-world footprint,
+which is wrong — a rack with 2 levels occupies the same floor rectangle as one with 1. Instead
+the canvas toolbar grows a level selector (`ALL` / `1` / `2` / …) whenever any rendered entity
+has more than one level; selecting a specific level filters which bay row each multi-level
+entity draws (clamped to an entity's own top level if it has fewer), while `ALL` aggregates
+occupancy across every level at that bay into one cell. A rack's on-canvas label also appends
+its level count (`· 2L`) so the information isn't lost when viewing `ALL`.
+
+Bin codes only spell out the level when there's more than one: `A-01-3` (single-level) vs.
+`A-01-2-3` (level 2, bay 3) — see `bayCode()` in `blueprint-types.ts`. Resizing a rack's
+levels across the 1 ⇄ >1 boundary renames its surviving children to match the new format,
+rather than leaving a mix of old- and new-style codes.
+
+### Full-depot starter templates
+
+The original starter templates (`simple`, `yard`) were a sparse demo — a couple of racks in
+one zone. Real feedback was that the default a new company lands on should look like an
+actual depot: walled perimeter, multiple zones/sectors separated by aisles, and racks built as
+two-level pallet racking by default (see above), not flat one-level shelving. `buildTemplate()`
+now offers `depotVertical` and `depotHorizontal` — 4 zones (vertical strips or horizontal
+bands, `buildDepot()` in `blueprint-types.ts`), each with 3 two-level, 6-bay racks, walled and
+aisled — plus `simple` kept as a minimal option for a single small room. All positions still
+scale as fractions of the facility's actual configured floor size.
+
+### One scheme per subscription: persistent access + destructive-replace confirmation
+
+Templates were originally offered once, on a genuinely empty floor. Once a facility can have
+real stock committed to it, silently offering "start over" at any time is dangerous — a
+misclick could discard a working layout. Two changes: a **Templates** button now lives
+permanently in the builder sidebar (not just on an empty floor), and `applyTemplate()` takes an
+explicit `replace: boolean` — calling it against a floor that already has locations without
+`replace: true` throws a translated `confirmationRequired` error, which the client turns into a
+confirmation dialog spelling out the actual constraint (a subscription gives one depot scheme;
+replacing it discards the current one and can't be undone, though blank/other templates remain
+always available). Confirming re-calls with `replace: true`. Either way, `checkNoStock()` still
+runs first — a replace is never allowed to silently destroy real stock, confirmed or not; it
+fails with `replaceHasStock` and the user has to clear the stock first.
+
+### "Add sector": reflow existing zones to make room
+
+`addSector()` (`src/app/builder/actions.ts`) adds one more top-level zone by shrinking the
+existing ones to fit, rather than just dropping a new zone on top of whatever's already there.
+`detectOrientation()` looks at whether existing zones are laid out more spread out
+horizontally or vertically (comparing the spread of their centre-point coordinates), and
+`computeZoneSlots()` computes N+1 evenly-sized boxes along that same axis. Each existing zone
+is resized to its new slot, and `rescaleWithinZone()` applies the same affine transform (scale
++ offset, derived from old vs. new zone bounds) to reposition its direct children so racks
+keep their relative position inside a now-narrower zone instead of spilling outside it.
+
+Deliberately scoped to zones and their own direct children — an aisle or dock placed
+independently of any zone is left where it is rather than attempting a full general-purpose
+layout engine that reflows the whole floor. The new zone itself is created empty; a user fills
+it from the palette like any other zone.
+
 ## Internationalization
 
 **next-intl**, cookie-based (`NEXT_LOCALE`), no URL locale prefixes — this is a logged-in
@@ -132,6 +201,88 @@ that need to stay stable and predictable, not translated labels.
 
 No canvas/diagramming library (Konva, React Flow, etc.) — plain absolutely-positioned React
 elements are enough for boxes-on-a-grid and keep bundle size down.
+
+### Per-kind visual language
+
+Every entity kind originally rendered as one of three generic looks (dashed area, hatched
+fixture, plain white store box) — differentiated mostly by size, which meant the floor plan
+didn't actually read as a depot to someone who wasn't already staring at the codes. Fixed by
+giving each `LocationKind` its own look in `KIND_APPEARANCE` (`blueprint-canvas.tsx`), styled
+after architectural drafting conventions rather than literal icons: racks get a light tint
+with heavy end-posts (the steel uprights a real pallet rack bolts to), platforms a fine
+crosshatch (a grated deck), pallets three horizontal bars (the classic top-down pallet
+silhouette), bins a nested inset border (a container in its slot), docks an accent-tinted
+hatch distinct from a wall's neutral one, and walls a solid dark poché fill — the one kind
+that's genuinely impassable, so it's the one drawn solid instead of hollow. All CSS
+(`repeating-linear-gradient`/`linear-gradient` background patterns, no images), so it costs
+nothing extra to render and needs no new dependency. The same table drives the palette
+swatches, so the palette doubles as a legend a new user learns while placing objects.
+
+One follow-on fix this surfaced: a subdivided rack/platform's bay-grid cells painted opaque
+white, which fully hid the kind's own pattern in exactly the case (multi-bay racks) where it
+mattered most. Unoccupied bay cells now use a translucent wash instead of solid white so the
+parent's pattern still reads through the grid; occupied cells stay opaque (`--color-accent-
+200`) so "has stock" remains unambiguous at a glance.
+
+### Search-to-highlight
+
+The gap this closed: stock search results used to link to a text-only `/builder/bin/[id]`
+page — a worker searching an item got a location *code* back, not a place on the floor plan
+they'd actually recognize. Search results (`stock-search.tsx`) now link to `/builder?bin=<id>`
+as their primary action; `/builder/bin/[id]` (stock add/remove) is still one tap away via a
+secondary "Manage stock" link on the same result, so nothing already built was displaced.
+
+`BlueprintCanvas` accepts `initialHighlightBinId` and, on load, walks the bin up to its
+rendering parent (the rack/platform box the canvas actually draws — a bin itself is usually a
+grid cell, not its own box), selects that parent, switches the level selector to the bin's
+own level if it has more than one, scrolls the parent into view, and flashes the exact bay
+cell for a few seconds — then drops the `?bin=` param via `router.replace` so a refresh
+doesn't replay it. The flash (`.locate-ping` in `ds.css`) animates `transform`/`filter`
+specifically because every other visual property (border, background, box-shadow, outline) is
+already claimed by a box's own inline kind styling or selection ring, and inline style always
+wins over a class.
+
+Real bug this exposed, not from the design but from React's dev-only Strict Mode: the
+highlight effect scheduled its "clear the flash" timer and marked itself consumed in the same
+synchronous pass. Strict Mode double-invokes effects once on mount (mount → cleanup → mount)
+to surface exactly this kind of bug — the first mount's cleanup canceled the timer, but since
+the "consumed" flag had already flipped, the second (real) mount saw nothing to do and never
+rescheduled it, leaving the flash stuck on permanently in development. Fixed by only marking
+the highlight consumed *inside* the timer callback once it actually fires, not synchronously
+in the effect body — both Strict Mode passes now schedule fresh timers safely, and once one
+of them actually completes, later unrelated reloads correctly stop re-triggering the highlight.
+
+### Undo/redo, copy/paste, delete
+
+A client-side stack of inverse-operation pairs (`undo`/`redo` thunks), not a snapshot/restore
+system — each pair is built from the same server actions the UI already calls, so it only
+covers operations where "undo" has an unambiguous, safe meaning: create, delete, duplicate,
+paste, move, resize, and field edits (name/code/dimensions/bays/levels) on one entity at a
+time. `applyTemplate` and `addSector` touch many rows in one call and already carry their own
+confirmation gate (or, for templates, an explicit "not reversible" warning) — rather than try
+to make a many-row operation safely revertible, they simply clear undo/redo history, so a
+stale entry never tries to patch a floor template-replace already rearranged.
+
+Create/delete/duplicate/paste all make a *row* appear or disappear, and the server action
+always mints a fresh id — so each of those undo entries closes over a mutable `liveId` that
+gets reassigned every time the entry's own `undo`/`redo` runs, letting one entry keep
+correctly referring to "this logical entity" across repeated undo/redo cycles even as its
+underlying database id changes each time. Undoing a delete needed a way to recreate an entity
+with its *exact* prior kind/box/bays/levels — not a kind's defaults, the same mistake
+`duplicateEntity` had before this session's earlier fix — so `restoreEntity` was added as a
+thin public wrapper around the same internal `createEntityAt` both `createEntity` and
+`duplicateEntity` already use.
+
+Keyboard handling lives in one `window` `keydown` listener, gated so it only fires when focus
+isn't inside a text/number input or textarea (preserving native undo/copy/paste inside form
+fields) and no dialog is open. Cmd/Ctrl+Z undoes, Shift adds redo (Cmd/Ctrl+Y also redoes);
+Cmd/Ctrl+C copies the selected entity's id into an in-memory clipboard (not the system
+clipboard — deliberately, so paste doesn't require Clipboard API permissions) unless there's
+an active text selection on the page, in which case native text-copy is left alone; Cmd/Ctrl+V
+pastes via the existing `duplicateEntity` action, cascading each repeated paste from the
+previous one rather than always offsetting from the original; Delete/Backspace removes the
+current selection. Small Undo/Redo buttons in the canvas toolbar mirror the shortcuts for
+anyone not on a keyboard shortcut-friendly device.
 
 ## Background jobs
 

@@ -2,15 +2,18 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
 import { LOCATION_TYPES, TEMPLATE_KEYS, type TemplateKey } from "@/lib/blueprint-types";
 import {
+  addSector,
   applyTemplate,
   createEntity,
   deleteEntity,
   duplicateEntity,
   getBlueprint,
+  restoreEntity,
   updateEntity,
   updateFacility,
   type LocationRow,
@@ -36,56 +39,175 @@ const PALETTE_KINDS: LocationKind[] = [
   "wall",
 ];
 
+// A distinct look per kind, styled after architectural drafting conventions
+// (different hatch/fill per material or fixture type, solid poché for
+// walls) rather than one generic box — so the floor plan reads as an actual
+// depot layout, not an undifferentiated grid of rectangles. Shared between
+// the palette swatches and the canvas so the palette doubles as a legend.
+const KIND_APPEARANCE: Record<LocationKind, React.CSSProperties> = {
+  zone: {
+    border: "1px dashed var(--color-accent-500)",
+    background: "transparent",
+  },
+  aisle: {
+    border: "1px dashed var(--color-accent-500)",
+    background:
+      "repeating-linear-gradient(45deg,transparent 0 7px,color-mix(in srgb,var(--color-text) 5%,transparent) 7px 8px)",
+  },
+  // Shelving frame: a light tint with heavy end-posts (the vertical steel
+  // uprights a real pallet rack is bolted to), thin top/bottom rails.
+  rack: {
+    borderTop: "1px solid var(--color-accent-700)",
+    borderBottom: "1px solid var(--color-accent-700)",
+    borderLeft: "4px solid var(--color-accent-700)",
+    borderRight: "4px solid var(--color-accent-700)",
+    background: "var(--color-neutral-100)",
+  },
+  // Raised deck: a fine crosshatch suggesting a grated/plated platform
+  // surface, distinct from a rack's solid shelf tint.
+  platform: {
+    border: "1px solid var(--color-accent-600)",
+    background:
+      "repeating-linear-gradient(0deg,transparent 0 5px,color-mix(in srgb,var(--color-accent-600) 9%,transparent) 5px 6px)," +
+      "repeating-linear-gradient(90deg,transparent 0 5px,color-mix(in srgb,var(--color-accent-600) 9%,transparent) 5px 6px)",
+  },
+  // Three deck boards, top-down — the classic pallet silhouette.
+  pallet: {
+    border: "1px solid var(--color-accent-500)",
+    backgroundColor: "var(--color-neutral-100)",
+    backgroundImage:
+      "linear-gradient(var(--color-neutral-400) 0 18%,transparent 18% 41%,var(--color-neutral-400) 41% 59%,transparent 59% 82%,var(--color-neutral-400) 82% 100%)",
+  },
+  // A small container: a nested inset border, like a tote sitting in its slot.
+  bin: {
+    border: "1px solid var(--color-accent-400)",
+    background: "#fff",
+    boxShadow: "inset 0 0 0 3px var(--color-bg), inset 0 0 0 4px var(--color-accent-300)",
+  },
+  // Fixture, accent-tinted hatch — a loading door, not a structural wall.
+  dock: {
+    border: "1px solid var(--color-accent-600)",
+    background:
+      "repeating-linear-gradient(-45deg,transparent 0 5px,color-mix(in srgb,var(--color-accent-600) 16%,transparent) 5px 6px)",
+  },
+  // Structural walls are drawn solid (poché), same as on a real blueprint —
+  // the one kind that's genuinely impassable, so it reads as solid, not hollow.
+  wall: {
+    border: "1px solid var(--color-neutral-900)",
+    background: "var(--color-neutral-800)",
+  },
+};
+
 function snap(v: number) {
   return Math.round(v / SNAP) * SNAP;
 }
+
+type EntitySpec = {
+  kind: LocationKind;
+  xM: number;
+  yM: number;
+  widthM: number;
+  heightM: number;
+  bays: number;
+  levels: number;
+};
+
+function specOf(e: LocationRow): EntitySpec {
+  return { kind: e.kind as LocationKind, xM: e.xM, yM: e.yM, widthM: e.widthM, heightM: e.heightM, bays: e.bays, levels: e.levels };
+}
+
+type UndoEntry = { undo: () => Promise<void>; redo: () => Promise<void> };
 
 function defaultPosition(count: number) {
   return { x: 1 + (count % 8) * 1.5, y: 1 + Math.floor(count / 8) * 1.5 };
 }
 
+// Occupancy across every cell (every level × bay), regardless of which
+// level is currently being viewed — the inspector's aggregate stat.
 function occupancyOf(entity: LocationRow, all: LocationRow[], occupied: Set<string>) {
-  if (entity.bays <= 1) return occupied.has(entity.id) ? 1 : 0;
+  if (entity.bays <= 1 && entity.levels <= 1) return occupied.has(entity.id) ? 1 : 0;
   const kids = all.filter((l) => l.parentId === entity.id);
   if (kids.length === 0) return 0;
   return kids.filter((k) => occupied.has(k.id)).length / kids.length;
+}
+
+// The bay row to actually draw for one entity at the globally-selected
+// level. A level higher than this entity has clamps to its own top level
+// (an entity with fewer levels than the one being viewed still shows its
+// top shelf, rather than going blank). "all" aggregates every level per bay
+// into one cell — occupied if ANY level at that bay has stock.
+function levelRow(entity: LocationRow, all: LocationRow[], selectedLevel: number | "all") {
+  const kids = all.filter((l) => l.parentId === entity.id);
+  if (kids.length === 0) return [] as { bay: number; ids: string[] }[];
+
+  if (selectedLevel === "all") {
+    const byBay = new Map<number, string[]>();
+    for (const k of kids) {
+      const bay = k.bay ?? 1;
+      byBay.set(bay, [...(byBay.get(bay) ?? []), k.id]);
+    }
+    return [...byBay.entries()].sort((a, b) => a[0] - b[0]).map(([bay, ids]) => ({ bay, ids }));
+  }
+
+  const level = Math.min(selectedLevel, entity.levels);
+  return kids
+    .filter((k) => (k.level ?? 1) === level)
+    .sort((a, b) => (a.bay ?? 1) - (b.bay ?? 1))
+    .map((c) => ({ bay: c.bay ?? 1, ids: [c.id] }));
 }
 
 export function BlueprintCanvas({
   facility: initialFacility,
   initialLocations,
   initialOccupiedBinIds,
+  initialHighlightBinId,
 }: {
   facility: Facility;
   initialLocations: LocationRow[];
   initialOccupiedBinIds: string[];
+  initialHighlightBinId?: string;
 }) {
   const t = useTranslations("builder");
+  const router = useRouter();
   const [facility, setFacility] = useState(initialFacility);
   const [locations, setLocations] = useState(initialLocations);
   const [occupied, setOccupied] = useState(new Set(initialOccupiedBinIds));
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<number | "all">("all");
   const [zoom, setZoom] = useState(0.8);
   const [grid, setGrid] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [floorOpen, setFloorOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [confirmTemplate, setConfirmTemplate] = useState<TemplateKey | null>(null);
   const [floorDraft, setFloorDraft] = useState({
     name: facility.name,
     widthM: String(facility.widthM),
     heightM: String(facility.heightM),
   });
   const [localOverride, setLocalOverride] = useState<Record<string, Box>>({});
+  const [pulseBinId, setPulseBinId] = useState<string | null>(null);
+  // The value itself drives no rendering directly — bumping it just forces a
+  // re-render so the undo/redo buttons re-read the (ref-backed) stacks.
+  const [, setHistoryVersion] = useState(0);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
+  const boxRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const pendingHighlightRef = useRef<string | null>(initialHighlightBinId ?? null);
+  const clipboardRef = useRef<{ liveId: string } | null>(null);
+  const undoStack = useRef<UndoEntry[]>([]);
+  const redoStack = useRef<UndoEntry[]>([]);
 
   const selected = useMemo(
     () => locations.find((l) => l.id === selectedId) ?? null,
     [locations, selectedId],
   );
+  const maxLevels = useMemo(() => Math.max(1, ...locations.map((l) => l.levels)), [locations]);
 
   useEffect(() => {
     if (!selected) return;
@@ -97,6 +219,7 @@ export function BlueprintCanvas({
       widthM: String(selected.widthM),
       heightM: String(selected.heightM),
       bays: String(selected.bays),
+      levels: String(selected.levels),
     });
   }, [selected]);
 
@@ -110,6 +233,49 @@ export function BlueprintCanvas({
     setZoom(Math.max(0.3, Math.min(2, Math.round(z * 20) / 20)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!status) return;
+    const timer = setTimeout(() => setStatus(null), 2200);
+    return () => clearTimeout(timer);
+  }, [status]);
+
+  // A search result (or any other deep link) can land here with ?bin=<id> to
+  // point straight at one exact bin instead of a text-only "current location"
+  // answer — select its parent box, switch to the bin's level, scroll it into
+  // view, and flash it, then drop the query param so a reload doesn't replay it.
+  // The "consumed" flag is only set once the pulse timer actually FIRES, not
+  // synchronously in the effect body — React's dev-only Strict Mode runs a
+  // mount→cleanup→mount cycle once on initial mount, which cancels this
+  // effect's first set of timers; consuming the ref synchronously would make
+  // the second (real) mount see it as already-handled and never reschedule
+  // them, leaving the pulse stuck on forever.
+  useEffect(() => {
+    const binId = pendingHighlightRef.current;
+    if (!binId) return;
+    const bin = locations.find((l) => l.id === binId);
+    if (!bin) return;
+
+    const parent = (bin.parentId && locations.find((l) => l.id === bin.parentId)) || bin;
+    setSelectedId(parent.id);
+    if (bin.level && bin.level > 1) setSelectedLevel(bin.level);
+    if (zoom < 0.8) setZoom(1);
+    setPulseBinId(bin.id);
+    router.replace("/builder", { scroll: false });
+
+    const scrollTimer = setTimeout(() => {
+      boxRefs.current[parent.id]?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    }, 80);
+    const pulseTimer = setTimeout(() => {
+      setPulseBinId(null);
+      pendingHighlightRef.current = null;
+    }, 3600);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(pulseTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locations]);
 
   function fit() {
     const el = wrapRef.current;
@@ -127,6 +293,132 @@ export function BlueprintCanvas({
     setOccupied(new Set(data.occupiedBinIds));
   }
 
+  // ── Undo/redo ──────────────────────────────────────────────────────────
+  // A client-side stack of inverse-operation pairs, built on top of the same
+  // server actions the UI already calls — not a snapshot/restore system, so
+  // it only covers single-entity operations (create/delete/duplicate/paste,
+  // move/resize, field edits) where "undo" has an unambiguous, safe meaning.
+  // Applying a template or adding a sector touch many rows at once and are
+  // already gated behind their own confirmation UI, so they intentionally
+  // clear history instead of trying to participate in it.
+  function pushUndo(entry: UndoEntry) {
+    undoStack.current.push(entry);
+    if (undoStack.current.length > 50) undoStack.current.shift();
+    redoStack.current = [];
+    setHistoryVersion((v) => v + 1);
+  }
+
+  function clearHistory() {
+    undoStack.current = [];
+    redoStack.current = [];
+    setHistoryVersion((v) => v + 1);
+  }
+
+  async function applyEntityPatch(id: string, patch: Record<string, string | number>) {
+    await updateEntity(id, patch);
+    await reload();
+    setSelectedId(id);
+  }
+
+  // create/delete/duplicate/paste all make a *row* appear or disappear, and
+  // the server action always mints a fresh id — a mutable `liveId` lets the
+  // same entry keep pointing at "this logical entity" across repeated
+  // undo/redo cycles even though its underlying id changes each time.
+  function makeCreateUndoEntry(spec: EntitySpec, initialId: string): UndoEntry {
+    let liveId = initialId;
+    return {
+      undo: async () => {
+        await deleteEntity(liveId);
+        await reload();
+        setSelectedId(null);
+      },
+      redo: async () => {
+        const created = await restoreEntity(facility.id, spec);
+        liveId = created.id;
+        await reload();
+        setSelectedId(created.id);
+      },
+    };
+  }
+
+  function makeDeleteUndoEntry(spec: EntitySpec, initialId: string): UndoEntry {
+    let liveId = initialId;
+    return {
+      undo: async () => {
+        const created = await restoreEntity(facility.id, spec);
+        liveId = created.id;
+        await reload();
+        setSelectedId(created.id);
+      },
+      redo: async () => {
+        await deleteEntity(liveId);
+        await reload();
+        setSelectedId(null);
+      },
+    };
+  }
+
+  async function handleUndo() {
+    const entry = undoStack.current.pop();
+    if (!entry) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await entry.undo();
+      redoStack.current.push(entry);
+      setStatus(t("status.undone"));
+    } catch (e) {
+      undoStack.current.push(entry);
+      setError(e instanceof Error ? e.message : t("error.couldntUndo"));
+    } finally {
+      setHistoryVersion((v) => v + 1);
+      setBusy(false);
+    }
+  }
+
+  async function handleRedo() {
+    const entry = redoStack.current.pop();
+    if (!entry) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await entry.redo();
+      undoStack.current.push(entry);
+      setStatus(t("status.redone"));
+    } catch (e) {
+      redoStack.current.push(entry);
+      setError(e instanceof Error ? e.message : t("error.couldntRedo"));
+    } finally {
+      setHistoryVersion((v) => v + 1);
+      setBusy(false);
+    }
+  }
+
+  function handleCopy() {
+    if (!selected) return;
+    clipboardRef.current = { liveId: selected.id };
+    setStatus(t("status.copied"));
+  }
+
+  async function handlePaste() {
+    const clip = clipboardRef.current;
+    if (!clip) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const created = await duplicateEntity(clip.liveId);
+      await reload();
+      setSelectedId(created.id);
+      clip.liveId = created.id;
+      pushUndo(makeCreateUndoEntry(specOf(created), created.id));
+      setStatus(t("status.pasted"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("error.couldntDuplicate"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleAdd(kind: LocationKind) {
     setBusy(true);
     setError(null);
@@ -135,6 +427,7 @@ export function BlueprintCanvas({
       const created = await createEntity(facility.id, kind, pos.x, pos.y);
       await reload();
       setSelectedId(created.id);
+      pushUndo(makeCreateUndoEntry(specOf(created), created.id));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("error.couldntAdd"));
     } finally {
@@ -144,11 +437,18 @@ export function BlueprintCanvas({
 
   async function commit(patch: Record<string, string | number>) {
     if (!selected) return;
+    const id = selected.id;
+    const prevPatch: Record<string, string | number> = {};
+    for (const key of Object.keys(patch)) {
+      const v = (selected as unknown as Record<string, unknown>)[key];
+      if (typeof v === "string" || typeof v === "number") prevPatch[key] = v;
+    }
     setBusy(true);
     setError(null);
     try {
-      await updateEntity(selected.id, patch);
+      await updateEntity(id, patch);
       await reload();
+      pushUndo({ undo: () => applyEntityPatch(id, prevPatch), redo: () => applyEntityPatch(id, patch) });
     } catch (e) {
       setError(e instanceof Error ? e.message : t("error.couldntSave"));
     } finally {
@@ -158,12 +458,15 @@ export function BlueprintCanvas({
 
   async function handleDelete() {
     if (!selected) return;
+    const spec = specOf(selected);
+    const id = selected.id;
     setBusy(true);
     setError(null);
     try {
-      await deleteEntity(selected.id);
+      await deleteEntity(id);
       setSelectedId(null);
       await reload();
+      pushUndo(makeDeleteUndoEntry(spec, id));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("error.couldntDelete"));
     } finally {
@@ -179,6 +482,7 @@ export function BlueprintCanvas({
       const copy = await duplicateEntity(selected.id);
       await reload();
       setSelectedId(copy.id);
+      pushUndo(makeCreateUndoEntry(specOf(copy), copy.id));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("error.couldntDuplicate"));
     } finally {
@@ -209,14 +513,41 @@ export function BlueprintCanvas({
     }
   }
 
-  async function handleApplyTemplate(key: TemplateKey) {
+  function chooseTemplate(key: TemplateKey) {
+    if (locations.length > 0) {
+      setConfirmTemplate(key);
+      return;
+    }
+    void runTemplate(key, false);
+  }
+
+  async function runTemplate(key: TemplateKey, replace: boolean) {
     setBusy(true);
     setError(null);
     try {
-      await applyTemplate(facility.id, key);
+      await applyTemplate(facility.id, key, replace);
       await reload();
+      setSelectedId(null);
+      setTemplatesOpen(false);
+      setConfirmTemplate(null);
+      clearHistory();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("error.couldntApplyTemplate"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleAddSector() {
+    setBusy(true);
+    setError(null);
+    try {
+      const created = await addSector(facility.id);
+      await reload();
+      setSelectedId(created.id);
+      clearHistory();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("error.couldntAdd"));
     } finally {
       setBusy(false);
     }
@@ -287,18 +618,22 @@ export function BlueprintCanvas({
         delete next[d.id];
         return next;
       });
-      // A plain click (mousedown+mouseup with no real movement) also starts a
-      // drag — skip the round-trip when nothing actually changed.
       const unchanged =
         d.kind === "move"
           ? box.xM === d.origin.xM && box.yM === d.origin.yM
           : box.widthM === d.origin.widthM && box.heightM === d.origin.heightM;
       if (unchanged) return;
 
-      const patch = d.kind === "move" ? { xM: box.xM, yM: box.yM } : { widthM: box.widthM, heightM: box.heightM };
+      const patch: Record<string, number> =
+        d.kind === "move" ? { xM: box.xM, yM: box.yM } : { widthM: box.widthM, heightM: box.heightM };
+      const prevPatch: Record<string, number> =
+        d.kind === "move" ? { xM: d.origin.xM, yM: d.origin.yM } : { widthM: d.origin.widthM, heightM: d.origin.heightM };
       setBusy(true);
       updateEntity(d.id, patch)
         .then(() => reload())
+        .then(() => {
+          pushUndo({ undo: () => applyEntityPatch(d.id, prevPatch), redo: () => applyEntityPatch(d.id, patch) });
+        })
         .catch((e) => setError(e instanceof Error ? e.message : t("error.couldntSave")))
         .finally(() => setBusy(false));
     }
@@ -308,11 +643,50 @@ export function BlueprintCanvas({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-    // z (via pointFromEvent) is the only reactive value these handlers depend
-    // on — dragRef carries everything else, so it survives this effect
-    // re-registering without losing an in-progress drag.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [z]);
+
+  useEffect(() => {
+    function isEditableTarget(el: EventTarget | null) {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
+    }
+    function onKeyDown(ev: KeyboardEvent) {
+      if (isEditableTarget(ev.target)) return;
+      if (floorOpen || templatesOpen || confirmTemplate) return;
+      const meta = ev.metaKey || ev.ctrlKey;
+      const key = ev.key.toLowerCase();
+      if (meta && key === "z") {
+        ev.preventDefault();
+        if (ev.shiftKey) void handleRedo();
+        else void handleUndo();
+        return;
+      }
+      if (meta && key === "y") {
+        ev.preventDefault();
+        void handleRedo();
+        return;
+      }
+      if (meta && key === "c") {
+        if (window.getSelection?.()?.toString()) return; // preserve native text copy
+        ev.preventDefault();
+        handleCopy();
+        return;
+      }
+      if (meta && key === "v") {
+        ev.preventDefault();
+        void handlePaste();
+        return;
+      }
+      if (!meta && (ev.key === "Backspace" || ev.key === "Delete") && selectedId) {
+        ev.preventDefault();
+        void handleDelete();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   const topLevel = locations.filter((l) => {
     if (!l.parentId) return true;
@@ -324,6 +698,23 @@ export function BlueprintCanvas({
     label: t(`kindPlural.${k}`),
     n: locations.filter((l) => l.kind === k).length,
   })).filter((c) => c.n > 0);
+
+  const templateButtons = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {TEMPLATE_KEYS.map((key) => (
+        <button
+          key={key}
+          className="btn btn-secondary"
+          onClick={() => chooseTemplate(key)}
+          disabled={busy}
+          title={t(`template.${key}.description`)}
+          style={{ textAlign: "left" }}
+        >
+          {t(`template.${key}.name`)}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "minmax(0,214px) minmax(480px,1fr) minmax(0,306px)" }}>
@@ -349,7 +740,7 @@ export function BlueprintCanvas({
                   textAlign: "left", font: "inherit",
                 }}
               >
-                <div style={{ width: 24, height: 20, flex: "none", border: "1px dashed var(--color-accent-500)" }} />
+                <div style={{ width: 24, height: 20, flex: "none", ...KIND_APPEARANCE[kind] }} />
                 <div>
                   <div style={{ fontFamily: "var(--font-heading)", fontSize: 14, letterSpacing: ".04em" }}>{t(`kind.${kind}`).toUpperCase()}</div>
                   <div style={{ fontSize: 10, color: "color-mix(in srgb,var(--color-text) 50%,transparent)" }}>
@@ -359,6 +750,10 @@ export function BlueprintCanvas({
               </button>
             );
           })}
+
+          <button className="btn btn-secondary btn-block" onClick={handleAddSector} disabled={busy} title={t("addSectorHint")}>
+            {t("addSector")}
+          </button>
 
           <div style={{ height: 1, background: "var(--color-divider)", margin: "9px 0" }} />
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
@@ -375,6 +770,7 @@ export function BlueprintCanvas({
             </div>
           </div>
           <button className="btn btn-secondary btn-block" onClick={() => setFloorOpen(true)}>{t("editFloor")}</button>
+          <button className="btn btn-secondary btn-block" onClick={() => setTemplatesOpen(true)}>{t("templatesButton")}</button>
         </div>
       </div>
 
@@ -385,7 +781,40 @@ export function BlueprintCanvas({
           <button className="btn btn-secondary" onClick={() => setZoom((z) => Math.min(2, Math.round((z + 0.1) * 10) / 10))} style={{ minWidth: 26, padding: "1px 7px" }}>+</button>
           <button className="btn btn-secondary" onClick={fit} style={{ padding: "1px 8px", fontSize: 11, letterSpacing: ".08em" }}>{t("zoomFit")}</button>
           <button className="btn btn-ghost" onClick={() => setGrid((g) => !g)} style={{ fontSize: 11, letterSpacing: ".08em" }}>{grid ? t("gridOn") : t("gridOff")}</button>
+
+          <div style={{ width: 1, height: 17, background: "var(--color-divider)" }} />
+          <button className="btn btn-secondary" onClick={handleUndo} disabled={busy || undoStack.current.length === 0} title={t("undo")} style={{ minWidth: 26, padding: "1px 7px" }}>↺</button>
+          <button className="btn btn-secondary" onClick={handleRedo} disabled={busy || redoStack.current.length === 0} title={t("redo")} style={{ minWidth: 26, padding: "1px 7px" }}>↻</button>
+
+          {maxLevels > 1 && (
+            <>
+              <div style={{ width: 1, height: 17, background: "var(--color-divider)" }} />
+              <span style={{ fontFamily: "var(--font-heading)", fontSize: 10, letterSpacing: ".14em", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
+                {t("level")}
+              </span>
+              <div className="seg">
+                <button
+                  className="seg-opt"
+                  onClick={() => setSelectedLevel("all")}
+                  style={{ background: selectedLevel === "all" ? "var(--color-accent)" : undefined, color: selectedLevel === "all" ? "var(--color-bg)" : undefined, fontSize: 11 }}
+                >
+                  {t("allLevels")}
+                </button>
+                {Array.from({ length: maxLevels }, (_, i) => i + 1).map((lv) => (
+                  <button
+                    key={lv}
+                    className="seg-opt"
+                    onClick={() => setSelectedLevel(lv)}
+                    style={{ background: selectedLevel === lv ? "var(--color-accent)" : undefined, color: selectedLevel === lv ? "var(--color-bg)" : undefined, fontSize: 11 }}
+                  >
+                    {lv}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           {error && <span style={{ fontSize: 11, color: "var(--color-accent-800)", marginLeft: 8 }}>{error}</span>}
+          {!error && status && <span style={{ fontSize: 11, color: "var(--color-accent-700)", marginLeft: 8 }}>{status}</span>}
         </div>
 
         <div ref={wrapRef} style={{ flex: 1, minHeight: 0, position: "relative", overflow: "auto" }} onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}>
@@ -413,13 +842,7 @@ export function BlueprintCanvas({
                   </div>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
                     {TEMPLATE_KEYS.map((key) => (
-                      <button
-                        key={key}
-                        className="btn btn-secondary"
-                        onClick={() => handleApplyTemplate(key)}
-                        disabled={busy}
-                        title={t(`template.${key}.description`)}
-                      >
+                      <button key={key} className="btn btn-secondary" onClick={() => chooseTemplate(key)} disabled={busy} title={t(`template.${key}.description`)}>
                         {t(`template.${key}.name`)}
                       </button>
                     ))}
@@ -433,56 +856,67 @@ export function BlueprintCanvas({
                 const box: React.CSSProperties = {
                   position: "absolute", left: live.xM * z, top: live.yM * z, width: live.widthM * z, height: live.heightM * z,
                   cursor: "move",
+                  zIndex: type.spatial === "area" ? 1 : type.spatial === "fixture" ? 2 : 3,
+                  ...KIND_APPEARANCE[e.kind as LocationKind],
                 };
-                if (type.spatial === "area") {
-                  box.border = "1px dashed var(--color-accent-500)";
-                  box.background = e.kind === "aisle"
-                    ? "repeating-linear-gradient(45deg,transparent 0 7px,color-mix(in srgb,var(--color-text) 5%,transparent) 7px 8px)"
-                    : "transparent";
-                  box.zIndex = 1;
-                } else if (type.spatial === "fixture") {
-                  box.border = "1px solid var(--color-neutral-500)";
-                  box.background = "repeating-linear-gradient(-45deg,transparent 0 5px,var(--color-neutral-300) 5px 6px)";
-                  box.zIndex = 2;
-                } else {
-                  box.border = "1px solid var(--color-accent-700)";
-                  box.background = "#fff";
-                  box.zIndex = 3;
-                }
                 if (isSel) { box.outline = "1.5px solid var(--color-accent)"; box.outlineOffset = 1; box.zIndex = 6; }
 
-                const kids = type.spatial === "store" && e.bays > 1
-                  ? locations.filter((l) => l.parentId === e.id).sort((a, b) => (a.code ?? "").localeCompare(b.code ?? ""))
-                  : [];
+                const row = type.spatial === "store" && e.bays * e.levels > 1 ? levelRow(e, locations, selectedLevel) : [];
 
                 return (
-                  <div key={e.id} style={box} onMouseDown={(ev) => startDrag("move", ev, e)} title={`${e.code ?? e.name} · ${e.name}`}>
+                  <div
+                    key={e.id}
+                    ref={(el) => { boxRefs.current[e.id] = el; }}
+                    style={box}
+                    onMouseDown={(ev) => startDrag("move", ev, e)}
+                    title={`${e.code ?? e.name} · ${e.name}`}
+                  >
                     <div
                       onMouseDown={(ev) => startDrag("move", ev, e)}
                       style={{
                         position: "absolute", left: 0, top: -3, transform: "translateY(-100%)",
+                        display: "flex", alignItems: "baseline", gap: 3,
                         fontFamily: "var(--font-heading)", fontSize: type.spatial === "area" ? 11 : 9,
                         letterSpacing: type.spatial === "area" ? ".14em" : ".1em", whiteSpace: "nowrap",
                         color: type.spatial === "area" ? "var(--color-accent-700)" : "color-mix(in srgb,var(--color-text) 62%,transparent)",
                         cursor: "pointer",
                       }}
                     >
-                      {e.kind === "zone" ? `${e.code} · ${e.name}` : (type.spatial === "fixture" ? e.name : e.code)}
+                      <span>{e.kind === "zone" ? `${e.code} · ${e.name}` : (type.spatial === "fixture" ? e.name : e.code)}</span>
+                      {e.levels > 1 && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+                          <svg width="8" height="7" viewBox="0 0 10 8" aria-hidden="true">
+                            <rect x="0" y="0" width="10" height="2" fill="currentColor" opacity="0.55" />
+                            <rect x="0" y="3" width="10" height="2" fill="currentColor" opacity="0.75" />
+                            <rect x="0" y="6" width="10" height="2" fill="currentColor" />
+                          </svg>
+                          {e.levels}{t("levelsAbbrev")}
+                        </span>
+                      )}
                     </div>
 
-                    {kids.length > 0 ? (
-                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${kids.length},minmax(0,1fr))`, gap: 1, padding: 1, width: "100%", height: "100%" }}>
-                        {kids.map((k) => {
-                          const isOcc = occupied.has(k.id);
+                    {row.length > 0 ? (
+                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${row.length},minmax(0,1fr))`, gap: 1, padding: 1, width: "100%", height: "100%" }}>
+                        {row.map(({ bay, ids }) => {
+                          const isOcc = ids.some((id) => occupied.has(id));
+                          const targetId = ids[0];
+                          const cellCode =
+                            ids.length === 1
+                              ? (locations.find((l) => l.id === targetId)?.code ?? `${e.code}-${bay}`)
+                              : `${e.code}-${bay}`;
                           return (
                             <Link
-                              key={k.id}
-                              href={`/builder/bin/${k.id}`}
+                              key={bay}
+                              href={`/builder/bin/${targetId}`}
                               onMouseDown={(ev) => ev.stopPropagation()}
-                              title={`${k.code} — ${isOcc ? t("stocked") : t("empty")}`}
+                              title={`${cellCode} — ${isOcc ? t("stocked") : t("empty")}`}
+                              className={pulseBinId && ids.includes(pulseBinId) ? "locate-ping" : undefined}
                               style={{
                                 border: "1px solid var(--color-neutral-300)",
-                                background: isOcc ? "var(--color-accent-200)" : "#fff",
+                                // Unoccupied cells stay translucent so the parent's kind
+                                // pattern (rack tint, platform crosshatch, …) still reads
+                                // through the bay grid instead of being papered over.
+                                background: isOcc ? "var(--color-accent-200)" : "color-mix(in srgb,#fff 55%,transparent)",
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 fontSize: 8, color: "color-mix(in srgb,var(--color-text) 55%,transparent)",
                                 minWidth: 0, overflow: "hidden", textDecoration: "none",
@@ -495,6 +929,7 @@ export function BlueprintCanvas({
                       <Link
                         href={`/builder/bin/${e.id}`}
                         onMouseDown={(ev) => ev.stopPropagation()}
+                        className={pulseBinId === e.id ? "locate-ping" : undefined}
                         style={{ display: "block", width: "100%", height: "100%", background: occupied.has(e.id) ? "var(--color-accent-200)" : undefined }}
                       />
                     ) : null}
@@ -526,7 +961,7 @@ export function BlueprintCanvas({
                 </div>
               </div>
               <span className="tag tag-accent">
-                {selected.bays > 1 ? t("baysCount", { n: selected.bays }) : selected.isBin ? t("oneLocation") : t("areaM2", { n: Math.round(selected.widthM * selected.heightM) })}
+                {selected.bays * selected.levels > 1 ? t("cellCount", { n: selected.bays * selected.levels }) : selected.isBin ? t("oneLocation") : t("areaM2", { n: Math.round(selected.widthM * selected.heightM) })}
               </span>
             </div>
 
@@ -556,7 +991,10 @@ export function BlueprintCanvas({
                 <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)", marginBottom: 7 }}>
                   {t("subdivision")}
                 </div>
-                <div className="field"><label>{t("bays")}</label><input className="input" type="number" step="1" min="1" max="48" value={draft.bays ?? ""} onChange={(e) => setDraft((d) => ({ ...d, bays: e.target.value }))} onBlur={() => commit({ bays: parseInt(draft.bays, 10) })} /></div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div className="field"><label>{t("bays")}</label><input className="input" type="number" step="1" min="1" max="48" value={draft.bays ?? ""} onChange={(e) => setDraft((d) => ({ ...d, bays: e.target.value }))} onBlur={() => commit({ bays: parseInt(draft.bays, 10) })} /></div>
+                  <div className="field"><label>{t("levels")}</label><input className="input" type="number" step="1" min="1" max="4" value={draft.levels ?? ""} onChange={(e) => setDraft((d) => ({ ...d, levels: e.target.value }))} onBlur={() => commit({ levels: parseInt(draft.levels, 10) })} /></div>
+                </div>
                 <div style={{ marginTop: 9, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11 }}>
                   <span style={{ color: "color-mix(in srgb,var(--color-text) 60%,transparent)" }}>{t("occupied")}</span>
                   <span style={{ fontVariantNumeric: "tabular-nums" }}>{Math.round(occupancyOf(selected, locations, occupied) * 100)}%</span>
@@ -616,6 +1054,35 @@ export function BlueprintCanvas({
             <div className="dialog-actions">
               <button className="btn btn-secondary" onClick={() => setFloorOpen(false)} style={{ flex: 1 }}>{t("cancel")}</button>
               <button className="btn btn-primary" onClick={handleFloorSave} disabled={busy} style={{ flex: 1 }}>{t("save")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {templatesOpen && (
+        <div className="dialog-backdrop" style={{ position: "fixed", zIndex: 60 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setTemplatesOpen(false); }}>
+          <div className="dialog blueprint">
+            <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+            <div className="dialog-title">{t("templatesButton")}</div>
+            <div className="dialog-body">{locations.length > 0 ? t("templatesReplaceHint") : t("templatePrompt")}</div>
+            {templateButtons}
+            <div className="dialog-actions">
+              <button className="btn btn-secondary" onClick={() => setTemplatesOpen(false)} style={{ flex: 1 }}>{t("cancel")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmTemplate && (
+        <div className="dialog-backdrop" style={{ position: "fixed", zIndex: 70 }}>
+          <div className="dialog blueprint">
+            <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+            <div className="dialog-title">{t("confirmReplaceTitle")}</div>
+            <div className="dialog-body">{t("confirmReplaceBody")}</div>
+            {error && <p style={{ fontSize: 12, color: "var(--color-accent-800)" }}>{error}</p>}
+            <div className="dialog-actions">
+              <button className="btn btn-secondary" onClick={() => setConfirmTemplate(null)} style={{ flex: 1 }}>{t("cancel")}</button>
+              <button className="btn btn-primary" onClick={() => runTemplate(confirmTemplate, true)} disabled={busy} style={{ flex: 1 }}>{t("confirmReplace")}</button>
             </div>
           </div>
         </div>

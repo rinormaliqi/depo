@@ -42,7 +42,15 @@ locations                              -- the tree: zones/racks/shelves/bins, re
   code (nullable text),                -- short label shown on the blueprint, e.g. "A-01"
   is_bin (boolean),                    -- true = leaf node that can actually hold stock
   x_m, y_m, width_m, height_m (real, metres) -- position + size on the blueprint canvas
-  bays (integer, default 1),           -- single subdivision axis, no multi-level shelving
+  bays (integer, default 1),           -- lateral subdivision axis
+  levels (integer, default 1),         -- vertical/height subdivision axis (mezzanine-style
+                                        -- pallet racking) — invisible from the canvas's
+                                        -- top-down view, shown one at a time via a level
+                                        -- selector, never as a second spatial grid dimension
+  bay, level (nullable integers),      -- grid position, set only on an auto-generated bin
+                                        -- child (1-indexed) — lets a bays/levels resize tell
+                                        -- "this cell already exists, keep its stock" apart
+                                        -- from "this cell is new" without parsing `code`
   created_at
 
 items                                  -- the catalog
@@ -64,12 +72,20 @@ movements                              -- append-only audit log — source of tr
   performed_by → users, created_at
 ```
 
-A `store`-kind location (rack/platform/pallet/bin) with `bays > 1` is a pure shape on the
-canvas (`is_bin = false`) with that many real `kind = 'bin'` child rows auto-generated
-(`code` like `A-01-1`..`A-01-8`) — not virtual string keys. `bays = 1` means the location
-itself is the leaf (`is_bin = true`). A location's `parent_id` is set to whichever `zone`
-location's bounding box contains its centre point at creation/placement time, computed once
-and persisted rather than recomputed on every read.
+A `store`-kind location (rack/platform/pallet/bin) with `bays * levels > 1` is a pure shape
+on the canvas (`is_bin = false`) with that many real `kind = 'bin'` child rows auto-generated
+— not virtual string keys. A single-level location codes its children `A-01-1`..`A-01-8`; once
+`levels > 1` the code spells out the level too (`A-01-1-1`..`A-01-2-8`) since it's no longer
+implied. `bays = 1 && levels = 1` means the location itself is the leaf (`is_bin = true`).
+A location's `parent_id` is set to whichever `zone` location's bounding box contains its
+centre point at creation/placement time, computed once and persisted rather than recomputed
+on every read.
+
+Resizing `bays`/`levels` diffs the existing bin children against the new grid by their
+explicit `bay`/`level` columns (not by parsing `code`, which a user may have hand-edited):
+cells outside the new range are deleted (blocked if any holds stock), cells inside it are kept
+and renamed if the single-level/multi-level code format changed, and missing cells are
+inserted fresh.
 
 ## Indexes that matter
 - `organization_id` on every tenant-scoped table — every query filters on it.

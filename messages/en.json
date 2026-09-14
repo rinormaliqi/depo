@@ -106,6 +106,14 @@
     "zoomFit": "FIT",
     "gridOn": "GRID ON",
     "gridOff": "GRID OFF",
+    "undo": "Undo (⌘Z)",
+    "redo": "Redo (⌘⇧Z)",
+    "status": {
+      "copied": "Copied",
+      "pasted": "Pasted",
+      "undone": "Undid last change",
+      "redone": "Redid last change"
+    },
     "emptyFloorTitle": "EMPTY FLOOR",
     "emptyFloorBody": "Add a zone from the palette to block out your first section, then fill it with racks, platforms and pallet positions.",
     "templatePrompt": "or start from a template:",
@@ -114,11 +122,25 @@
         "name": "Simple storage room",
         "description": "One zone, two racks — good for a single room or small yard."
       },
-      "yard": {
-        "name": "Yard with racking & loading",
-        "description": "A racking zone, a bulk-floor zone, and a loading dock."
+      "depotVertical": {
+        "name": "Full depot — vertical zones",
+        "description": "4 walled zones side by side, each with 3 two-level pallet racks, separated by aisles."
+      },
+      "depotHorizontal": {
+        "name": "Full depot — horizontal zones",
+        "description": "The same 4-zone racked depot, laid out in horizontal bands instead of vertical strips."
       }
     },
+    "templatesButton": "Templates",
+    "templatesReplaceHint": "Choosing a template replaces everything currently on this floor.",
+    "addSector": "+ Add sector",
+    "addSectorHint": "Adds one more zone, shrinking the existing ones to make room.",
+    "level": "Level",
+    "allLevels": "ALL",
+    "levelsAbbrev": "L",
+    "confirmReplaceTitle": "Replace the current scheme?",
+    "confirmReplaceBody": "Your subscription gives this facility one depot scheme. Applying a template replaces everything on the floor now and can't be undone — though you can always come back here and switch to a blank floor or another template later.",
+    "confirmReplace": "Replace scheme",
     "stocked": "stocked",
     "empty": "empty",
     "nothingSelected": "Nothing selected",
@@ -133,11 +155,12 @@
     "yFromWall": "Y from wall",
     "subdivision": "Subdivision",
     "bays": "Bays",
+    "levels": "Levels",
     "occupied": "Occupied",
     "viewStock": "View stock",
     "duplicate": "Duplicate",
     "delete": "Delete",
-    "baysCount": "{n} bays",
+    "cellCount": "{n} locations",
     "oneLocation": "1 location",
     "areaM2": "{n} m²",
     "floorSettingsTitle": "Floor settings",
@@ -153,12 +176,16 @@
       "nameRequired": "Name is required",
       "codeRequired": "Code is required",
       "codeInUse": "{code} is already in use on this floor",
-      "baysReduce": "Can't reduce bays — some of them still hold stock",
+      "baysReduce": "Can't reduce bays or levels — some of them still hold stock",
       "deleteHasStock": "Can't delete — this still holds stock. Remove it first.",
+      "confirmationRequired": "This floor already has a scheme — confirm before replacing it",
+      "replaceHasStock": "Can't replace the scheme — some locations still hold stock. Clear it first.",
       "couldntAdd": "Couldn't add that",
       "couldntSave": "Couldn't save that change",
       "couldntDelete": "Couldn't delete that",
       "couldntDuplicate": "Couldn't duplicate that",
+      "couldntUndo": "Couldn't undo that",
+      "couldntRedo": "Couldn't redo that",
       "couldntSaveFloor": "Couldn't save the floor",
       "couldntApplyTemplate": "Couldn't apply that template"
     }
@@ -185,7 +212,8 @@
     "noMatches": "Nothing matches “{query}”.",
     "zoneUtilisation": "Zone utilisation",
     "noZones": "No zones on the blueprint yet.",
-    "occupiedOfTotal": "{occupied} of {total} locations occupied · {area} m²"
+    "occupiedOfTotal": "{occupied} of {total} locations occupied · {area} m²",
+    "manageStock": "Manage stock"
   },
   "metrics": {
     "mappedFloor": "Mapped floor",

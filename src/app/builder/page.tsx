@@ -5,12 +5,17 @@ import { AppHeader } from "@/components/app-header";
 import { getBlueprint, getMyFacility } from "./actions";
 import { BlueprintCanvas } from "./blueprint-canvas";
 
-export default async function BuilderPage() {
+export default async function BuilderPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ bin?: string }>;
+}) {
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
   }
 
+  const { bin } = await searchParams;
   const facility = await getMyFacility();
   const t = await getTranslations();
 
@@ -35,6 +40,7 @@ export default async function BuilderPage() {
         facility={{ id: facility.id, name: facility.name, widthM: facility.widthM, heightM: facility.heightM }}
         initialLocations={locations}
         initialOccupiedBinIds={occupiedBinIds}
+        initialHighlightBinId={bin}
       />
     </div>
   );

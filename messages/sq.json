@@ -106,6 +106,14 @@
     "zoomFit": "PËRSHTAT",
     "gridOn": "RRJETA AKTIVE",
     "gridOff": "RRJETA JOAKTIVE",
+    "undo": "Zhbëj (⌘Z)",
+    "redo": "Ribëj (⌘⇧Z)",
+    "status": {
+      "copied": "U kopjua",
+      "pasted": "U ngjit",
+      "undone": "Ndryshimi i fundit u zhbë",
+      "redone": "Ndryshimi i fundit u ribë"
+    },
     "emptyFloorTitle": "PLANIMETRI BOSHE",
     "emptyFloorBody": "Shto një zonë nga paleta për të përcaktuar seksionin tënd të parë, pastaj mbushe me rafte, platforma dhe pozicione paletash.",
     "templatePrompt": "ose fillo nga një shabllon:",
@@ -114,11 +122,25 @@
         "name": "Dhomë e thjeshtë ruajtjeje",
         "description": "Një zonë, dy rafte — e mirë për një dhomë të vetme ose një oborr të vogël."
       },
-      "yard": {
-        "name": "Oborr me rafte dhe ngarkim",
-        "description": "Një zonë me rafte, një zonë dyshemeje për ngarkesa të mëdha, dhe një dok ngarkimi."
+      "depotVertical": {
+        "name": "Depo e plotë — zona vertikale",
+        "description": "4 zona të muruara njëra pranë tjetrës, secila me 3 rafte paletash me 2 nivele, të ndara nga korridore."
+      },
+      "depotHorizontal": {
+        "name": "Depo e plotë — zona horizontale",
+        "description": "E njëjta depo me 4 zona me rafte, e vendosur në breza horizontalë në vend të shiritave vertikalë."
       }
     },
+    "templatesButton": "Shabllone",
+    "templatesReplaceHint": "Zgjedhja e një shablloni zëvendëson gjithçka që ndodhet aktualisht në këtë planimetri.",
+    "addSector": "+ Shto sektor",
+    "addSectorHint": "Shton edhe një zonë, duke zvogëluar ato ekzistueset për t'i bërë vend.",
+    "level": "Niveli",
+    "allLevels": "TË GJITHA",
+    "levelsAbbrev": "N",
+    "confirmReplaceTitle": "Të zëvendësohet skema aktuale?",
+    "confirmReplaceBody": "Abonimi yt i jep kësaj depoje një skemë të vetme. Aplikimi i një shablloni zëvendëson gjithçka në planimetri tani dhe nuk mund të kthehet mbrapsht — por gjithmonë mund të kthehesh këtu dhe të kalosh te një planimetri bosh ose një shabllon tjetër më vonë.",
+    "confirmReplace": "Zëvendëso skemën",
     "stocked": "me stok",
     "empty": "bosh",
     "nothingSelected": "Asgjë e zgjedhur",
@@ -133,11 +155,12 @@
     "yFromWall": "Y nga muri",
     "subdivision": "Ndarja",
     "bays": "Hapësira",
+    "levels": "Nivele",
     "occupied": "Të zëna",
     "viewStock": "Shiko stokun",
     "duplicate": "Dyfisho",
     "delete": "Fshi",
-    "baysCount": "{n} hapësira",
+    "cellCount": "{n} vendndodhje",
     "oneLocation": "1 vendndodhje",
     "areaM2": "{n} m²",
     "floorSettingsTitle": "Cilësimet e planimetrisë",
@@ -153,12 +176,16 @@
       "nameRequired": "Emri është i detyrueshëm",
       "codeRequired": "Kodi është i detyrueshëm",
       "codeInUse": "{code} është tashmë në përdorim në këtë planimetri",
-      "baysReduce": "Nuk mund të zvogëlohen hapësirat — disa prej tyre kanë ende stok",
+      "baysReduce": "Nuk mund të zvogëlohen hapësirat ose nivelet — disa prej tyre kanë ende stok",
       "deleteHasStock": "Nuk mund të fshihet — kjo ka ende stok. Hiqe stokun fillimisht.",
+      "confirmationRequired": "Kjo planimetri ka tashmë një skemë — konfirmo para se ta zëvendësosh",
+      "replaceHasStock": "Nuk mund të zëvendësohet skema — disa vendndodhje kanë ende stok. Pastroje fillimisht.",
       "couldntAdd": "Nuk u shtua dot",
       "couldntSave": "Ndryshimi nuk u ruajt dot",
       "couldntDelete": "Nuk u fshi dot",
       "couldntDuplicate": "Nuk u dyfishua dot",
+      "couldntUndo": "Nuk u zhbë dot",
+      "couldntRedo": "Nuk u ribë dot",
       "couldntSaveFloor": "Planimetria nuk u ruajt dot",
       "couldntApplyTemplate": "Shablloni nuk u aplikua dot"
     }
@@ -185,7 +212,8 @@
     "noMatches": "Asgjë nuk përputhet me “{query}”.",
     "zoneUtilisation": "Shfrytëzimi i zonave",
     "noZones": "Ende nuk ka zona në skemë.",
-    "occupiedOfTotal": "{occupied} nga {total} vendndodhje të zëna · {area} m²"
+    "occupiedOfTotal": "{occupied} nga {total} vendndodhje të zëna · {area} m²",
+    "manageStock": "Menaxho stokun"
   },
   "metrics": {
     "mappedFloor": "Sipërfaqja e mapuar",

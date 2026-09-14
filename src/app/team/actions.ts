@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { invites, memberships, type MembershipRole, users } from "@/db/schema";
+import { assertCanAddSeats } from "@/lib/plan-limits";
 import { requireSession } from "@/lib/session";
 
 const INVITE_VALID_DAYS = 7;
@@ -59,9 +60,6 @@ export async function createInvite(_prevState: { error?: string } | undefined, f
     if (existingMembership) return { error: t("alreadyMember") };
   }
 
-  // Plan seat limits (plans.max_users) aren't enforced yet anywhere in the
-  // app — that's tracked separately so every limit type gets handled the
-  // same way in one place, rather than half-enforcing it just here.
   const expiresAt = expiryFromNow();
   const [existingInvite] = await db
     .select()
@@ -69,8 +67,16 @@ export async function createInvite(_prevState: { error?: string } | undefined, f
     .where(and(eq(invites.organizationId, session.organizationId), eq(invites.email, email), isNull(invites.acceptedAt)));
 
   if (existingInvite) {
+    // Refreshing an already-pending invite (role change, resend) doesn't
+    // consume a new seat — it's already counted in the existing-invites
+    // query inside assertCanAddSeats, so no limit check here.
     await db.update(invites).set({ role, expiresAt, invitedBy: session.userId }).where(eq(invites.id, existingInvite.id));
   } else {
+    try {
+      await assertCanAddSeats(session.organizationId, 1);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : t("notAuthorized") };
+    }
     await db.insert(invites).values({
       organizationId: session.organizationId,
       email,

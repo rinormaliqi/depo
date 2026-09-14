@@ -150,6 +150,11 @@
       "canceled": "Anuluar"
     }
   },
+  "planLimit": {
+    "users": "Ky plan lejon deri në {max} përdorues. Vizito Faturimin për ta përmirësuar.",
+    "facilities": "Ky plan lejon deri në {max} depo. Vizito Faturimin për ta përmirësuar.",
+    "bins": "Ky plan lejon deri në {max} kuti. Vizito Faturimin për ta përmirësuar."
+  },
   "builder": {
     "entities": "Elementet",
     "entitiesHint": "Kliko për ta vendosur në planimetri, pastaj tërhiqe në vend ose rregulloje saktësisht me numra në të djathtë.",

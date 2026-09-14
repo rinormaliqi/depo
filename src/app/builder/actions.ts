@@ -18,6 +18,7 @@ import {
   type Box,
   type TemplateKey,
 } from "@/lib/blueprint-types";
+import { assertCanAddBins } from "@/lib/plan-limits";
 import { getMyOrgId, requireOrgId } from "@/lib/session";
 
 export type LocationRow = typeof locations.$inferSelect;
@@ -52,7 +53,7 @@ async function requireOwnedLocation(locationId: string) {
     throw new Error(t("locationNotFound"));
   }
 
-  return location;
+  return { ...location, organizationId };
 }
 
 // Assumes one facility per org for now — multi-facility switching isn't built yet.
@@ -209,9 +210,13 @@ export async function createEntity(
   xM: number,
   yM: number,
 ) {
-  await requireOwnedFacility(facilityId);
+  const facility = await requireOwnedFacility(facilityId);
 
   const type = LOCATION_TYPES[kind];
+  if (type.spatial === "store") {
+    await assertCanAddBins(facility.organizationId, type.bays * type.levels);
+  }
+
   const created = await createEntityAt(
     facilityId,
     kind,
@@ -240,6 +245,16 @@ export async function applyTemplate(facilityId: string, templateKey: TemplateKey
   }
 
   const specs = buildTemplate(templateKey, facility.widthM, facility.heightM);
+
+  // Check the whole template's bin total upfront rather than per-entity as
+  // the loop below goes — discovering the plan doesn't have room for it
+  // partway through inserting a dozen racks would be a bad place to fail.
+  const totalBins = specs.reduce(
+    (sum, spec) => sum + (LOCATION_TYPES[spec.kind].spatial === "store" ? spec.bays * spec.levels : 0),
+    0,
+  );
+  await assertCanAddBins(facility.organizationId, totalBins);
+
   for (const spec of specs) {
     await createEntityAt(
       facilityId,
@@ -440,6 +455,15 @@ export async function updateEntity(
     const newLevels = Math.max(1, Math.min(MAX_LEVELS, Math.round(patch.levels ?? location.levels)));
     const code = (values.code as string | undefined) ?? location.code ?? location.name;
 
+    // The grid always stays dense (no gaps), so the net bin-count change is
+    // just the before/after cell totals — growing from 6 bays/1 level to
+    // 6 bays/2 levels adds exactly 6, regardless of which specific cells
+    // reshapeGrid ends up adding or removing to get there.
+    const binDelta = newBays * newLevels - location.bays * location.levels;
+    if (binDelta > 0) {
+      await assertCanAddBins(location.organizationId, binDelta);
+    }
+
     await reshapeGrid(id, code, location.levels, newBays, newLevels);
 
     values.bays = newBays;
@@ -480,6 +504,9 @@ export async function deleteEntity(id: string) {
 
 export async function duplicateEntity(id: string) {
   const location = await requireOwnedLocation(id);
+  if (LOCATION_TYPES[location.kind as LocationKind].spatial === "store") {
+    await assertCanAddBins(location.organizationId, location.bays * location.levels);
+  }
   const created = await createEntityAt(
     location.facilityId,
     location.kind as LocationKind,
@@ -500,7 +527,10 @@ export async function restoreEntity(
   facilityId: string,
   spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number },
 ) {
-  await requireOwnedFacility(facilityId);
+  const facility = await requireOwnedFacility(facilityId);
+  if (LOCATION_TYPES[spec.kind].spatial === "store") {
+    await assertCanAddBins(facility.organizationId, spec.bays * spec.levels);
+  }
   const created = await createEntityAt(
     facilityId,
     spec.kind,

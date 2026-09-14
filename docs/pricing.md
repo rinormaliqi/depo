@@ -48,8 +48,9 @@ See `docs/architecture.md`'s Billing section for how `/internal` and `/billing` 
   hard cap). Hard limits are simpler to reason about and enforce for MVP.
 
 ## Enforcement
-Limits are data (`plans.max_users`, `max_facilities`, `max_bins`), not hardcoded logic — the
-app compares live counts against the organization's plan before allowing an action that would
-exceed it (e.g. adding a bin past `max_bins`). No separate schema needed for that check.
-**Not yet built** — `/billing` shows live usage against these limits, but nothing currently
-blocks an action that would exceed them (tracked separately).
+Limits are data (`plans.max_users`, `max_facilities`, `max_bins`), not hardcoded logic —
+`src/lib/plan-limits.ts` compares live counts against the organization's plan before allowing
+an action that would exceed it (e.g. adding a bin past `max_bins`). No separate schema needed
+for that check. See `docs/architecture.md`'s "Plan-limit enforcement" section for where each
+check is actually wired in — `max_facilities` has no call site yet, since nothing creates a
+second facility until multi-facility switching exists.

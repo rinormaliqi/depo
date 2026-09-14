@@ -29,11 +29,19 @@ larger multi-site operations.
 target-market willingness to pay (geography matters here: adjust if the initial customer base
 turns out to be more price-sensitive than a generic SMB assumption).*
 
+## Billing v1: manual activation, not Stripe
+
+Turning a trialing org into a paying one is a person (the founder) looking at `/internal`
+after an offline conversation and picking a plan/status — not a customer clicking "upgrade"
+and a card getting charged. Chosen over building a full self-serve Stripe Checkout integration
+because it's days of work instead of weeks, and the first handful of B2B customers are
+realistically closed by a conversation anyway, not a self-serve checkout flow. Automate with
+Stripe once there's repeat volume to justify it — `organizations.stripe_customer_id` stays a
+placeholder column for that, and nothing about the manual path forecloses adding it later.
+
+See `docs/architecture.md`'s Billing section for how `/internal` and `/billing` work.
+
 ## What's explicitly deferred
-- **Actual payment processing.** This only defines plan data and limits — charging a real
-  card requires integrating a payment processor (Stripe is the natural fit given the rest of
-  the stack) as a separate, later task. `organizations.stripe_customer_id` is a placeholder
-  column for that, not a working integration.
 - **Annual billing / discounted yearly plans.** Can be added later as a non-breaking column
   (`price_cents_yearly`) once monthly pricing is validated.
 - **Usage-based/overage pricing** (e.g. charging per bin beyond the plan limit instead of a
@@ -43,3 +51,5 @@ turns out to be more price-sensitive than a generic SMB assumption).*
 Limits are data (`plans.max_users`, `max_facilities`, `max_bins`), not hardcoded logic — the
 app compares live counts against the organization's plan before allowing an action that would
 exceed it (e.g. adding a bin past `max_bins`). No separate schema needed for that check.
+**Not yet built** — `/billing` shows live usage against these limits, but nothing currently
+blocks an action that would exceed them (tracked separately).

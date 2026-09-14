@@ -4,6 +4,11 @@
     "signOut": "Sign out",
     "items": "Items",
     "team": "Team",
+    "billing": "Billing",
+    "trialDaysLeft": "{plan} · Trial: {n}d left",
+    "trialEnded": "Trial ended",
+    "planPastDue": "{plan} · Past due",
+    "planCanceled": "{plan} · Canceled",
     "backToBlueprint": "‹ Back to blueprint",
     "noFacility": "No facility found for your organization yet.",
     "searchPlaceholder": "Find an item, SKU or location",
@@ -124,6 +129,25 @@
       "passwordLength": "Password must be at least 8 characters",
       "accountExists": "An account with that email already exists — try accepting from the login link instead",
       "signInFailed": "Joined, but sign-in failed — try logging in"
+    }
+  },
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Your organization's plan and usage.",
+    "priceLine": "${price}/mo",
+    "usage": "Usage",
+    "usageUsers": "Users",
+    "usageFacilities": "Facilities",
+    "usageBins": "Bins",
+    "trialDaysLeft": "{n} days left in your trial",
+    "trialEnded": "Your trial has ended",
+    "changePlan": "Want to change your plan? Get in touch with whoever set up your account.",
+    "changePlanWithEmail": "Want to change your plan? Email {email}.",
+    "status": {
+      "trialing": "Trialing",
+      "active": "Active",
+      "past_due": "Past due",
+      "canceled": "Canceled"
     }
   },
   "builder": {

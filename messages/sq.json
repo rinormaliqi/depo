@@ -4,6 +4,11 @@
     "signOut": "Dilni",
     "items": "Artikujt",
     "team": "Ekipi",
+    "billing": "Faturimi",
+    "trialDaysLeft": "{plan} · Prova: {n}d të mbetura",
+    "trialEnded": "Prova përfundoi",
+    "planPastDue": "{plan} · Pagesë e vonuar",
+    "planCanceled": "{plan} · Anuluar",
     "backToBlueprint": "‹ Kthehu te skema",
     "noFacility": "Ende nuk u gjet asnjë depo për organizatën tuaj.",
     "searchPlaceholder": "Kërko një artikull, SKU ose vendndodhje",
@@ -124,6 +129,25 @@
       "passwordLength": "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
       "accountExists": "Ekziston tashmë një llogari me atë email — provo ta pranosh nga lidhja e hyrjes",
       "signInFailed": "U bashkua, por hyrja dështoi — provo të hysh"
+    }
+  },
+  "billing": {
+    "title": "Faturimi",
+    "subtitle": "Plani dhe përdorimi i organizatës tënde.",
+    "priceLine": "${price}/muaj",
+    "usage": "Përdorimi",
+    "usageUsers": "Përdorues",
+    "usageFacilities": "Depo",
+    "usageBins": "Kuti",
+    "trialDaysLeft": "{n} ditë të mbetura në provën tënde",
+    "trialEnded": "Prova jote ka përfunduar",
+    "changePlan": "Do të ndryshosh planin? Kontakto kë e krijoi llogarinë.",
+    "changePlanWithEmail": "Do të ndryshosh planin? Shkruaj te {email}.",
+    "status": {
+      "trialing": "Në provë",
+      "active": "Aktiv",
+      "past_due": "Pagesë e vonuar",
+      "canceled": "Anuluar"
     }
   },
   "builder": {

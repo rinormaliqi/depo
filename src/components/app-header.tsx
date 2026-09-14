@@ -3,9 +3,26 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getBillingSummary } from "@/app/billing/actions";
 import { logout } from "@/lib/actions/auth";
 import { LocaleSwitcher } from "./locale-switcher";
+
+type BillingSummary = Awaited<ReturnType<typeof getBillingSummary>>;
+
+function billingPill(billing: BillingSummary, t: ReturnType<typeof useTranslations>) {
+  if (!billing.planName) return null;
+  if (billing.subscriptionStatus === "trialing") {
+    const daysLeft = billing.trialEndsAt
+      ? Math.ceil((new Date(billing.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : null;
+    if (daysLeft !== null && daysLeft <= 0) return { text: t("common.trialEnded"), urgent: true };
+    return { text: t("common.trialDaysLeft", { plan: billing.planName, n: daysLeft ?? "?" }), urgent: (daysLeft ?? 99) <= 5 };
+  }
+  if (billing.subscriptionStatus === "past_due") return { text: t("common.planPastDue", { plan: billing.planName }), urgent: true };
+  if (billing.subscriptionStatus === "canceled") return { text: t("common.planCanceled", { plan: billing.planName }), urgent: true };
+  return { text: billing.planName, urgent: false };
+}
 
 export function AppHeader({
   facilityName,
@@ -20,6 +37,14 @@ export function AppHeader({
   const pathname = usePathname();
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [billing, setBilling] = useState<BillingSummary | null>(null);
+
+  // A self-contained fetch rather than a prop every page would need to pass
+  // — AppHeader is rendered from ~7 different page types, and this way none
+  // of them need to know billing status exists.
+  useEffect(() => {
+    getBillingSummary().then(setBilling).catch(() => {});
+  }, []);
 
   const tabs = [
     { href: "/builder", label: t("nav.blueprint") },
@@ -81,6 +106,20 @@ export function AppHeader({
         </div>
       </div>
 
+      {billing && (() => {
+        const pill = billingPill(billing, t);
+        if (!pill) return null;
+        return (
+          <Link
+            href="/billing"
+            className={pill.urgent ? "tag tag-outline" : "tag tag-accent"}
+            style={{ whiteSpace: "nowrap", textDecoration: "none" }}
+          >
+            {pill.text}
+          </Link>
+        );
+      })()}
+
       <div className="seg" style={{ marginLeft: 8 }}>
         {tabs.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(tab.href + "/");
@@ -122,6 +161,9 @@ export function AppHeader({
         </Link>
         <Link href="/team" className="btn btn-secondary">
           {t("common.team")}
+        </Link>
+        <Link href="/billing" className="btn btn-secondary">
+          {t("common.billing")}
         </Link>
         <LocaleSwitcher />
         <span

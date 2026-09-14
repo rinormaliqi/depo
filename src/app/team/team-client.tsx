@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
+import { formatDate } from "@/lib/format-date";
 import { createInvite, getTeam, resendInvite, revokeInvite } from "./actions";
 
 type TeamData = Awaited<ReturnType<typeof getTeam>>;
@@ -57,7 +58,7 @@ function PendingInviteRow({ invite, canManage }: { invite: PendingInvite; canMan
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 4 }}>
         <span style={{ fontSize: 11, color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
-          {t("expires", { date: new Date(invite.expiresAt).toLocaleDateString() })}
+          {t("expires", { date: formatDate(invite.expiresAt) })}
         </span>
         <div style={{ display: "flex", gap: 4 }}>
           <InviteLink token={invite.token} />

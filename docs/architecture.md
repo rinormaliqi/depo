@@ -69,6 +69,43 @@ the app (what a worker vs. admin can actually do once they've joined) is a separ
 built piece — right now, joining with a role is tracked, but only this invite flow itself
 checks it.
 
+## Billing — manual activation, not Stripe
+
+`docs/pricing.md` defines real tiers/limits, but the fastest path to actual revenue for the
+first customers is a founder manually flipping a plan after a conversation, not building a
+full self-serve Stripe integration before there's a single paying customer (see that doc's
+"Billing v1" section for the reasoning). Two small, deliberately asymmetric pieces:
+
+- **`/internal`** — a founder-only, cross-tenant console listing every organization with
+  inline plan/status/trial-end editing. Gated by `requirePlatformAdmin()`
+  (`src/lib/platform-admin.ts`), which checks the signed-in email against a
+  `PLATFORM_ADMIN_EMAILS` env var allowlist — not a `users`/`memberships` role, since a DB-level
+  "platform admin" concept is premature generalization for what is, for now, exactly one
+  person. Never linked from the app's own nav, and deliberately English-only: it's operated by
+  the founder, not shown to a customer, so translating it buys nothing (the one place in this
+  otherwise fully-translated app where that trade was made deliberately).
+- **`/billing`** — the org-scoped, customer-facing counterpart: current plan, subscription
+  status, trial countdown, and live usage (users/facilities/bins) against the plan's limits.
+  Read-only for everyone (no self-serve upgrade exists yet) with a "contact us" line gated by
+  an optional `NEXT_PUBLIC_SUPPORT_EMAIL` env var — left unset, the line still renders without
+  a dead/fabricated address. `AppHeader` also surfaces a small trial/plan pill
+  (`src/app/billing/actions.ts`'s `getBillingSummary()`, fetched client-side on mount rather
+  than threaded as a prop through the ~7 different page types that render `AppHeader`) that
+  links to this page.
+
+**Not yet built**, tracked separately: actually *blocking* an action once a plan limit or an
+expired trial is hit. `/billing` shows the numbers; nothing stops them from going over yet.
+
+Real bug this surfaced: `internal-client.tsx` and `team-client.tsx` originally formatted dates
+with `toLocaleDateString()`, which resolves using the runtime's ambient locale *and* timezone —
+values that can differ between the server that renders a page and the browser that hydrates
+it, producing a React hydration mismatch the moment a formatted date appears in a client
+component's initial render. Fixed with a small shared `formatDate()` (`src/lib/format-date.ts`)
+that uses the `Date` object's UTC getters specifically, not just a pinned locale string —
+needed because the server and a viewer's browser can also be in genuinely different
+timezones, and only reading UTC components guarantees both compute the same calendar date for
+the same instant no matter where each one executes.
+
 ## QR codes
 
 Not implemented yet. The Scanner page (below) currently takes a typed location `code`

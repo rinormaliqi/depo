@@ -21,6 +21,15 @@ import {
 
 const PPM = 26;
 const SNAP = 0.25;
+const DEFAULT_LEFT_WIDTH = 214;
+const DEFAULT_RIGHT_WIDTH = 306;
+const LEFT_WIDTH_RANGE: [number, number] = [160, 420];
+const RIGHT_WIDTH_RANGE: [number, number] = [220, 480];
+const SIDEBAR_WIDTHS_KEY = "smartdepo:builder:sidebarWidths";
+
+function clampWidth(v: number, [min, max]: [number, number]) {
+  return Math.min(max, Math.max(min, v));
+}
 type Facility = { id: string; name: string; widthM: number; heightM: number };
 type Box = { xM: number; yM: number; widthM: number; heightM: number };
 
@@ -193,6 +202,9 @@ export function BlueprintCanvas({
   // The value itself drives no rendering directly — bumping it just forces a
   // re-render so the undo/redo buttons re-read the (ref-backed) stacks.
   const [, setHistoryVersion] = useState(0);
+  const [leftWidth, setLeftWidth] = useState(DEFAULT_LEFT_WIDTH);
+  const [rightWidth, setRightWidth] = useState(DEFAULT_RIGHT_WIDTH);
+  const [resizingSide, setResizingSide] = useState<"left" | "right" | null>(null);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -202,6 +214,8 @@ export function BlueprintCanvas({
   const clipboardRef = useRef<{ liveId: string } | null>(null);
   const undoStack = useRef<UndoEntry[]>([]);
   const redoStack = useRef<UndoEntry[]>([]);
+  const sidebarResizeRef = useRef<{ side: "left" | "right"; startX: number; startWidth: number } | null>(null);
+  const sidebarWidthsRef = useRef({ left: DEFAULT_LEFT_WIDTH, right: DEFAULT_RIGHT_WIDTH });
 
   const selected = useMemo(
     () => locations.find((l) => l.id === selectedId) ?? null,
@@ -232,6 +246,73 @@ export function BlueprintCanvas({
     const z = Math.min(w / (facility.widthM * PPM), h / (facility.heightM * PPM));
     setZoom(Math.max(0.3, Math.min(2, Math.round(z * 20) / 20)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Restore any previously-saved panel widths after mount rather than in the
+  // initial state itself — reading localStorage during the very first
+  // (server-matching) render would make that render diverge from what the
+  // server sent and trip a hydration mismatch.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SIDEBAR_WIDTHS_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { left?: number; right?: number };
+      if (typeof parsed.left === "number") {
+        const left = clampWidth(parsed.left, LEFT_WIDTH_RANGE);
+        sidebarWidthsRef.current.left = left;
+        setLeftWidth(left);
+      }
+      if (typeof parsed.right === "number") {
+        const right = clampWidth(parsed.right, RIGHT_WIDTH_RANGE);
+        sidebarWidthsRef.current.right = right;
+        setRightWidth(right);
+      }
+    } catch {
+      // localStorage unavailable (private browsing, etc.) — just keep defaults.
+    }
+  }, []);
+
+  function startSidebarResize(side: "left" | "right", ev: React.MouseEvent) {
+    ev.preventDefault();
+    sidebarResizeRef.current = { side, startX: ev.clientX, startWidth: side === "left" ? leftWidth : rightWidth };
+    setResizingSide(side);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }
+
+  useEffect(() => {
+    function onMove(ev: MouseEvent) {
+      const d = sidebarResizeRef.current;
+      if (!d) return;
+      const delta = ev.clientX - d.startX;
+      if (d.side === "left") {
+        const next = clampWidth(d.startWidth + delta, LEFT_WIDTH_RANGE);
+        sidebarWidthsRef.current.left = next;
+        setLeftWidth(next);
+      } else {
+        const next = clampWidth(d.startWidth - delta, RIGHT_WIDTH_RANGE);
+        sidebarWidthsRef.current.right = next;
+        setRightWidth(next);
+      }
+    }
+    function onUp() {
+      if (!sidebarResizeRef.current) return;
+      sidebarResizeRef.current = null;
+      setResizingSide(null);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      try {
+        localStorage.setItem(SIDEBAR_WIDTHS_KEY, JSON.stringify(sidebarWidthsRef.current));
+      } catch {
+        // localStorage unavailable — resizing still works, just doesn't persist.
+      }
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
   }, []);
 
   useEffect(() => {
@@ -717,8 +798,8 @@ export function BlueprintCanvas({
   );
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "minmax(0,214px) minmax(480px,1fr) minmax(0,306px)" }}>
-      <div style={{ borderRight: "1px solid var(--color-divider)", background: "#fff", overflow: "auto", padding: 13 }}>
+    <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: `${leftWidth}px 6px minmax(360px,1fr) 6px ${rightWidth}px` }}>
+      <div style={{ background: "#fff", overflow: "auto", padding: 13 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
             {t("entities")}
@@ -773,6 +854,12 @@ export function BlueprintCanvas({
           <button className="btn btn-secondary btn-block" onClick={() => setTemplatesOpen(true)}>{t("templatesButton")}</button>
         </div>
       </div>
+
+      <div
+        className={resizingSide === "left" ? "resize-handle dragging" : "resize-handle"}
+        onMouseDown={(ev) => startSidebarResize("left", ev)}
+        title={t("resizePanel")}
+      />
 
       <div style={{ minWidth: 0, display: "flex", flexDirection: "column", background: "var(--color-bg)" }}>
         <div style={{ flex: "none", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 7, padding: "7px 11px", background: "#fff", borderBottom: "1px solid var(--color-divider)" }}>
@@ -871,6 +958,19 @@ export function BlueprintCanvas({
                     onMouseDown={(ev) => startDrag("move", ev, e)}
                     title={`${e.code ?? e.name} · ${e.name}`}
                   >
+                    {type.spatial === "store" && e.levels > 1 && (
+                      // The four upright posts a real second-level platform is
+                      // bolted to, shown as corner marks (the footprint's
+                      // actual corners, not a spatial subdivision) — a level
+                      // is invisible from top-down otherwise, so this is the
+                      // one cue that something is held up above this rack.
+                      <>
+                        <span style={{ position: "absolute", left: -1, top: -1, width: 4, height: 4, background: "var(--color-accent-900)", pointerEvents: "none", zIndex: 5 }} />
+                        <span style={{ position: "absolute", right: -1, top: -1, width: 4, height: 4, background: "var(--color-accent-900)", pointerEvents: "none", zIndex: 5 }} />
+                        <span style={{ position: "absolute", left: -1, bottom: -1, width: 4, height: 4, background: "var(--color-accent-900)", pointerEvents: "none", zIndex: 5 }} />
+                        <span style={{ position: "absolute", right: -1, bottom: -1, width: 4, height: 4, background: "var(--color-accent-900)", pointerEvents: "none", zIndex: 5 }} />
+                      </>
+                    )}
                     <div
                       onMouseDown={(ev) => startDrag("move", ev, e)}
                       style={{
@@ -916,7 +1016,13 @@ export function BlueprintCanvas({
                                 // Unoccupied cells stay translucent so the parent's kind
                                 // pattern (rack tint, platform crosshatch, …) still reads
                                 // through the bay grid instead of being papered over.
-                                background: isOcc ? "var(--color-accent-200)" : "color-mix(in srgb,#fff 55%,transparent)",
+                                backgroundColor: isOcc ? "var(--color-accent-200)" : "color-mix(in srgb,#fff 55%,transparent)",
+                                // Each bay is a pallet position — an occupied one gets the
+                                // same three-deck-board slats as the pallet kind itself, so
+                                // "stocked" reads as an actual loaded pallet sitting there.
+                                backgroundImage: isOcc
+                                  ? "linear-gradient(color-mix(in srgb,var(--color-accent-700) 45%,transparent) 0 20%,transparent 20% 40%,color-mix(in srgb,var(--color-accent-700) 45%,transparent) 40% 60%,transparent 60% 80%,color-mix(in srgb,var(--color-accent-700) 45%,transparent) 80% 100%)"
+                                  : undefined,
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 fontSize: 8, color: "color-mix(in srgb,var(--color-text) 55%,transparent)",
                                 minWidth: 0, overflow: "hidden", textDecoration: "none",
@@ -948,7 +1054,13 @@ export function BlueprintCanvas({
         </div>
       </div>
 
-      <div style={{ borderLeft: "1px solid var(--color-divider)", background: "#fff", overflow: "auto", padding: 14 }}>
+      <div
+        className={resizingSide === "right" ? "resize-handle dragging" : "resize-handle"}
+        onMouseDown={(ev) => startSidebarResize("right", ev)}
+        title={t("resizePanel")}
+      />
+
+      <div style={{ background: "#fff", overflow: "auto", padding: 14 }}>
         {selected ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>

@@ -277,9 +277,14 @@ textarea.input { min-height: 90px; resize: vertical; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
 
 /* — blueprint frame: components are wireframe objects (see .blueprint
-     and .corner above) — square, transparent, hairline-bordered — */
+     and .corner above) — square, hairline-bordered, and transparent EXCEPT
+     .dialog: a modal overlay still needs an opaque surface to read against
+     whatever's behind its backdrop, wireframe aesthetic or not — folding it
+     into the transparent cards/inputs rule left every dialog see-through
+     down to its 1px border, unreadable over a busy canvas. */
 .card, .btn, .input, .tag, .seg, .dialog { border-radius: 0; }
-.card, .dialog { background: transparent; border: 1px solid var(--color-divider); }
+.card { background: transparent; border: 1px solid var(--color-divider); }
+.dialog { border: 1px solid var(--color-divider); }
 .btn { border: 1px solid var(--color-divider); }
 .btn-primary { border-color: var(--color-accent); }
 .btn-ghost { border-color: transparent; }
@@ -294,4 +299,18 @@ textarea.input { min-height: 90px; resize: vertical; }
   50% { transform: scale(1.2); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--color-accent) 75%, transparent)); }
 }
 .locate-ping { animation: locate-ping 0.85s ease-in-out 3; position: relative; z-index: 30; }
+
+/* — resize handle: a slim drag grip between the builder's palette/inspector
+     panels and the canvas — a hairline by default (the same divider a fixed
+     border would have drawn), widening into a visible band on hover or
+     while actively dragging so it's discoverable without adding a permanent
+     visual seam when idle. */
+.resize-handle { position: relative; cursor: col-resize; background: transparent; }
+.resize-handle::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
+  transform: translateX(-50%); background: var(--color-divider);
+}
+.resize-handle:hover, .resize-handle.dragging {
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
 

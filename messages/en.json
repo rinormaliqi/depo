@@ -106,6 +106,7 @@
     "zoomFit": "FIT",
     "gridOn": "GRID ON",
     "gridOff": "GRID OFF",
+    "resizePanel": "Drag to resize",
     "undo": "Undo (⌘Z)",
     "redo": "Redo (⌘⇧Z)",
     "status": {

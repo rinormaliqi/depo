@@ -100,30 +100,50 @@ export interface TemplateEntitySpec {
 export const TEMPLATE_KEYS = ["simple", "depotVertical", "depotHorizontal"] as const;
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
-function racksAlongZone(zone: Box, count: number, levels: number, bays: number, vertical: boolean): TemplateEntitySpec[] {
+// Realistic picking-aisle clearance between rack rows/columns, and the
+// per-bay width a template rack is sized against — both metres. Previously
+// this function was handed a fixed row count (3) and stretched whatever
+// gap was left over to fill the zone, which on a normal-sized facility left
+// racks stranded in a zone many times taller than the racking itself — a
+// floor plan with far more open floor than actual storage. Deriving the
+// count from these two real-world constants instead means a zone fills
+// with as many rows as would realistically fit, and a bigger zone gets
+// more racks rather than emptier aisles.
+const RACK_ROW_GAP = 1.8;
+const RACK_BAY_WIDTH = 1.1;
+
+function racksAlongZone(zone: Box, levels: number, bays: number, vertical: boolean): TemplateEntitySpec[] {
   const rackDepth = LOCATION_TYPES.rack.h; // real-world depth, never stretched
   if (vertical) {
     // Zone is a tall, narrow strip — racks stack going down its length.
     const widthM = round2(zone.widthM * 0.82);
     const xM = round2(zone.xM + (zone.widthM - widthM) / 2);
-    const gap = round2((zone.heightM - count * rackDepth) / (count + 1));
+    const unit = rackDepth + RACK_ROW_GAP;
+    const count = Math.max(1, Math.floor((zone.heightM + RACK_ROW_GAP) / unit));
+    const used = count * rackDepth + (count - 1) * RACK_ROW_GAP;
+    const leading = round2((zone.heightM - used) / 2);
     return Array.from({ length: count }, (_, i) => ({
       kind: "rack" as LocationKind,
       xM,
-      yM: round2(zone.yM + gap * (i + 1) + rackDepth * i),
+      yM: round2(zone.yM + leading + i * unit),
       widthM,
       heightM: rackDepth,
       bays,
       levels,
     }));
   }
-  // Zone is a wide, short band — racks sit side by side along its width.
-  const widthM = round2((zone.widthM / count) * 0.82);
-  const gap = round2((zone.widthM - count * widthM) / (count + 1));
+  // Zone is a wide, short band — racks sit side by side along its width, at
+  // a realistic width instead of stretching to fill however wide the band
+  // happens to be.
+  const widthM = round2(Math.min(zone.widthM * 0.82, bays * RACK_BAY_WIDTH));
+  const unit = widthM + RACK_ROW_GAP;
+  const count = Math.max(1, Math.floor((zone.widthM + RACK_ROW_GAP) / unit));
+  const used = count * widthM + (count - 1) * RACK_ROW_GAP;
+  const leading = round2((zone.widthM - used) / 2);
   const yM = round2(zone.yM + (zone.heightM - rackDepth) / 2);
   return Array.from({ length: count }, (_, i) => ({
     kind: "rack" as LocationKind,
-    xM: round2(zone.xM + gap * (i + 1) + widthM * i),
+    xM: round2(zone.xM + leading + i * unit),
     yM,
     widthM,
     heightM: rackDepth,
@@ -143,15 +163,15 @@ function perimeterWalls(floorW: number, floorH: number): TemplateEntitySpec[] {
   ];
 }
 
-// 4 zones, walled perimeter, aisles between zones, 3 racks per zone with
-// 2-level pallet racking — a filled-out depot to land on, not a sparse demo.
+// 4 zones, walled perimeter, aisles between zones, each zone packed with as
+// many rows of 2-level pallet racking as realistically fit it (see
+// racksAlongZone) — a filled-out depot to land on, not a sparse demo.
 // Positions scale with the facility's actual floor size; rack depth and
 // wall thickness stay at their real-world defaults.
 function buildDepot(floorW: number, floorH: number, orientation: "vertical" | "horizontal"): TemplateEntitySpec[] {
   const margin = Math.max(0.6, round2(Math.min(floorW, floorH) * 0.03));
   const aisleW = Math.max(1.2, round2(Math.min(floorW, floorH) * 0.05));
   const zoneCount = 4;
-  const racksPerZone = 3;
 
   const specs: TemplateEntitySpec[] = [...perimeterWalls(floorW, floorH)];
 
@@ -163,7 +183,7 @@ function buildDepot(floorW: number, floorH: number, orientation: "vertical" | "h
       const xM = round2(margin + i * (zoneW + aisleW));
       const zone: Box = { xM, yM: margin, widthM: zoneW, heightM: zoneH };
       specs.push({ kind: "zone", ...zone, bays: 1, levels: 1 });
-      specs.push(...racksAlongZone(zone, racksPerZone, 2, 6, true));
+      specs.push(...racksAlongZone(zone, 2, 6, true));
       if (i < zoneCount - 1) {
         specs.push({ kind: "aisle", xM: round2(xM + zoneW), yM: margin, widthM: aisleW, heightM: zoneH, bays: 1, levels: 1 });
       }
@@ -176,7 +196,7 @@ function buildDepot(floorW: number, floorH: number, orientation: "vertical" | "h
       const yM = round2(margin + i * (zoneH + aisleW));
       const zone: Box = { xM: margin, yM, widthM: zoneW, heightM: zoneH };
       specs.push({ kind: "zone", ...zone, bays: 1, levels: 1 });
-      specs.push(...racksAlongZone(zone, racksPerZone, 2, 6, false));
+      specs.push(...racksAlongZone(zone, 2, 6, false));
       if (i < zoneCount - 1) {
         specs.push({ kind: "aisle", xM: margin, yM: round2(yM + zoneH), widthM: zoneW, heightM: aisleW, bays: 1, levels: 1 });
       }

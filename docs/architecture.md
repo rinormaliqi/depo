@@ -143,9 +143,33 @@ one zone. Real feedback was that the default a new company lands on should look 
 actual depot: walled perimeter, multiple zones/sectors separated by aisles, and racks built as
 two-level pallet racking by default (see above), not flat one-level shelving. `buildTemplate()`
 now offers `depotVertical` and `depotHorizontal` — 4 zones (vertical strips or horizontal
-bands, `buildDepot()` in `blueprint-types.ts`), each with 3 two-level, 6-bay racks, walled and
-aisled — plus `simple` kept as a minimal option for a single small room. All positions still
-scale as fractions of the facility's actual configured floor size.
+bands, `buildDepot()` in `blueprint-types.ts`), each packed with two-level, 6-bay racks, walled
+and aisled — plus `simple` kept as a minimal option for a single small room. All positions
+still scale as fractions of the facility's actual configured floor size.
+
+`racksAlongZone()` originally placed a fixed count of 3 rack rows per zone and stretched
+whatever space was left over into the gaps between them — on a normal-sized facility that left
+a zone many times taller than the racking actually inside it, reading as mostly empty floor
+rather than a filled depot. Fixed by deriving the row (or column, for horizontal zones) count
+from two real-world constants instead — `RACK_ROW_GAP` (1.8m, a realistic picking-aisle
+clearance) and, for horizontal zones, `RACK_BAY_WIDTH` (1.1m, capping how wide a single rack
+row is allowed to stretch) — so a zone fills with as many realistically-spaced rows as
+actually fit it. A bigger facility now gets more racks per zone rather than emptier aisles: on
+the default 40×24m facility this took each zone from 3 racks to 8.
+
+Two more cues address "this doesn't look like a real depot" specifically for the parts that
+don't survive a flat top-down projection:
+- **Multi-level support posts.** A level is deliberately not drawn as a second spatial axis
+  (see above) — but "there's a platform held up above this" still needs *some* on-canvas cue,
+  or it's only visible via the small "2L" badge in the label. A `levels > 1` store entity now
+  gets four small filled squares at the corners of its own footprint, echoing how architectural
+  floor plans show structural columns — the footprint's real corners, not a subdivision of it,
+  so it doesn't contradict the "levels aren't spatial" rule.
+- **Pallets as the actual unit of storage.** A bay cell's occupied fill used to be a flat block
+  of color; it now also gets the same three-deck-board slat pattern as the `pallet` kind itself
+  when occupied, so a loaded bay reads as an actual pallet sitting there rather than an
+  abstract "has stock" flag. Left off empty cells deliberately, so it reads as "a pallet is
+  here" rather than cluttering every open slot.
 
 ### One scheme per subscription: persistent access + destructive-replace confirmation
 
@@ -283,6 +307,34 @@ pastes via the existing `duplicateEntity` action, cascading each repeated paste 
 previous one rather than always offsetting from the original; Delete/Backspace removes the
 current selection. Small Undo/Redo buttons in the canvas toolbar mirror the shortcuts for
 anyone not on a keyboard shortcut-friendly device.
+
+### Resizable palette/inspector panels
+
+The builder's three-column layout (palette, canvas, inspector) was fixed-width — reasonable
+for the default sizes, but a fixed 214px palette or 306px inspector can crowd a workflow that
+wants more canvas, or cramp one that wants to read longer labels. Both side panels are now
+user-resizable: a 6px drag handle (`.resize-handle` in `ds.css`, a hairline by default,
+highlighting on hover/drag) sits between each sidebar and the canvas, dragging updates the
+grid's `gridTemplateColumns` directly (`${leftWidth}px 6px minmax(360px,1fr) 6px
+${rightWidth}px`), and the chosen widths persist to `localStorage` so they survive a reload.
+Clamped to a sane range per side (160–420px palette, 220–480px inspector) so a drag can't
+crush a panel unusably small or swallow the whole canvas.
+
+Persisted widths are applied in a `useEffect` after mount, not read into the initial
+`useState`, even though that means a one-frame flash from default to saved width on load —
+reading `localStorage` during the very first render would make that render diverge from what
+the server sent (which has no access to the browser's storage) and trip a hydration mismatch.
+
+### Dev-only stale-translations trap
+
+`src/i18n/request.ts` originally loaded messages via `import(`../../messages/${locale}.json`)`
+— a dynamic import behind a template string. Turbopack's dev server doesn't reliably
+invalidate that particular pattern when the JSON file changes; new keys can throw
+`MISSING_MESSAGE` in the browser for a running dev session even though the file on disk is
+correct, until the dev server is restarted. Hit this twice in one session before tracing it to
+the import style rather than the file content. Fixed by switching to static imports for both
+locales (`en`/`sq`) into a small lookup object — an ordinary part of the module graph, so it
+hot-reloads like any other source edit instead of needing a manual restart.
 
 ## Background jobs
 

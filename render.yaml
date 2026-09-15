@@ -49,6 +49,12 @@ services:
         sync: false
       - key: PAYSERA_TEST_MODE
         value: "1"
+      # Site-ownership <meta> tag from the Checkout project's
+      # "Konfirmimi i projektit" section: name attribute and content value.
+      - key: NEXT_PUBLIC_PAYSERA_VERIFICATION_NAME
+        sync: false
+      - key: NEXT_PUBLIC_PAYSERA_VERIFICATION_VALUE
+        sync: false
 
 databases:
   - name: smartdepo-db

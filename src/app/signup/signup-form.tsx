@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useActionState } from "react";
 import { signUp } from "./actions";
 
@@ -30,6 +31,12 @@ export function SignupForm() {
       <button type="submit" className="btn btn-primary btn-block" disabled={isPending}>
         {isPending ? t("signup.creating") : t("signup.createAccount")}
       </button>
+      <p className="text-muted" style={{ fontSize: 11, textAlign: "center", margin: 0 }}>
+        {t.rich("signup.agree", {
+          terms: (chunks) => <Link href="/terms" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</Link>,
+          refunds: (chunks) => <Link href="/refunds" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</Link>,
+        })}
+      </p>
     </form>
   );
 }

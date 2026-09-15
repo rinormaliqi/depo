@@ -66,7 +66,8 @@
       "errorEmailExists": "An account with that email already exists",
       "errorPlansNotSeeded": "Plans aren't seeded yet — run pnpm db:seed",
       "errorSignInFailed": "Account created, but sign-in failed — try logging in",
-      "errorDisposableEmail": "Disposable email addresses can't be used — please use your work email"
+      "errorDisposableEmail": "Disposable email addresses can't be used — please use your work email",
+      "agree": "By creating an account you agree to the <terms>Terms of Service</terms> and <refunds>Refund Policy</refunds>."
     }
   },
   "forgotPassword": {
@@ -501,5 +502,51 @@
     "manageItems": "Only managers and admins can add items",
     "manageTeam": "Only managers and admins can manage the team",
     "manageBilling": "Only an admin can manage billing"
+  },
+  "public": {
+    "updated": "Last updated {date}",
+    "nav": {
+      "pricing": "Pricing",
+      "login": "Log in",
+      "signup": "Start free trial",
+      "terms": "Terms",
+      "refunds": "Refunds",
+      "contact": "Contact"
+    },
+    "footer": {
+      "regNo": "Reg. no. {n}"
+    },
+    "terms": {
+      "title": "Terms of Service"
+    },
+    "refunds": {
+      "title": "Refund Policy",
+      "intro": "Short version: try it free for 30 days, and if you pay and change your mind within 14 days you get all of it back."
+    },
+    "contact": {
+      "title": "Contact",
+      "intro": "Questions about SmartDepo, your plan, an invoice or a refund — write to us and a person replies, usually the same working day.",
+      "company": "Company",
+      "regNo": "Registration no.",
+      "address": "Address",
+      "email": "Email",
+      "hours": "Support is available Monday–Friday, 09:00–17:00 (CET)."
+    },
+    "pricing": {
+      "title": "Pricing",
+      "intro": "Straightforward plans, priced per organization — not per user. Every plan starts with a 30-day free trial, no card required.",
+      "popular": "Most popular",
+      "from": "from {price}",
+      "perMonth": "/ month",
+      "historyMonths": "{n} months of movement history",
+      "historyUnlimited": "Unlimited movement history",
+      "enterpriseNote": "Multi-site operations, custom limits, invoicing and onboarding. Priced per customer.",
+      "startTrial": "Start free trial",
+      "noteTrial": "Trial: 30 days, full features, no payment details. Afterwards the account becomes read-only until a plan is active — nothing is deleted.",
+      "notePrepaid": "Payment: prepaid for 1, 3 or 12 months via Paysera (cards, e-banking, bank transfer) or by invoice. No automatic renewal — you are never charged without initiating a payment.",
+      "noteVat": "All prices in EUR. VAT is added where required by law and shown before you pay.",
+      "noteRefund": "Full refund within 14 days of any payment, no questions asked.",
+      "refundLink": "Read the refund policy"
+    }
   }
 }

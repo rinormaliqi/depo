@@ -217,6 +217,20 @@ purchase chains from the previous `period_end`, an expired `paid_until` locks wr
 "paid period has ended" message, and the reminder marker is claimed on the first page load
 inside the 7-day window.
 
+### Public pages: pricing, terms, refunds, contact
+
+Paysera's payment-collection annex (and its project reviewers) expect the merchant site to show
+full prices, terms, a refund policy and contact/company details before a project is approved —
+and the same pages are what keep a customer dispute from ever reaching Paysera's >2%/>5%
+complaint thresholds. `/pricing` reads the live `plans` rows, so the number a prospect sees is
+the number `/billing` charges. `/terms` and `/refunds` render `src/content/legal.ts` — long
+prose kept as data per locale rather than in `messages/*.json`, so a legal redline never touches
+UI strings; Albanian is the binding version and the English text says so. Company identity
+(`NEXT_PUBLIC_LEGAL_NAME` / `_COMPANY_REG_NO` / `_COMPANY_ADDRESS`, `src/lib/company.ts`) is
+env-driven because it changes exactly once, at ARBK registration. Refund policy as written: 30
+days free, then full refund within 14 days of any payment, no questions — we absorb Paysera's
+non-refundable commission on those (1%, cheaper than a dispute). Signup links both documents.
+
 ## Plan-limit enforcement
 
 `plans.max_users`/`max_facilities`/`max_bins` existed as data from the start, but nothing ever

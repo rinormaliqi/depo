@@ -33,6 +33,12 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SUPPORT_EMAIL
         sync: false
+      - key: NEXT_PUBLIC_LEGAL_NAME
+        sync: false
+      - key: NEXT_PUBLIC_COMPANY_REG_NO
+        sync: false
+      - key: NEXT_PUBLIC_COMPANY_ADDRESS
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM

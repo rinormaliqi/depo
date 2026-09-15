@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { PublicFooter } from "@/components/public-page";
 import { logout } from "@/lib/actions/auth";
 
 export default async function Home() {
@@ -31,6 +32,9 @@ export default async function Home() {
         </div>
       ) : (
         <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+          <Link href="/pricing" className="btn btn-secondary">
+            {t("public.nav.pricing")}
+          </Link>
           <Link href="/login" className="btn btn-secondary">
             {t("home.logIn")}
           </Link>
@@ -39,6 +43,9 @@ export default async function Home() {
           </Link>
         </div>
       )}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0 }}>
+        <PublicFooter />
+      </div>
     </main>
   );
 }

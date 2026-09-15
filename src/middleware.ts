@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
-const publicPaths = new Set(["/", "/login", "/signup", "/forgot-password"]);
+const publicPaths = new Set(["/", "/login", "/signup", "/forgot-password", "/pricing", "/terms", "/refunds", "/contact"]);
 // Token-in-the-URL pages, reached by someone who isn't signed in yet (that's
 // the whole point of an invite or reset link) — a prefix check, not an exact
 // one, since the token itself varies per link.

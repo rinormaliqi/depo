@@ -30,6 +30,6 @@ Open http://localhost:3000.
 - `pnpm lint` / `pnpm type-check`
 - `pnpm db:push` — sync the Drizzle schema to the database (local dev)
 - `pnpm db:generate` — generate a SQL migration from schema changes
-- `pnpm db:migrate` — apply migrations (production)
+- `pnpm db:migrate` — apply migrations (production; `render.yaml` runs this as the pre-deploy command)
 - `pnpm db:seed` — seed the `plans` table with the pricing tiers
 - `pnpm db:studio` — browse the database

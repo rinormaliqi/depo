@@ -170,11 +170,16 @@ export function BlueprintCanvas({
   initialLocations,
   initialOccupiedBinIds,
   initialHighlightBinId,
+  readOnly = false,
 }: {
   facility: Facility;
   initialLocations: LocationRow[];
   initialOccupiedBinIds: string[];
   initialHighlightBinId?: string;
+  // A worker's view: the server rejects every layout write for them anyway
+  // (requirePermission("editLayout")), this just stops the UI offering
+  // controls that would only ever produce an error.
+  readOnly?: boolean;
 }) {
   const t = useTranslations("builder");
   const router = useRouter();
@@ -675,6 +680,7 @@ export function BlueprintCanvas({
     ev.stopPropagation();
     ev.preventDefault();
     setSelectedId(entity.id);
+    if (readOnly) return;
     dragRef.current = {
       kind,
       id: entity.id,
@@ -736,6 +742,7 @@ export function BlueprintCanvas({
     function onKeyDown(ev: KeyboardEvent) {
       if (isEditableTarget(ev.target)) return;
       if (floorOpen || templatesOpen || confirmTemplate) return;
+      if (readOnly) return;
       const meta = ev.metaKey || ev.ctrlKey;
       const key = ev.key.toLowerCase();
       if (meta && key === "z") {
@@ -804,11 +811,19 @@ export function BlueprintCanvas({
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
             {t("entities")}
           </div>
-          <div style={{ fontSize: 11, lineHeight: 1.45, color: "color-mix(in srgb,var(--color-text) 60%,transparent)", marginBottom: 3 }}>
-            {t("entitiesHint")}
-          </div>
+          {readOnly && (
+            <div style={{ fontSize: 11, lineHeight: 1.45, padding: "8px 9px", border: "1px solid var(--color-divider)", background: "var(--color-bg)", marginBottom: 3 }}>
+              <span className="tag tag-outline" style={{ marginRight: 6 }}>{t("viewOnly")}</span>
+              {t("viewOnlyHint")}
+            </div>
+          )}
+          {!readOnly && (
+            <div style={{ fontSize: 11, lineHeight: 1.45, color: "color-mix(in srgb,var(--color-text) 60%,transparent)", marginBottom: 3 }}>
+              {t("entitiesHint")}
+            </div>
+          )}
 
-          {PALETTE_KINDS.map((kind) => {
+          {!readOnly && PALETTE_KINDS.map((kind) => {
             const type = LOCATION_TYPES[kind];
             return (
               <button
@@ -832,9 +847,11 @@ export function BlueprintCanvas({
             );
           })}
 
-          <button className="btn btn-secondary btn-block" onClick={handleAddSector} disabled={busy} title={t("addSectorHint")}>
-            {t("addSector")}
-          </button>
+          {!readOnly && (
+            <button className="btn btn-secondary btn-block" onClick={handleAddSector} disabled={busy} title={t("addSectorHint")}>
+              {t("addSector")}
+            </button>
+          )}
 
           <div style={{ height: 1, background: "var(--color-divider)", margin: "9px 0" }} />
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
@@ -850,8 +867,12 @@ export function BlueprintCanvas({
               <span style={{ fontVariantNumeric: "tabular-nums" }}>{facility.widthM} × {facility.heightM} m</span>
             </div>
           </div>
-          <button className="btn btn-secondary btn-block" onClick={() => setFloorOpen(true)}>{t("editFloor")}</button>
-          <button className="btn btn-secondary btn-block" onClick={() => setTemplatesOpen(true)}>{t("templatesButton")}</button>
+          {!readOnly && (
+            <>
+              <button className="btn btn-secondary btn-block" onClick={() => setFloorOpen(true)}>{t("editFloor")}</button>
+              <button className="btn btn-secondary btn-block" onClick={() => setTemplatesOpen(true)}>{t("templatesButton")}</button>
+            </>
+          )}
         </div>
       </div>
 
@@ -870,8 +891,12 @@ export function BlueprintCanvas({
           <button className="btn btn-ghost" onClick={() => setGrid((g) => !g)} style={{ fontSize: 11, letterSpacing: ".08em" }}>{grid ? t("gridOn") : t("gridOff")}</button>
 
           <div style={{ width: 1, height: 17, background: "var(--color-divider)" }} />
-          <button className="btn btn-secondary" onClick={handleUndo} disabled={busy || undoStack.current.length === 0} title={t("undo")} style={{ minWidth: 26, padding: "1px 7px" }}>↺</button>
-          <button className="btn btn-secondary" onClick={handleRedo} disabled={busy || redoStack.current.length === 0} title={t("redo")} style={{ minWidth: 26, padding: "1px 7px" }}>↻</button>
+          {!readOnly && (
+            <>
+              <button className="btn btn-secondary" onClick={handleUndo} disabled={busy || undoStack.current.length === 0} title={t("undo")} style={{ minWidth: 26, padding: "1px 7px" }}>↺</button>
+              <button className="btn btn-secondary" onClick={handleRedo} disabled={busy || redoStack.current.length === 0} title={t("redo")} style={{ minWidth: 26, padding: "1px 7px" }}>↻</button>
+            </>
+          )}
 
           {maxLevels > 1 && (
             <>
@@ -922,18 +947,22 @@ export function BlueprintCanvas({
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center", padding: 20 }}>
                   <div style={{ fontFamily: "var(--font-heading)", fontSize: 21, letterSpacing: ".08em", color: "var(--color-accent-700)", pointerEvents: "none" }}>{t("emptyFloorTitle")}</div>
                   <div style={{ fontSize: 13, maxWidth: 320, color: "color-mix(in srgb,var(--color-text) 60%,transparent)", pointerEvents: "none" }}>
-                    {t("emptyFloorBody")}
+                    {readOnly ? t("emptyFloorBodyReadOnly") : t("emptyFloorBody")}
                   </div>
-                  <div style={{ fontSize: 11, color: "color-mix(in srgb,var(--color-text) 55%,transparent)", marginTop: 6, pointerEvents: "none" }}>
-                    {t("templatePrompt")}
-                  </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-                    {TEMPLATE_KEYS.map((key) => (
-                      <button key={key} className="btn btn-secondary" onClick={() => chooseTemplate(key)} disabled={busy} title={t(`template.${key}.description`)}>
-                        {t(`template.${key}.name`)}
-                      </button>
-                    ))}
-                  </div>
+                  {!readOnly && (
+                    <>
+                      <div style={{ fontSize: 11, color: "color-mix(in srgb,var(--color-text) 55%,transparent)", marginTop: 6, pointerEvents: "none" }}>
+                        {t("templatePrompt")}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                        {TEMPLATE_KEYS.map((key) => (
+                          <button key={key} className="btn btn-secondary" onClick={() => chooseTemplate(key)} disabled={busy} title={t(`template.${key}.description`)}>
+                            {t(`template.${key}.name`)}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
               {topLevel.map((e) => {
@@ -1062,7 +1091,10 @@ export function BlueprintCanvas({
 
       <div style={{ background: "#fff", overflow: "auto", padding: 14 }}>
         {selected ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          // A disabled <fieldset> greys out every input inside in one go —
+          // the inspector's fields still show the selected entity's numbers,
+          // they just can't be edited.
+          <fieldset disabled={readOnly} style={{ display: "flex", flexDirection: "column", gap: 11, border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
               <div>
                 <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--color-accent)" }}>
@@ -1124,11 +1156,13 @@ export function BlueprintCanvas({
 
             {error && <p style={{ fontSize: 12, color: "var(--color-accent-800)" }}>{error}</p>}
 
-            <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
-              <button className="btn btn-secondary" onClick={handleDuplicate} disabled={busy} style={{ flex: 1 }}>{t("duplicate")}</button>
-              <button className="btn btn-secondary" onClick={handleDelete} disabled={busy} style={{ flex: 1 }}>{t("delete")}</button>
-            </div>
-          </div>
+            {!readOnly && (
+              <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+                <button className="btn btn-secondary" onClick={handleDuplicate} disabled={busy} style={{ flex: 1 }}>{t("duplicate")}</button>
+                <button className="btn btn-secondary" onClick={handleDelete} disabled={busy} style={{ flex: 1 }}>{t("delete")}</button>
+              </div>
+            )}
+          </fieldset>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
             <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>

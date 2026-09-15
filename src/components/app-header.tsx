@@ -10,14 +10,22 @@ import { LocaleSwitcher } from "./locale-switcher";
 
 type BillingSummary = Awaited<ReturnType<typeof getBillingSummary>>;
 
-function billingPill(billing: BillingSummary, t: ReturnType<typeof useTranslations>) {
+function billingPill(billing: BillingSummary, t: ReturnType<typeof useTranslations>): { text: string; urgent: boolean; href?: string } | null {
   if (!billing.planName) return null;
   if (billing.subscriptionStatus === "trialing") {
+    // No trial end yet = founder hasn't verified their email; the clock
+    // starts when they do (see markEmailVerified in src/lib/email-verification.ts).
+    if (!billing.trialEndsAt) return { text: t("common.verifyEmail"), urgent: true, href: "/verify-email" };
     const daysLeft = billing.trialEndsAt
       ? Math.ceil((new Date(billing.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
       : null;
     if (daysLeft !== null && daysLeft <= 0) return { text: t("common.trialEnded"), urgent: true };
     return { text: t("common.trialDaysLeft", { plan: billing.planName, n: daysLeft ?? "?" }), urgent: (daysLeft ?? 99) <= 5 };
+  }
+  if (billing.subscriptionStatus === "active" && billing.paidUntil) {
+    const daysLeft = Math.ceil((new Date(billing.paidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (daysLeft <= 0) return { text: t("common.planExpired", { plan: billing.planName }), urgent: true };
+    if (daysLeft <= 7) return { text: t("common.planRenewSoon", { plan: billing.planName, n: daysLeft }), urgent: true };
   }
   if (billing.subscriptionStatus === "past_due") return { text: t("common.planPastDue", { plan: billing.planName }), urgent: true };
   if (billing.subscriptionStatus === "canceled") return { text: t("common.planCanceled", { plan: billing.planName }), urgent: true };
@@ -111,7 +119,7 @@ export function AppHeader({
         if (!pill) return null;
         return (
           <Link
-            href="/billing"
+            href={pill.href ?? "/billing"}
             className={pill.urgent ? "tag tag-outline" : "tag tag-accent"}
             style={{ whiteSpace: "nowrap", textDecoration: "none" }}
           >

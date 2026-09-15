@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { invites, organizations, users } from "@/db/schema";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { normalizeEmail } from "@/lib/email-normalize";
 import { AcceptInviteForm } from "./accept-invite-form";
 
 export default async function InvitePage({
@@ -19,7 +20,7 @@ export default async function InvitePage({
     .where(and(eq(invites.token, token), isNull(invites.acceptedAt), gt(invites.expiresAt, new Date())));
 
   const organization = invite ? (await db.select().from(organizations).where(eq(organizations.id, invite.organizationId)))[0] : null;
-  const existingUser = invite ? (await db.select().from(users).where(eq(users.email, invite.email)))[0] : null;
+  const existingUser = invite ? (await db.select().from(users).where(eq(users.normalizedEmail, normalizeEmail(invite.email))))[0] : null;
 
   return (
     <main style={{ display: "flex", minHeight: "100vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24, padding: "0 24px" }}>

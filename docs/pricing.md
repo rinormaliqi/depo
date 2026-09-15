@@ -25,25 +25,38 @@ Business is the anchor tier — sized for the ~10-15 worker company that's the p
 customer. Enterprise's price is a negotiable starting point, not a hard number, meant for
 larger multi-site operations.
 
-*Currency (USD) and exact figures are a draft, not fixed — revisit once there's real signal on
+*Exact figures are a draft, not fixed (currency is EUR — see Billing v2) — revisit once there's real signal on
 target-market willingness to pay (geography matters here: adjust if the initial customer base
 turns out to be more price-sensitive than a generic SMB assumption).*
 
-## Billing v1: manual activation, not Stripe
+## Billing v2: prepaid periods through Paysera (v1 was manual activation)
 
-Turning a trialing org into a paying one is a person (the founder) looking at `/internal`
-after an offline conversation and picking a plan/status — not a customer clicking "upgrade"
-and a card getting charged. Chosen over building a full self-serve Stripe Checkout integration
-because it's days of work instead of weeks, and the first handful of B2B customers are
-realistically closed by a conversation anyway, not a self-serve checkout flow. Automate with
-Stripe once there's repeat volume to justify it — `organizations.stripe_customer_id` stays a
-placeholder column for that, and nothing about the manual path forecloses adding it later.
+v1 was the founder flipping plan/status by hand on `/internal` after a conversation — chosen
+so the first customers could pay without weeks of checkout work. That path still exists (it's
+now "record a bank transfer"), but there's a self-serve one next to it.
 
-See `docs/architecture.md`'s Billing section for how `/internal` and `/billing` work.
+**Provider: Paysera, not Stripe.** Stripe doesn't onboard businesses registered in Kosovo;
+Paysera does (it operates in Kosovo and Albania directly), takes cards and bank payments, and
+its Checkout Classic protocol is a redirect plus one signed callback. Its *recurring* billing
+is merchant-initiated (you store a card token and charge it yourself, under a separate
+agreement), so rather than build a subscription engine the model is:
+
+**Prepaid periods.** An admin picks a plan and 1 / 3 / 12 months on `/billing`, pays the total
+up front on Paysera's hosted page, and `organizations.paid_until` moves forward by that many
+months. Paying before the current period ends *extends* it; changing plan starts a fresh period
+from now (no proration — the old period is simply superseded). Seven days before `paid_until`
+(or the trial end) the admins get one reminder email; when it passes, the org drops into the
+same read-only lockout as an expired trial until another period is bought. Enterprise is not
+self-serve — it's "contact us" and activated on `/internal`. See `docs/architecture.md`'s
+Billing section for the mechanics.
+
+**Currency: EUR.** Kosovo uses the euro; the figures above are read as EUR (`BILLING_CURRENCY`
+in `src/lib/billing-plans.ts`). Automatic card renewal via Paysera tokens is the obvious next
+step once the Paysera agreement covers it; nothing in the prepaid model forecloses it.
 
 ## What's explicitly deferred
-- **Annual billing / discounted yearly plans.** Can be added later as a non-breaking column
-  (`price_cents_yearly`) once monthly pricing is validated.
+- **Discounted multi-month pricing.** 3- and 12-month periods exist but cost exactly months ×
+  monthly; a discount is one change in `priceForPeriod()` once monthly pricing is validated.
 - **Usage-based/overage pricing** (e.g. charging per bin beyond the plan limit instead of a
   hard cap). Hard limits are simpler to reason about and enforce for MVP.
 

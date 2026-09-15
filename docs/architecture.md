@@ -43,31 +43,52 @@ a bigger box or a second managed service. Auth.js adds zero infrastructure.
 Roles (Admin / Manager / Worker) are a column on the user-organization membership, checked in
 route handlers/middleware — no external authorization service.
 
-### Team invites — link-sharing, not email
+### Team invites, roles and permissions
 
-Signup only ever created the first (admin) user for an org — there was no way to add a second
-person, which mattered because workers, not admins, are the product's primary daily user.
-`invites` (`src/db/schema.ts`) is a pending-seat table keyed by a random bearer token rather
-than requiring the invitee to already have an account: an admin/manager picks an email and a
-role on `/team`, the app generates a `/invite/<token>` link, and — deliberately — **no email is
-actually sent**. The inviting admin copies the link and shares it however they already reach
-that person (Slack, WhatsApp, texting it directly), rather than this project standing up
-transactional email infrastructure (sender domain, deliverability, a provider account) before
-there's a single paying customer. `/invite/<token>` detects whether the invited email already
-has an account and renders a sign-in-to-accept or create-account-to-accept form accordingly;
-either path writes the `membership` row and marks the invite accepted before establishing the
-session — for the sign-in path specifically, the password is verified directly (not solely via
-`signIn()`) because `signIn()`'s own redirect-on-success means no code after a successful call
-would run, so the membership write has to happen before it, and it has to happen only *after*
-the password is confirmed correct.
+Signup only ever creates the first (admin) user for an org; everyone else arrives through
+`invites` (`src/db/schema.ts`) — a pending-seat table keyed by a random bearer token, so the
+invitee doesn't need an account yet. An admin/manager picks an email and a role on `/team`; the
+app **emails** a `/invite/<token>` link (`sendInviteEmail` in `src/app/team/actions.ts`, via the
+same `src/lib/email.ts` Resend path as password reset — it originally did *not* send mail, on
+the grounds of not standing up email infra before a paying customer, but reset needed that infra
+anyway, so the reason expired). The link is still shown on `/team` with a copy button: a
+floor worker's inbox is not always reliable, and a mail-provider failure returns a translated
+"created but couldn't send — share the link" error rather than throwing the seat away. Resend
+re-sends the mail and extends the 7-day expiry; expired-but-unaccepted invites stay listed with
+an "Expired" marker so they can be resent, not silently vanish.
 
-An invite's role is capped at what the inviter can grant: a manager can invite a worker or
-another manager, but not an admin — only an existing admin can create a new one. Revoke/resend
-exist per pending invite (resend just extends its 7-day expiry and re-surfaces the link, since
-there's no email to actually redeliver). Full role-based *permission* enforcement elsewhere in
-the app (what a worker vs. admin can actually do once they've joined) is a separate, not-yet-
-built piece — right now, joining with a role is tracked, but only this invite flow itself
-checks it.
+`/invite/<token>` detects whether the invited email already has an account (compared on
+`normalized_email`, so an invite to `me+work@gmail.com` finds `me@gmail.com`) and renders a
+sign-in-to-accept or create-account-to-accept form. Either path writes the `membership` row,
+marks the invite accepted and marks the user's email verified — the link reached that inbox,
+which is the same proof signup's verification asks for — *before* calling `signIn()`, whose
+redirect-on-success means nothing after it runs; the sign-in path checks the password directly
+first for the same reason.
+
+**Permissions** (`src/lib/permissions.ts`) are a small table, not scattered `if (role === …)`
+checks: `moveStock` (everyone), `editLayout` / `manageItems` / `manageTeam` (admin + manager),
+`manageBilling` (admin). `requirePermission(p)` is what every mutating server action now calls
+instead of `requireActiveOrg()` — it runs the same lock check and then the role check, throwing a
+translated message either way, so the lockout and the permission gate are one call site. Wired
+into all of `builder/actions.ts`, `items/actions.ts`'s `createItem`, the scanner/bin stock
+actions, and every `team/actions.ts` mutation. The split follows how a depot runs: workers move
+stock all day and must not be able to reshape the layout by accident; managers run the depot
+(layout, catalog, staffing) but not the company's wallet; admins own the account.
+
+The UI mirrors the table rather than letting people discover a rule by hitting an error:
+`getMyPermissions()` drives a `readOnly` prop on `BlueprintCanvas` (palette, templates, floor
+settings, undo/redo, duplicate/delete hidden; drag and destructive shortcuts no-op'd; the
+inspector wrapped in a disabled `<fieldset>` so numbers stay visible but uneditable) and hides
+the item form for workers. Server enforcement is the real gate — verified by calling
+`addSector` directly with a worker session and getting the permission error back.
+
+`/team` also does member management: change role (a select per row) and remove. Rules, in
+`changeMemberRole` / `removeMember`: the target must belong to this org; a manager can't touch
+an admin seat in either direction (same cap as inviting — only an admin creates an admin);
+nobody removes themselves; and **an org can never be left without an admin**
+(`assertNotLastAdmin`), or nobody could manage the team or billing again. Removing deletes only
+the membership row — the user, any other org they're in, and the `user_id` on movements they
+logged all stay, so history remains attributable.
 
 ### Password reset
 
@@ -107,43 +128,94 @@ invite being tested. Fixed by adding an explicit public-prefix list (`/invite/`,
 `/reset-password/`) alongside the exact-match set, so a token in the URL — the entire point of
 being reachable while logged out — is never gated behind a login the visitor can't perform yet.
 
-## Billing — manual activation, not Stripe
+### Email verification — the trial starts when the inbox is proven
 
-`docs/pricing.md` defines real tiers/limits, but the fastest path to actual revenue for the
-first customers is a founder manually flipping a plan after a conversation, not building a
-full self-serve Stripe integration before there's a single paying customer (see that doc's
-"Billing v1" section for the reasoning). Two small, deliberately asymmetric pieces:
+Signup used to hand out a 30-day trial to whatever was typed into the email field. `users.email`
+was already `UNIQUE`, but nothing checked the inbox existed, and `me+1@gmail.com` / `me+2@gmail.com`
+were as good as different people — a free trial forever, one alias at a time. Three pieces:
 
-- **`/internal`** — a founder-only, cross-tenant console listing every organization with
-  inline plan/status/trial-end editing. Gated by `requirePlatformAdmin()`
-  (`src/lib/platform-admin.ts`), which checks the signed-in email against a
-  `PLATFORM_ADMIN_EMAILS` env var allowlist — not a `users`/`memberships` role, since a DB-level
-  "platform admin" concept is premature generalization for what is, for now, exactly one
-  person. Never linked from the app's own nav, and deliberately English-only: it's operated by
-  the founder, not shown to a customer, so translating it buys nothing (the one place in this
-  otherwise fully-translated app where that trade was made deliberately).
-- **`/billing`** — the org-scoped, customer-facing counterpart: current plan, subscription
-  status, trial countdown, and live usage (users/facilities/bins) against the plan's limits.
-  Read-only for everyone (no self-serve upgrade exists yet) with a "contact us" line gated by
-  an optional `NEXT_PUBLIC_SUPPORT_EMAIL` env var — left unset, the line still renders without
-  a dead/fabricated address. `AppHeader` also surfaces a small trial/plan pill
-  (`src/app/billing/actions.ts`'s `getBillingSummary()`, fetched client-side on mount rather
-  than threaded as a prop through the ~7 different page types that render `AppHeader`) that
-  links to this page.
+- **`users.normalized_email`** (`src/lib/email-normalize.ts`) — the alias-collapsed form: `+tag`
+  stripped, dots stripped for Gmail/Googlemail. Unique; it's what signup's duplicate check and the
+  invite-accept lookup compare on. The raw `email` is still what gets mail. Plus a short,
+  hand-picked disposable-domain list (`src/lib/disposable-domains.ts`) — not a scraped 10k-entry
+  blocklist, which goes stale and needs its own update job; extend it when an actual abuser shows
+  up on `/internal`.
+- **`email_verifications`** — the `password_resets` shape again (single-use bearer token), 24-hour
+  window. `sendVerificationEmail()` / `consumeVerificationToken()` / `markEmailVerified()` live in
+  `src/lib/email-verification.ts`. Resend from `/verify-email` has a 60-second floor so the button
+  can't be used to make us spam an inbox.
+- **The trial clock starts at verification, not signup.** Signup creates the org `trialing` with
+  `trial_ends_at = NULL`; `getOrgLockReason()` reads that as a new `"unverified"` lock reason — the
+  same read-only treatment as an expired trial (look around, save nothing), different message and
+  a different fix. `markEmailVerified()` then sets `trial_ends_at = now + 30d` on any org the user
+  founded (`memberships.role = 'admin'`, still `trialing`, no trial end yet). Doing it this way
+  instead of "verified = allowed" means an unverified signup can't quietly burn its own trial
+  before ever getting in, and it reuses the lockout rather than adding a second gate.
 
-Actually *blocking* an action once a plan limit or an expired trial is hit — not yet built when
-this section was first written — now is: see "Plan-limit enforcement" and "Trial-expiry
-lockout" further down.
+Accepting an invite (`/invite/<token>`) marks the user verified too: the link reached that inbox,
+which is the same proof. Existing accounts were grandfathered in by the migration
+(`email_verified_at = created_at`, `normalized_email = lower(email)`) — locking every current
+customer out until they re-verify was never the goal. `/verify-email/<token>` is on the
+middleware's public-prefix list, same as reset links: the click can come from a phone's mail app
+with no session. `appBaseUrl()` (`src/lib/app-url.ts`) is the request-host-derived base every
+emailed link now uses, pulled out of the reset flow so this one didn't copy it.
 
-Real bug this surfaced: `internal-client.tsx` and `team-client.tsx` originally formatted dates
-with `toLocaleDateString()`, which resolves using the runtime's ambient locale *and* timezone —
-values that can differ between the server that renders a page and the browser that hydrates
-it, producing a React hydration mismatch the moment a formatted date appears in a client
-component's initial render. Fixed with a small shared `formatDate()` (`src/lib/format-date.ts`)
-that uses the `Date` object's UTC getters specifically, not just a pinned locale string —
-needed because the server and a viewer's browser can also be in genuinely different
-timezones, and only reading UTC components guarantees both compute the same calendar date for
-the same instant no matter where each one executes.
+## Billing — prepaid periods via Paysera, with manual activation kept
+
+`docs/pricing.md` ("Billing v2") has the why: Paysera because Stripe won't onboard a Kosovo
+business; prepaid 1/3/12-month periods because Paysera's recurring billing is merchant-initiated
+token charging that isn't worth building before there's renewal volume. The pieces:
+
+- **`src/lib/paysera.ts`** — the Checkout Classic (WebToPay) protocol as two pure functions,
+  ported from Paysera's own `lib-webtopay` rather than adding a dependency: `data` is url-safe
+  base64 of a query string, `sign`/`ss1` is `md5(data + project password)`. Unit-tested
+  (`paysera.test.ts`, `pnpm test`). Config is `PAYSERA_PROJECT_ID` / `PAYSERA_SIGN_PASSWORD` /
+  `PAYSERA_TEST_MODE`; with them unset `/billing` shows the bank-transfer/contact path only,
+  the same degrade-gracefully pattern as email without `RESEND_API_KEY`.
+- **`payments`** (`src/db/schema.ts`) — one row per attempt, `provider` = `paysera` or
+  `manual`. Its id is the Paysera `orderid`, so a callback maps to exactly one attempt.
+  `period_start`/`period_end` record what the payment actually bought — the answer to "why does
+  my access end on that date".
+- **`startCheckout`** (`src/app/billing/actions.ts`) — admin-only (a locked org must still be
+  able to pay its way out, so it checks the role but not the lock), refuses a plan the org's
+  current usage already exceeds (`limitsExceeded` — a 700-bin depot can't buy Starter and lock
+  itself out of its own racks), inserts a pending row and redirects to Paysera.
+- **`/api/billing/paysera/callback`** — the only path that grants access. Verifies `ss1`,
+  checks the project id, refuses a test-mode/live mismatch, and on `status=1` checks the
+  *paid* amount and currency against the row before calling `applyPaidPayment()`. Answers a
+  plain `OK` for every recognised callback, including ones it ignores, because Paysera retries
+  anything else. Had to be added to the middleware's public-prefix list — Paysera's servers have
+  no session, and the first curl came back as a 307 to `/login`. `/billing/return` (the
+  customer-facing redirect) only *displays* what the callback recorded; it never trusts the
+  redirect itself, which anyone could type into a browser.
+- **`applyPaidPayment()`** (`src/lib/billing.ts`) — the single place `paid_until` moves,
+  used by both the callback and `/internal`'s "+ Payment" (a bank transfer the founder saw
+  land). Idempotent per payment row (callbacks get redelivered). The new period starts from the
+  current `paid_until` when the org is active on the same plan and still inside it — paying
+  early extends — and from now otherwise. Sets `plan_id`, `subscription_status = active`,
+  clears `trial_ends_at`.
+- **Lockout** — `getOrgLockReason()` gained `"expired"`: `active` with a past `paid_until`. A
+  null `paid_until` on an active org means "paid indefinitely", the founder's override on
+  `/internal` (which now also edits `paid_until` directly).
+- **Reminders without a scheduler** — `src/lib/billing-reminders.ts`. There's no cron in
+  this app (see Background jobs), so `getBillingSummary()` — which every page's header calls —
+  runs the check: within 7 days of the trial end / `paid_until`, and
+  `expiry_reminder_sent_for` doesn't already equal that date, claim the date (an UPDATE, before
+  sending, so two concurrent loads can't both mail) and email the admins. The honest trade-off:
+  an org nobody opens for a week gets no reminder, but that org isn't the one renewing on time
+  either.
+- **`/billing`** — plan cards (Starter/Business selectable, Enterprise "contact us"), period
+  selector with the total, Pay button, usage bars, and paid-payment history. Non-admins see
+  the status and usage and a note to ask an admin. The header pill now also shows "Renew in
+  Nd" inside the last week and "Expired" after.
+
+Verified end to end against the local dev server with dummy Paysera credentials: checkout
+redirects to `bank.paysera.com` with a correctly signed request; a locally signed `status=1`
+callback activates the org for exactly the months bought, a replay is a no-op, a tampered
+signature is a 400, a wrong `payamount` marks the row failed without granting access, a second
+purchase chains from the previous `period_end`, an expired `paid_until` locks writes with the
+"paid period has ended" message, and the reminder marker is claimed on the first page load
+inside the 7-day window.
 
 ## Plan-limit enforcement
 
@@ -534,6 +606,14 @@ tender-ai) is a cost/complexity to add only once something concrete needs it.
 | TLS | Automatic (Render) | $0 |
 | Errors | Sentry free tier (5k events/mo) | $0 |
 | **Total** | | **~$14/mo flat** |
+
+`render.yaml` at the repo root is this table as a Render Blueprint. Its one non-obvious line is
+`preDeployCommand: pnpm db:migrate` — Drizzle migrations run against the live database before
+the new build takes traffic, and a failing migration aborts the deploy rather than shipping code
+that expects columns that don't exist yet. Nothing else runs migrations: Docker Compose is local
+Postgres only, and `pnpm db:push` is a dev-only shortcut that can't do backfills (migration 0004
+needed one). Secrets (`RESEND_API_KEY`, `PAYSERA_*`, …) are `sync: false` — set in the dashboard,
+never in the file; `AUTH_SECRET` is generated by Render on first deploy.
 
 ### Why Render over the alternatives considered
 - **Vercel Hobby + Neon/Supabase free:** $0/mo, but Hobby tier's terms expect commercial

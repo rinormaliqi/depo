@@ -42,14 +42,26 @@ export async function requireOrgId() {
 // only trial expiry: none of those represent an active paid plan either,
 // so the same read-only rule applies to all of them (see the "Trial-expiry
 // lockout" section in docs/architecture.md).
-export type OrgLockReason = "trialEnded" | "pastDue" | "canceled" | null;
+// "unverified" is the pre-trial state: a signup whose founder hasn't clicked
+// the verification link yet, so trial_ends_at was never set. Same read-only
+// treatment, different message (and a different fix — verify, not pay).
+// "expired" is a paid period that ran out without a renewal — same
+// read-only treatment as "pastDue" but a different message, since the
+// fix is "buy another period", not "sort out a failed charge".
+export type OrgLockReason = "unverified" | "trialEnded" | "expired" | "pastDue" | "canceled" | null;
 
 export async function getOrgLockReason(organizationId: string): Promise<OrgLockReason> {
   const [org] = await db.select().from(organizations).where(eq(organizations.id, organizationId));
   if (!org) return "canceled"; // shouldn't happen — fail locked, not open
-  if (org.subscriptionStatus === "active") return null;
+  if (org.subscriptionStatus === "active") {
+    // paid_until null on an active org = the founder's manual "paid
+    // indefinitely" override on /internal (see docs/architecture.md).
+    if (org.paidUntil && org.paidUntil.getTime() < Date.now()) return "expired";
+    return null;
+  }
   if (org.subscriptionStatus === "trialing") {
-    return org.trialEndsAt && org.trialEndsAt.getTime() < Date.now() ? "trialEnded" : null;
+    if (!org.trialEndsAt) return "unverified";
+    return org.trialEndsAt.getTime() < Date.now() ? "trialEnded" : null;
   }
   if (org.subscriptionStatus === "past_due") return "pastDue";
   return "canceled";

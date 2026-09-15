@@ -7,11 +7,12 @@ import { getMyFacility } from "@/app/builder/actions";
 import { db } from "@/db";
 import { items, locations, movements } from "@/db/schema";
 import { locationLabel } from "@/lib/location-path";
+import { requirePermission } from "@/lib/permissions";
 import { requireSession } from "@/lib/session";
 import { receiveStockAt } from "@/lib/stock";
 
 export async function commitScan(itemId: string, quantity: number, code: string) {
-  const { userId, organizationId } = await requireSession();
+  const { userId, organizationId } = await requirePermission("moveStock");
   const t = await getTranslations("scanner");
   const facility = await getMyFacility();
   if (!facility) throw new Error(t("errorNoFacility"));

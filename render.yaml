@@ -1,0 +1,51 @@
+# Render Blueprint — the app + database from docs/architecture.md's Hosting
+# section, as code. Render reads this on "New → Blueprint"; after that,
+# every push to main deploys through it.
+#
+# The important line is preDeployCommand: migrations run against the live
+# database *before* the new build takes traffic, and a failed migration
+# aborts the deploy instead of shipping code that expects columns that
+# don't exist yet. Nothing else in the repo runs migrations — Docker
+# Compose is local Postgres only.
+services:
+  - type: web
+    name: smartdepo
+    runtime: node
+    plan: starter
+    region: frankfurt # closest Render region to Kosovo
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    preDeployCommand: pnpm db:migrate
+    startCommand: pnpm start
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartdepo-db
+          property: connectionString
+      - key: AUTH_SECRET
+        generateValue: true
+      # Set these in the Render dashboard — secrets and per-environment
+      # values that don't belong in the repo. See .env.example for what
+      # each one does and which are safe to leave empty.
+      - key: PLATFORM_ADMIN_EMAILS
+        sync: false
+      - key: NEXT_PUBLIC_SUPPORT_EMAIL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: PAYSERA_PROJECT_ID
+        sync: false
+      - key: PAYSERA_SIGN_PASSWORD
+        sync: false
+      - key: PAYSERA_TEST_MODE
+        value: "1"
+
+databases:
+  - name: smartdepo-db
+    plan: starter
+    region: frankfurt
+    postgresMajorVersion: "16"

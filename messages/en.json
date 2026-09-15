@@ -19,7 +19,10 @@
       "pick": "OUT",
       "relocate": "MOVE",
       "adjust": "ADJUST"
-    }
+    },
+    "verifyEmail": "Verify your email",
+    "planExpired": "{plan} · Expired",
+    "planRenewSoon": "{plan} · Renew in {n}d"
   },
   "nav": {
     "blueprint": "Blueprint",
@@ -62,7 +65,8 @@
       "errorPasswordLength": "Password must be at least 8 characters",
       "errorEmailExists": "An account with that email already exists",
       "errorPlansNotSeeded": "Plans aren't seeded yet — run pnpm db:seed",
-      "errorSignInFailed": "Account created, but sign-in failed — try logging in"
+      "errorSignInFailed": "Account created, but sign-in failed — try logging in",
+      "errorDisposableEmail": "Disposable email addresses can't be used — please use your work email"
     }
   },
   "forgotPassword": {
@@ -105,7 +109,8 @@
     "adding": "Adding…",
     "addItem": "Add item",
     "noItems": "No items yet.",
-    "errorRequired": "Name and unit of measure are required"
+    "errorRequired": "Name and unit of measure are required",
+    "viewOnly": "Only managers and admins can add items to the catalog."
   },
   "team": {
     "title": "Team",
@@ -133,7 +138,24 @@
       "required": "Email and role are required",
       "onlyAdminCanInviteAdmin": "Only an admin can invite another admin",
       "alreadyMember": "That person is already a member of this organization",
-      "inviteNotFound": "That invite no longer exists"
+      "inviteNotFound": "That invite no longer exists",
+      "emailFailed": "The invite was created but the email couldn't be sent — copy the link below and share it directly.",
+      "memberNotFound": "That member no longer exists",
+      "lastAdmin": "An organization needs at least one admin",
+      "onlyAdminCanChangeAdmin": "Only an admin can change or remove another admin",
+      "cannotRemoveSelf": "You can't remove yourself — ask another admin"
+    },
+    "expired": "Expired {date}",
+    "remove": "Remove",
+    "removeConfirm": "Remove {name} from this organization? They'll lose access immediately.",
+    "roleHint": {
+      "admin": "Full access: layout, items, stock, team and billing.",
+      "manager": "Runs the depot: layout, items, stock and team. No billing.",
+      "worker": "Floor staff: find and move stock. Can't change the layout or items."
+    },
+    "email": {
+      "subject": "You've been invited to {org} on SmartDepo",
+      "body": "{inviter} invited you to join {org} on SmartDepo as {role}.\n\nAccept the invite here:\n\n{url}\n\nThe link expires in {days} days. If you weren't expecting this, you can ignore this email."
     }
   },
   "invite": {
@@ -166,20 +188,82 @@
   "billing": {
     "title": "Billing",
     "subtitle": "Your organization's plan and usage.",
-    "priceLine": "${price}/mo",
+    "priceLine": "€{price}/mo",
     "usage": "Usage",
     "usageUsers": "Users",
     "usageFacilities": "Facilities",
     "usageBins": "Bins",
     "trialDaysLeft": "{n} days left in your trial",
     "trialEnded": "Your trial has ended",
-    "changePlan": "Want to change your plan? Get in touch with whoever set up your account.",
-    "changePlanWithEmail": "Want to change your plan? Email {email}.",
     "status": {
       "trialing": "Trialing",
       "active": "Active",
       "past_due": "Past due",
-      "canceled": "Canceled"
+      "canceled": "Canceled",
+      "expired": "Expired"
+    },
+    "trialNotStarted": "Your 30-day trial starts once you verify your email.",
+    "verifyNow": "Verify now",
+    "paidUntil": "Paid until {date} ({n} days left)",
+    "paidExpired": "Your paid period ended on {date}",
+    "paidIndefinitely": "Active — no renewal needed",
+    "pastDueBody": "A payment is outstanding. Buy a new period below to restore access.",
+    "canceledBody": "This plan was canceled. Buy a new period below to reactivate.",
+    "choosePlan": "Plan & payment",
+    "adminOnlyBody": "Only an admin can change the plan or pay. Ask one of your organization's admins.",
+    "currentPlan": "Current",
+    "unlimited": "Unlimited",
+    "limitUsers": "{n} users",
+    "limitFacilities": "{n} facilities",
+    "limitBins": "{n} bins",
+    "blockedBy": "You already use more {what} than this plan allows.",
+    "enterprisePrice": "from €449/mo",
+    "enterpriseBody": "Unlimited users, facilities and bins, with movement history kept forever. Priced per customer.",
+    "contactUs": "Contact us",
+    "periodLabel": "Pay for",
+    "months": "{n, plural, =1 {1 month} other {# months}}",
+    "total": "Total €{amount}",
+    "totalHint": "{plan} × {n, plural, =1 {1 month} other {# months}}, paid up front. Extends your current period if it hasn't ended yet.",
+    "payWithPaysera": "Pay with Paysera",
+    "redirecting": "Redirecting…",
+    "payOffline": "Online payment isn't available here yet — get in touch with whoever set up your account to pay by bank transfer.",
+    "payOfflineWithEmail": "Online payment isn't available here yet — email {email} to pay by bank transfer.",
+    "bankTransferHint": "Paysera accepts cards and bank payments. Prefer an invoice and bank transfer? Get in touch with whoever set up your account.",
+    "bankTransferHintWithEmail": "Paysera accepts cards and bank payments. Prefer an invoice and bank transfer? Email {email}.",
+    "checkoutCanceled": "Payment canceled — nothing was charged.",
+    "history": "Payments",
+    "historyLine": "{months, plural, =1 {1 month} other {# months}} · {provider}",
+    "historyUntil": "until {date}",
+    "provider": {
+      "paysera": "Paysera",
+      "manual": "Bank transfer"
+    },
+    "error": {
+      "adminOnly": "Only an admin can pay for the organization",
+      "notConfigured": "Online payment isn't set up in this environment",
+      "invalidChoice": "Pick a plan and a period",
+      "overLimits": "Your organization already exceeds the {plan} plan's limits — reduce usage first or pick a larger plan"
+    },
+    "return": {
+      "paidTitle": "Payment received",
+      "paidBody": "Thanks — your organization is active until {until}.",
+      "openApp": "Open SmartDepo",
+      "failedTitle": "Payment didn't go through",
+      "failedBody": "Nothing was charged. You can try again from the billing page.",
+      "pendingTitle": "Waiting for confirmation",
+      "pendingBody": "Paysera hasn't confirmed this payment yet. Bank payments can take a moment — refresh in a few seconds.",
+      "refresh": "Refresh",
+      "backToBilling": "Back to billing"
+    },
+    "reminderEmail": {
+      "trial": {
+        "subject": "Your SmartDepo trial for {org} ends in {days} days",
+        "body": "The free trial for {org} ends in {days} days. To keep making changes after that, pick a plan and pay here:\n\n{url}\n\nEverything you've set up is kept either way — after the trial ends the account becomes read-only until a plan is active."
+      },
+      "paid": {
+        "subject": "SmartDepo: {org}'s paid period ends in {days} days",
+        "body": "The paid period for {org} ends in {days} days. Renew here to avoid the account going read-only:\n\n{url}"
+      }
     }
   },
   "planLimit": {
@@ -190,7 +274,9 @@
   "orgLocked": {
     "trialEnded": "Your trial has ended. Visit Billing to keep making changes.",
     "pastDue": "This organization's payment is past due. Visit Billing to resolve it.",
-    "canceled": "This organization's plan was canceled. Visit Billing to reactivate."
+    "canceled": "This organization's plan was canceled. Visit Billing to reactivate.",
+    "unverified": "Verify your email address to start your trial and make changes.",
+    "expired": "Your paid period has ended. Visit Billing to renew."
   },
   "builder": {
     "entities": "Entities",
@@ -312,7 +398,10 @@
       "couldntRedo": "Couldn't redo that",
       "couldntSaveFloor": "Couldn't save the floor",
       "couldntApplyTemplate": "Couldn't apply that template"
-    }
+    },
+    "viewOnly": "View only",
+    "viewOnlyHint": "Workers can look up and move stock but not change the layout. Ask a manager or admin if something needs to change.",
+    "emptyFloorBodyReadOnly": "Nothing has been mapped yet. A manager or admin sets up the floor plan."
   },
   "bin": {
     "kicker": "Bin",
@@ -381,5 +470,36 @@
     "errorEnterLocation": "Enter a location, e.g. A-01-3",
     "errorLocationNotFound": "{code} is not a location on this floor",
     "errorNoFacility": "No facility found"
+  },
+  "verifyEmail": {
+    "pendingTitle": "Check your inbox",
+    "pendingBody": "We sent a verification link to {email}. Click it to start your 30-day trial. Until then you can look around, but nothing can be saved.",
+    "resend": "Resend verification email",
+    "resending": "Sending…",
+    "resent": "Sent — check your inbox (and spam folder).",
+    "continueReadOnly": "Look around first",
+    "signOut": "Sign out",
+    "doneTitle": "Email verified",
+    "doneBody": "Your trial has started. You have full access for the next 30 days.",
+    "goToApp": "Open SmartDepo",
+    "goToLogin": "Log in",
+    "invalidTitle": "This link isn't valid",
+    "invalidBody": "It may have expired (links last 24 hours) or already been used.",
+    "requestNew": "Request a new link",
+    "error": {
+      "notSignedIn": "Please log in first",
+      "tooSoon": "Please wait a minute before requesting another email"
+    },
+    "email": {
+      "subject": "Verify your SmartDepo email",
+      "body": "Welcome to SmartDepo. Confirm this is your email address to start your 30-day trial:\n\n{url}\n\nThe link works once and expires in 24 hours. If you didn't sign up, you can ignore this email."
+    }
+  },
+  "permission": {
+    "moveStock": "You don't have permission to move stock",
+    "editLayout": "Only managers and admins can change the layout",
+    "manageItems": "Only managers and admins can add items",
+    "manageTeam": "Only managers and admins can manage the team",
+    "manageBilling": "Only an admin can manage billing"
   }
 }

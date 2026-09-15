@@ -4,6 +4,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { items, stock } from "@/db/schema";
+import { requirePermission } from "@/lib/permissions";
 import { requireSession } from "@/lib/session";
 import { pickStockAt, receiveStockAt, requireOwnedBin } from "@/lib/stock";
 
@@ -30,13 +31,13 @@ export async function getBinStock(locationId: string) {
 }
 
 export async function receiveStock(locationId: string, itemId: string, quantity: number) {
-  const { userId, organizationId } = await requireSession();
+  const { userId, organizationId } = await requirePermission("moveStock");
   await receiveStockAt(organizationId, userId, locationId, itemId, quantity);
   revalidatePath(`/builder/bin/${locationId}`);
 }
 
 export async function pickStock(locationId: string, itemId: string, quantity: number) {
-  const { userId, organizationId } = await requireSession();
+  const { userId, organizationId } = await requirePermission("moveStock");
   await pickStockAt(organizationId, userId, locationId, itemId, quantity);
   revalidatePath(`/builder/bin/${locationId}`);
 }

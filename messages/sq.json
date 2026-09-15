@@ -19,7 +19,10 @@
       "pick": "DALJE",
       "relocate": "ZHVENDOSJE",
       "adjust": "RREGULLIM"
-    }
+    },
+    "verifyEmail": "Verifiko email-in",
+    "planExpired": "{plan} · Skaduar",
+    "planRenewSoon": "{plan} · Rinovo brenda {n} ditësh"
   },
   "nav": {
     "blueprint": "Skema",
@@ -62,7 +65,8 @@
       "errorPasswordLength": "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
       "errorEmailExists": "Ekziston tashmë një llogari me këtë email",
       "errorPlansNotSeeded": "Planet ende nuk janë ngarkuar — ekzekutoni pnpm db:seed",
-      "errorSignInFailed": "Llogaria u krijua, por kyçja dështoi — provoni të kyçeni përsëri"
+      "errorSignInFailed": "Llogaria u krijua, por kyçja dështoi — provoni të kyçeni përsëri",
+      "errorDisposableEmail": "Adresat e përkohshme të email-it nuk lejohen — përdor email-in e punës"
     }
   },
   "forgotPassword": {
@@ -105,7 +109,8 @@
     "adding": "Duke shtuar…",
     "addItem": "Shto artikull",
     "noItems": "Ende nuk ka artikuj.",
-    "errorRequired": "Emri dhe njësia matëse janë të detyrueshme"
+    "errorRequired": "Emri dhe njësia matëse janë të detyrueshme",
+    "viewOnly": "Vetëm menaxherët dhe administratorët mund të shtojnë artikuj në katalog."
   },
   "team": {
     "title": "Ekipi",
@@ -133,7 +138,24 @@
       "required": "Emaili dhe roli janë të detyrueshëm",
       "onlyAdminCanInviteAdmin": "Vetëm një admin mund të ftojë një admin tjetër",
       "alreadyMember": "Ai person është tashmë anëtar i kësaj organizate",
-      "inviteNotFound": "Kjo ftesë nuk ekziston më"
+      "inviteNotFound": "Kjo ftesë nuk ekziston më",
+      "emailFailed": "Ftesa u krijua, por email-i nuk u dërgua — kopjo lidhjen më poshtë dhe ndaje direkt.",
+      "memberNotFound": "Ai anëtar nuk ekziston më",
+      "lastAdmin": "Një organizatë duhet të ketë të paktën një administrator",
+      "onlyAdminCanChangeAdmin": "Vetëm një administrator mund të ndryshojë ose heqë një administrator tjetër",
+      "cannotRemoveSelf": "Nuk mund ta heqësh veten — pyet një administrator tjetër"
+    },
+    "expired": "Skadoi më {date}",
+    "remove": "Hiq",
+    "removeConfirm": "Të hiqet {name} nga kjo organizatë? Do të humbasë qasjen menjëherë.",
+    "roleHint": {
+      "admin": "Qasje e plotë: planimetri, artikuj, stok, ekip dhe faturim.",
+      "manager": "Drejton depon: planimetri, artikuj, stok dhe ekip. Pa faturim.",
+      "worker": "Staf i depos: gjen dhe lëviz stokun. Nuk mund të ndryshojë planimetrinë ose artikujt."
+    },
+    "email": {
+      "subject": "Je ftuar në {org} në SmartDepo",
+      "body": "{inviter} të ftoi të bashkohesh me {org} në SmartDepo si {role}.\n\nPranoje ftesën këtu:\n\n{url}\n\nLidhja skadon pas {days} ditësh. Nëse nuk e prisje këtë, mund ta injorosh këtë email."
     }
   },
   "invite": {
@@ -166,20 +188,82 @@
   "billing": {
     "title": "Faturimi",
     "subtitle": "Plani dhe përdorimi i organizatës tënde.",
-    "priceLine": "${price}/muaj",
+    "priceLine": "€{price}/muaj",
     "usage": "Përdorimi",
     "usageUsers": "Përdorues",
     "usageFacilities": "Depo",
     "usageBins": "Kuti",
     "trialDaysLeft": "{n} ditë të mbetura në provën tënde",
     "trialEnded": "Prova jote ka përfunduar",
-    "changePlan": "Do të ndryshosh planin? Kontakto kë e krijoi llogarinë.",
-    "changePlanWithEmail": "Do të ndryshosh planin? Shkruaj te {email}.",
     "status": {
       "trialing": "Në provë",
       "active": "Aktiv",
       "past_due": "Pagesë e vonuar",
-      "canceled": "Anuluar"
+      "canceled": "Anuluar",
+      "expired": "Skaduar"
+    },
+    "trialNotStarted": "Prova 30-ditore fillon sapo të verifikosh email-in.",
+    "verifyNow": "Verifiko tani",
+    "paidUntil": "Paguar deri më {date} ({n} ditë të mbetura)",
+    "paidExpired": "Periudha e paguar mbaroi më {date}",
+    "paidIndefinitely": "Aktiv — nuk nevojitet rinovim",
+    "pastDueBody": "Ka një pagesë të papaguar. Bli një periudhë të re më poshtë për të rikthyer qasjen.",
+    "canceledBody": "Ky plan u anulua. Bli një periudhë të re më poshtë për ta riaktivizuar.",
+    "choosePlan": "Plani & pagesa",
+    "adminOnlyBody": "Vetëm një administrator mund të ndryshojë planin ose të paguajë. Pyet një nga administratorët e organizatës.",
+    "currentPlan": "Aktual",
+    "unlimited": "Pa limit",
+    "limitUsers": "{n} përdorues",
+    "limitFacilities": "{n} objekte",
+    "limitBins": "{n} vende",
+    "blockedBy": "Tashmë përdor më shumë {what} sesa lejon ky plan.",
+    "enterprisePrice": "nga €449/muaj",
+    "enterpriseBody": "Përdorues, objekte dhe vende pa limit, me historik lëvizjesh të ruajtur përgjithmonë. Çmim sipas klientit.",
+    "contactUs": "Na kontakto",
+    "periodLabel": "Paguaj për",
+    "months": "{n, plural, =1 {1 muaj} other {# muaj}}",
+    "total": "Gjithsej €{amount}",
+    "totalHint": "{plan} × {n, plural, =1 {1 muaj} other {# muaj}}, paguar paraprakisht. Zgjat periudhën aktuale nëse ende nuk ka mbaruar.",
+    "payWithPaysera": "Paguaj me Paysera",
+    "redirecting": "Duke ridrejtuar…",
+    "payOffline": "Pagesa online nuk është ende e disponueshme këtu — kontakto atë që e ka hapur llogarinë për të paguar me transfer bankar.",
+    "payOfflineWithEmail": "Pagesa online nuk është ende e disponueshme këtu — shkruaj te {email} për të paguar me transfer bankar.",
+    "bankTransferHint": "Paysera pranon karta dhe pagesa bankare. Preferon faturë dhe transfer bankar? Kontakto atë që e ka hapur llogarinë.",
+    "bankTransferHintWithEmail": "Paysera pranon karta dhe pagesa bankare. Preferon faturë dhe transfer bankar? Shkruaj te {email}.",
+    "checkoutCanceled": "Pagesa u anulua — asgjë nuk u faturua.",
+    "history": "Pagesat",
+    "historyLine": "{months, plural, =1 {1 muaj} other {# muaj}} · {provider}",
+    "historyUntil": "deri më {date}",
+    "provider": {
+      "paysera": "Paysera",
+      "manual": "Transfer bankar"
+    },
+    "error": {
+      "adminOnly": "Vetëm një administrator mund të paguajë për organizatën",
+      "notConfigured": "Pagesa online nuk është konfiguruar në këtë mjedis",
+      "invalidChoice": "Zgjidh një plan dhe një periudhë",
+      "overLimits": "Organizata tashmë i tejkalon limitet e planit {plan} — ul përdorimin ose zgjidh një plan më të madh"
+    },
+    "return": {
+      "paidTitle": "Pagesa u pranua",
+      "paidBody": "Faleminderit — organizata është aktive deri më {until}.",
+      "openApp": "Hap SmartDepo",
+      "failedTitle": "Pagesa nuk u krye",
+      "failedBody": "Asgjë nuk u faturua. Mund të provosh sërish nga faqja e faturimit.",
+      "pendingTitle": "Në pritje të konfirmimit",
+      "pendingBody": "Paysera ende nuk e ka konfirmuar këtë pagesë. Pagesat bankare mund të marrin pak kohë — rifresko pas disa sekondash.",
+      "refresh": "Rifresko",
+      "backToBilling": "Kthehu te faturimi"
+    },
+    "reminderEmail": {
+      "trial": {
+        "subject": "Prova e SmartDepo për {org} mbaron pas {days} ditësh",
+        "body": "Prova falas për {org} mbaron pas {days} ditësh. Për të vazhduar të bësh ndryshime pas kësaj, zgjidh një plan dhe paguaj këtu:\n\n{url}\n\nGjithçka që ke ndërtuar ruhet gjithsesi — pas mbarimit të provës llogaria bëhet vetëm për lexim derisa të aktivizohet një plan."
+      },
+      "paid": {
+        "subject": "SmartDepo: periudha e paguar e {org} mbaron pas {days} ditësh",
+        "body": "Periudha e paguar për {org} mbaron pas {days} ditësh. Rinovo këtu që llogaria të mos kalojë në vetëm-lexim:\n\n{url}"
+      }
     }
   },
   "planLimit": {
@@ -190,7 +274,9 @@
   "orgLocked": {
     "trialEnded": "Prova jote ka përfunduar. Vizito Faturimin për të vazhduar ndryshimet.",
     "pastDue": "Pagesa e kësaj organizate është e vonuar. Vizito Faturimin për ta zgjidhur.",
-    "canceled": "Plani i kësaj organizate u anulua. Vizito Faturimin për ta riaktivizuar."
+    "canceled": "Plani i kësaj organizate u anulua. Vizito Faturimin për ta riaktivizuar.",
+    "unverified": "Verifiko adresën e email-it për të filluar provën dhe për të bërë ndryshime.",
+    "expired": "Periudha e paguar ka mbaruar. Shko te Faturimi për ta rinovuar."
   },
   "builder": {
     "entities": "Elementet",
@@ -312,7 +398,10 @@
       "couldntRedo": "Nuk u ribë dot",
       "couldntSaveFloor": "Planimetria nuk u ruajt dot",
       "couldntApplyTemplate": "Shablloni nuk u aplikua dot"
-    }
+    },
+    "viewOnly": "Vetëm shikim",
+    "viewOnlyHint": "Punëtorët mund të kërkojnë dhe lëvizin stokun, por jo të ndryshojnë planimetrinë. Pyet një menaxher ose administrator nëse diçka duhet ndryshuar.",
+    "emptyFloorBodyReadOnly": "Ende nuk është hartuar asgjë. Një menaxher ose administrator e ndërton planimetrinë."
   },
   "bin": {
     "kicker": "Kuti",
@@ -381,5 +470,36 @@
     "errorEnterLocation": "Shkruani një vendndodhje, p.sh. A-01-3",
     "errorLocationNotFound": "{code} nuk është një vendndodhje në këtë planimetri",
     "errorNoFacility": "Nuk u gjet asnjë depo"
+  },
+  "verifyEmail": {
+    "pendingTitle": "Kontrollo email-in",
+    "pendingBody": "Dërguam një lidhje verifikimi te {email}. Kliko atë për të filluar provën 30-ditore. Deri atëherë mund të shikosh, por asgjë nuk mund të ruhet.",
+    "resend": "Ridërgo email-in e verifikimit",
+    "resending": "Duke dërguar…",
+    "resent": "U dërgua — kontrollo inbox-in (dhe spam-in).",
+    "continueReadOnly": "Shiko përreth fillimisht",
+    "signOut": "Dil",
+    "doneTitle": "Email-i u verifikua",
+    "doneBody": "Prova jote ka filluar. Ke qasje të plotë për 30 ditët e ardhshme.",
+    "goToApp": "Hap SmartDepo",
+    "goToLogin": "Hyr",
+    "invalidTitle": "Kjo lidhje nuk është e vlefshme",
+    "invalidBody": "Mund të ketë skaduar (lidhjet zgjasin 24 orë) ose është përdorur tashmë.",
+    "requestNew": "Kërko një lidhje të re",
+    "error": {
+      "notSignedIn": "Të lutem hyr fillimisht",
+      "tooSoon": "Prit një minutë para se të kërkosh një email tjetër"
+    },
+    "email": {
+      "subject": "Verifiko email-in tënd në SmartDepo",
+      "body": "Mirë se erdhe në SmartDepo. Konfirmo që kjo është adresa jote e email-it për të filluar provën 30-ditore:\n\n{url}\n\nLidhja funksionon vetëm një herë dhe skadon pas 24 orësh. Nëse nuk je regjistruar ti, injoroje këtë email."
+    }
+  },
+  "permission": {
+    "moveStock": "Nuk ke leje për të lëvizur stokun",
+    "editLayout": "Vetëm menaxherët dhe administratorët mund të ndryshojnë planimetrinë",
+    "manageItems": "Vetëm menaxherët dhe administratorët mund të shtojnë artikuj",
+    "manageTeam": "Vetëm menaxherët dhe administratorët mund të menaxhojnë ekipin",
+    "manageBilling": "Vetëm një administrator mund të menaxhojë faturimin"
   }
 }

@@ -1,5 +1,11 @@
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { authConfig } from "@/auth.config";
+
+// Edge-safe Auth.js instance: JWT decoding only, no database (see
+// src/auth.config.ts). The full instance in src/auth.ts is for pages
+// and server actions.
+const { auth } = NextAuth(authConfig);
 
 const publicPaths = new Set(["/", "/login", "/signup", "/forgot-password", "/pricing", "/terms", "/refunds", "/contact"]);
 // Token-in-the-URL pages, reached by someone who isn't signed in yet (that's

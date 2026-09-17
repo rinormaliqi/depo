@@ -68,7 +68,7 @@
       "errorPlansNotSeeded": "Planet ende nuk janë ngarkuar — ekzekutoni pnpm db:seed",
       "errorSignInFailed": "Llogaria u krijua, por kyçja dështoi — provoni të kyçeni përsëri",
       "errorDisposableEmail": "Adresat e përkohshme të email-it nuk lejohen — përdor email-in e punës",
-      "agree": "Duke hapur llogari pajtohesh me <terms>Kushtet e Shërbimit</terms> dhe <refunds>Politikën e Kthimit</refunds>."
+      "agree": "Duke hapur llogari pajtohesh me <terms>Kushtet e Shërbimit</terms>, <refunds>Politikën e Kthimit</refunds> dhe <privacy>Politikën e Privatësisë</privacy>."
     }
   },
   "forgotPassword": {
@@ -512,7 +512,8 @@
       "signup": "Fillo provën falas",
       "terms": "Kushtet",
       "refunds": "Kthimi i parave",
-      "contact": "Kontakti"
+      "contact": "Kontakti",
+      "privacy": "Privatësia"
     },
     "footer": {
       "regNo": "Nr. i regj. {n}"
@@ -548,6 +549,10 @@
       "noteVat": "Të gjitha çmimet në EUR. TVSH-ja shtohet aty ku e kërkon ligji dhe tregohet para pagesës.",
       "noteRefund": "Kthim i plotë brenda 14 ditësh nga çdo pagesë, pa pyetje.",
       "refundLink": "Lexo politikën e kthimit"
+    },
+    "privacy": {
+      "title": "Politika e Privatësisë",
+      "intro": "Shkurt: mbledhim vetëm atë që i duhet shërbimit, nuk shesim asgjë, nuk gjurmojmë, dhe me një email merr eksport të plotë ose fshirje."
     }
   },
   "facility": {

@@ -68,7 +68,7 @@
       "errorPlansNotSeeded": "Plans aren't seeded yet — run pnpm db:seed",
       "errorSignInFailed": "Account created, but sign-in failed — try logging in",
       "errorDisposableEmail": "Disposable email addresses can't be used — please use your work email",
-      "agree": "By creating an account you agree to the <terms>Terms of Service</terms> and <refunds>Refund Policy</refunds>."
+      "agree": "By creating an account you agree to the <terms>Terms of Service</terms>, <refunds>Refund Policy</refunds> and <privacy>Privacy Policy</privacy>."
     }
   },
   "forgotPassword": {
@@ -512,7 +512,8 @@
       "signup": "Start free trial",
       "terms": "Terms",
       "refunds": "Refunds",
-      "contact": "Contact"
+      "contact": "Contact",
+      "privacy": "Privacy"
     },
     "footer": {
       "regNo": "Reg. no. {n}"
@@ -548,6 +549,10 @@
       "noteVat": "All prices in EUR. VAT is added where required by law and shown before you pay.",
       "noteRefund": "Full refund within 14 days of any payment, no questions asked.",
       "refundLink": "Read the refund policy"
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "intro": "Short version: we collect only what the service needs, sell nothing, use no tracking, and you can get a full export or deletion by email."
     }
   },
   "facility": {

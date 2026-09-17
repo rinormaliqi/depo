@@ -34,7 +34,7 @@ export const terms: Record<Locale, Section[]> = {
     ]},
     { title: "Të dhënat e tua", paragraphs: [
       "Të dhënat që fut në SmartDepo (planimetria, artikujt, stoku, lëvizjet, përdoruesit) mbeten pronë e Klientit. Ne i përdorim vetëm për të ofruar shërbimin dhe nuk ia shesim apo ia japim palëve të treta, përveç nënkontraktorëve që e mundësojnë shërbimin (hosting, dërgim email-esh, procesim pagesash), të cilët veprojnë sipas udhëzimeve tona.",
-      "Të dhënat ruhen sa kohë llogaria ekziston, përfshirë periudhat vetëm-lexim. Klienti mund të kërkojë eksportimin ose fshirjen e plotë të të dhënave duke na shkruar; fshirja kryhet brenda 30 ditësh. Ne nuk ruajmë asnjëherë të dhëna kartash apo instrumentesh pagese — ato trajtohen vetëm nga Paysera.",
+      "Të dhënat ruhen sa kohë llogaria ekziston, përfshirë periudhat vetëm-lexim. Klienti mund të kërkojë eksportimin ose fshirjen e plotë të të dhënave duke na shkruar; fshirja kryhet brenda 30 ditësh. Ne nuk ruajmë asnjëherë të dhëna kartash apo instrumentesh pagese — ato trajtohen vetëm nga Paysera. Detajet janë në Politikën e Privatësisë, që është pjesë e këtyre kushteve.",
     ]},
     { title: "Përdorimi i lejuar", paragraphs: [
       "SmartDepo nuk mund të përdoret për veprimtari të paligjshme, për të ruajtur përmbajtje që shkel të drejtat e të tjerëve, apo për të ndërhyrë në funksionimin e shërbimit (p.sh. tentativa aksesi të paautorizuar, ngarkesë e qëllimshme). Mund të pezullojmë llogari që shkelin këto kushte, pasi t'ju kemi njoftuar aty ku është e mundur.",
@@ -74,7 +74,7 @@ export const terms: Record<Locale, Section[]> = {
     ]},
     { title: "Your data", paragraphs: [
       "The data you put into SmartDepo (floor plans, items, stock, movements, users) stays the Customer's property. We use it only to provide the service and never sell or hand it to third parties, other than the subprocessors that run the service (hosting, email delivery, payment processing), who act on our instructions.",
-      "Data is kept for as long as the account exists, including read-only periods. The Customer can request a full export or deletion by writing to us; deletion is completed within 30 days. We never store card or payment-instrument data — Paysera handles that exclusively.",
+      "Data is kept for as long as the account exists, including read-only periods. The Customer can request a full export or deletion by writing to us; deletion is completed within 30 days. We never store card or payment-instrument data — Paysera handles that exclusively. Details are in the Privacy Policy, which forms part of these terms.",
     ]},
     { title: "Acceptable use", paragraphs: [
       "SmartDepo may not be used for unlawful activity, to store content that infringes others' rights, or to interfere with the service (e.g. unauthorized access attempts, deliberate load). We may suspend accounts that breach these terms, after notifying you where possible.",
@@ -130,6 +130,95 @@ export const refunds: Record<Locale, Section[]> = {
     ]},
     { title: "Wrong or duplicate payments", paragraphs: [
       "If you paid twice or the wrong amount, email us with the Paysera reference number and we fix it right away.",
+    ]},
+  ],
+};
+
+export const privacy: Record<Locale, Section[]> = {
+  sq: [
+    { title: "Kush e përpunon të dhënat", paragraphs: [
+      "Kontrolluesi i të dhënave është {company}, {address} (\"ne\"). Kjo politikë shpjegon çfarë të dhënash mbledh SmartDepo, pse, ku ruhen dhe cilat janë të drejtat e tua. Zbatohet për çdo person që hap një llogari ose përdor SmartDepo si përdorues i ftuar nga një organizatë (Klienti).",
+      "Për të dhënat që Klienti fut vetë në SmartDepo (planimetria, artikujt, stoku, lëvizjet, të dhënat e punonjësve të tij), Klienti është kontrolluesi dhe ne veprojmë si përpunues sipas udhëzimeve të tij.",
+    ]},
+    { title: "Çfarë të dhënash mbledhim", paragraphs: [
+      "Të dhëna llogarie: emri, adresa e email-it dhe fjalëkalimi (i ruajtur vetëm si hash, asnjëherë në tekst të hapur), roli në organizatë, data e verifikimit të email-it dhe e krijimit të llogarisë.",
+      "Të dhëna të organizatës: emri i kompanisë, objektet dhe planimetritë e tyre, artikujt, sasitë e stokut dhe historiku i lëvizjeve. Çdo lëvizje stoku regjistron cilin përdorues e kreu — kjo është pjesë e funksionit të produktit (gjurmueshmëria) dhe është e dukshme për organizatën.",
+      "Të dhëna pagese: plani, periudha e blerë, shuma, data dhe numri i referencës nga Paysera. Nuk marrim dhe nuk ruajmë asnjëherë numra kartash apo të dhëna bankare — ato futen vetëm në faqen e Paysera-s.",
+      "Të dhëna teknike: adresa IP, lloji i shfletuesit dhe koha e kërkesave, në log-et e serverit të ofruesit të hostimit, të ruajtura për një periudhë të shkurtër për siguri dhe diagnostikim. Nuk përdorim mjete analitike apo reklamuese të palëve të treta.",
+    ]},
+    { title: "Cookies", paragraphs: [
+      "Përdorim vetëm cookies rreptësisht të nevojshme: sesioni i hyrjes (që të mbetesh i identifikuar), gjuha e zgjedhur dhe objekti (depoja) ku po punon. Asnjë cookie gjurmimi apo reklamimi. Prandaj nuk shfaqim banner pëlqimi për cookies.",
+    ]},
+    { title: "Pse i përpunojmë", paragraphs: [
+      "Për të ofruar shërbimin që Klienti ka kontraktuar (ekzekutimi i kontratës): identifikimi, ruajtja dhe shfaqja e të dhënave të depos, pagesat.",
+      "Për të dërguar email-e operacionale: verifikimi i adresës, ftesat në ekip, rivendosja e fjalëkalimit, njoftimi 7 ditë para mbarimit të provës ose të periudhës së paguar. Nuk dërgojmë email-e marketingu pa pëlqimin tënd.",
+      "Për sigurinë dhe parandalimin e abuzimit (interes legjitim): p.sh. bllokimi i adresave të përkohshme të email-it dhe i llogarive të shumëfishta për të njëjtën provë falas.",
+      "Për detyrime ligjore: ruajtja e të dhënave të faturimit sa kohë e kërkon ligji tatimor dhe i kontabilitetit.",
+    ]},
+    { title: "Kush i sheh të dhënat (nënpërpunuesit)", paragraphs: [
+      "Nuk i shesim dhe nuk i ndajmë të dhënat me palë të treta për qëllimet e tyre. I përdorim këta ofrues, të cilët i përpunojnë vetëm sipas udhëzimeve tona: Vercel (hostimi i aplikacionit), Neon (baza e të dhënave, rajoni Frankfurt, BE), Resend (dërgimi i email-eve operacionale), Paysera (procesimi i pagesave — merr emrin, email-in dhe shumën e pagesës).",
+      "Brenda organizatës tënde, administratorët dhe menaxherët shohin listën e anëtarëve (emër, email, rol) dhe historikun e lëvizjeve me emrin e personit që i ka kryer.",
+    ]},
+    { title: "Sa kohë i ruajmë", paragraphs: [
+      "Sa kohë ekziston llogaria e organizatës, përfshirë periudhat vetëm-lexim pas mbarimit të provës ose të pagesës — asgjë nuk fshihet automatikisht, që një Klient që rinovon më vonë t'i gjejë të dhënat siç i la.",
+      "Me kërkesë të Klientit fshijmë organizatën dhe të gjitha të dhënat e saj brenda 30 ditësh. Të dhënat e faturimit (pagesat) ruhen edhe pas kësaj vetëm sa e kërkon ligji. Log-et teknike fshihen automatikisht nga ofruesi i hostimit brenda pak javësh.",
+    ]},
+    { title: "Të drejtat e tua", paragraphs: [
+      "Ke të drejtë të kërkosh qasje në të dhënat e tua, korrigjimin, fshirjen, kufizimin e përpunimit, transferimin (eksport të plotë të të dhënave të organizatës në format të lexueshëm nga makina) dhe të kundërshtosh përpunimin që bazohet në interes legjitim. Për të dhënat e organizatës, kërkesa duhet të vijë nga një administrator i saj.",
+      "Na shkruaj te {email}; përgjigjemi brenda 30 ditësh. Nëse mendon se të dhënat e tua përpunohen në kundërshtim me ligjin, ke të drejtë të ankohesh te Agjencia për Informim dhe Privatësi e Republikës së Kosovës.",
+    ]},
+    { title: "Siguria", paragraphs: [
+      "I gjithë trafiku është i enkriptuar (TLS). Fjalëkalimet ruhen si hash (bcrypt). Qasja në të dhënat e organizatës kufizohet sipas rolit (administrator, menaxher, punëtor). Të dhënat e pagesës nuk kalojnë kurrë nëpër serverët tanë. Nëse ndodh një shkelje sigurie që prek të dhënat e tua, të njoftojmë pa vonesë të panevojshme.",
+    ]},
+    { title: "Fëmijët", paragraphs: [
+      "SmartDepo është shërbim për biznese dhe nuk u drejtohet personave nën 18 vjeç.",
+    ]},
+    { title: "Ndryshimet dhe kontakti", paragraphs: [
+      "Nëse ndryshojmë këtë politikë në mënyrë thelbësore, njoftojmë administratorët me email të paktën 30 ditë përpara. Baza ligjore: Ligji nr. 06/L-082 për Mbrojtjen e të Dhënave Personale i Republikës së Kosovës dhe, ku zbatohet, GDPR.",
+      "Pyetje për privatësinë: {email}.",
+    ]},
+  ],
+  en: [
+    { title: "Who processes your data", paragraphs: [
+      "The data controller is {company}, {address} (\"we\"). This policy explains what data SmartDepo collects, why, where it is stored, and what your rights are. It applies to anyone who opens an account or uses SmartDepo as a user invited by an organization (the Customer).",
+      "For data the Customer puts into SmartDepo itself (floor plans, items, stock, movements, its employees' details), the Customer is the controller and we act as a processor on its instructions.",
+    ]},
+    { title: "What we collect", paragraphs: [
+      "Account data: name, email address and password (stored only as a hash, never in clear text), role in the organization, email-verification and account-creation dates.",
+      "Organization data: company name, facilities and their floor plans, items, stock quantities and movement history. Every stock movement records which user performed it — that is part of the product (traceability) and is visible to the organization.",
+      "Payment data: plan, period bought, amount, date and Paysera's reference number. We never receive or store card numbers or bank details — those are entered only on Paysera's page.",
+      "Technical data: IP address, browser type and request times, in the hosting provider's server logs, kept briefly for security and diagnostics. We use no third-party analytics or advertising tools.",
+    ]},
+    { title: "Cookies", paragraphs: [
+      "We use only strictly necessary cookies: the login session (so you stay signed in), your chosen language, and the facility you are working in. No tracking or advertising cookies — which is why there is no cookie consent banner.",
+    ]},
+    { title: "Why we process it", paragraphs: [
+      "To provide the service the Customer contracted (performance of a contract): sign-in, storing and displaying warehouse data, payments.",
+      "To send operational email: address verification, team invites, password reset, and the notice 7 days before a trial or paid period ends. We send no marketing email without your consent.",
+      "For security and abuse prevention (legitimate interest): e.g. blocking disposable email addresses and duplicate accounts for the same free trial.",
+      "For legal obligations: keeping billing records for as long as tax and accounting law requires.",
+    ]},
+    { title: "Who sees it (subprocessors)", paragraphs: [
+      "We do not sell or share data with third parties for their own purposes. We use these providers, who process it only on our instructions: Vercel (application hosting), Neon (database, Frankfurt region, EU), Resend (operational email), Paysera (payment processing — receives name, email and the payment amount).",
+      "Within your organization, admins and managers see the member list (name, email, role) and the movement history with the name of the person who performed each movement.",
+    ]},
+    { title: "How long we keep it", paragraphs: [
+      "For as long as the organization's account exists, including read-only periods after a trial or paid period ends — nothing is deleted automatically, so a Customer who renews later finds the data as they left it.",
+      "On a Customer's request we delete the organization and all its data within 30 days. Billing records (payments) are kept beyond that only as long as the law requires. Technical logs are purged automatically by the hosting provider within weeks.",
+    ]},
+    { title: "Your rights", paragraphs: [
+      "You can request access to your data, correction, deletion, restriction of processing, portability (a full machine-readable export of the organization's data), and object to processing based on legitimate interest. For organization data, the request must come from one of its admins.",
+      "Email {email}; we answer within 30 days. If you believe your data is processed unlawfully you may complain to the Information and Privacy Agency of the Republic of Kosovo.",
+    ]},
+    { title: "Security", paragraphs: [
+      "All traffic is encrypted (TLS). Passwords are stored hashed (bcrypt). Access to organization data is limited by role (admin, manager, worker). Payment data never passes through our servers. If a security breach affects your data, we notify you without undue delay.",
+    ]},
+    { title: "Children", paragraphs: [
+      "SmartDepo is a business service and is not directed at anyone under 18.",
+    ]},
+    { title: "Changes and contact", paragraphs: [
+      "If we change this policy materially we email admins at least 30 days in advance. Legal basis: Law No. 06/L-082 on Protection of Personal Data of the Republic of Kosovo and, where applicable, the GDPR.",
+      "Privacy questions: {email}.",
     ]},
   ],
 };

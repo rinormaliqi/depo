@@ -47,6 +47,7 @@ export async function PublicFooter() {
           <Link href="/pricing" style={{ color: "inherit" }}>{t("nav.pricing")}</Link>
           <Link href="/terms" style={{ color: "inherit" }}>{t("nav.terms")}</Link>
           <Link href="/refunds" style={{ color: "inherit" }}>{t("nav.refunds")}</Link>
+          <Link href="/privacy" style={{ color: "inherit" }}>{t("nav.privacy")}</Link>
           <Link href="/contact" style={{ color: "inherit" }}>{t("nav.contact")}</Link>
         </span>
       </div>

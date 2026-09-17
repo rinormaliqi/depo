@@ -35,6 +35,7 @@ export function SignupForm() {
         {t.rich("signup.agree", {
           terms: (chunks) => <Link href="/terms" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</Link>,
           refunds: (chunks) => <Link href="/refunds" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</Link>,
+          privacy: (chunks) => <Link href="/privacy" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</Link>,
         })}
       </p>
     </form>

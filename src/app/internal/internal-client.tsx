@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { formatDate } from "@/lib/format-date";
-import { listOrganizations, recordManualPayment, updateOrgBilling } from "./actions";
+import { listOrganizations } from "./actions";
+import * as rawActions from "./actions";
+import { unwrap } from "@/lib/action-result";
+
+const updateOrgBilling = unwrap(rawActions.updateOrgBilling);
+const recordManualPayment = unwrap(rawActions.recordManualPayment);
 
 type Data = Awaited<ReturnType<typeof listOrganizations>>;
 type Org = Data["organizations"][number];

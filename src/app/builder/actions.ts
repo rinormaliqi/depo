@@ -21,6 +21,7 @@ import {
 import { assertCanAddBins } from "@/lib/plan-limits";
 import { requirePermission } from "@/lib/permissions";
 import { getMyOrgId, requireOrgId } from "@/lib/session";
+import { attempt } from "@/lib/action-result";
 
 export type LocationRow = typeof locations.$inferSelect;
 
@@ -70,7 +71,7 @@ export async function getMyFacility() {
   return facility ?? null;
 }
 
-export async function updateFacility(
+async function updateFacilityImpl(
   facilityId: string,
   patch: { name?: string; widthM?: number; heightM?: number },
 ) {
@@ -206,7 +207,7 @@ async function createEntityAt(
   return created;
 }
 
-export async function createEntity(
+async function createEntityImpl(
   facilityId: string,
   kind: LocationKind,
   xM: number,
@@ -232,7 +233,7 @@ export async function createEntity(
   return created;
 }
 
-export async function applyTemplate(facilityId: string, templateKey: TemplateKey, replace: boolean) {
+async function applyTemplateImpl(facilityId: string, templateKey: TemplateKey, replace: boolean) {
   await requirePermission("editLayout");
   const facility = await requireOwnedFacility(facilityId);
 
@@ -277,7 +278,7 @@ export async function applyTemplate(facilityId: string, templateKey: TemplateKey
 // rather than just dropping a new zone on top of whatever's already there.
 // Scoped to zones and their own children — an aisle or dock placed
 // independently of any zone is left where it is.
-export async function addSector(facilityId: string) {
+async function addSectorImpl(facilityId: string) {
   await requirePermission("editLayout");
   const facility = await requireOwnedFacility(facilityId);
 
@@ -390,7 +391,7 @@ async function reshapeGrid(
   }
 }
 
-export async function updateEntity(
+async function updateEntityImpl(
   id: string,
   patch: {
     name?: string;
@@ -498,7 +499,7 @@ async function descendantIds(rootId: string): Promise<string[]> {
   return ids;
 }
 
-export async function deleteEntity(id: string) {
+async function deleteEntityImpl(id: string) {
   await requirePermission("editLayout");
   await requireOwnedLocation(id);
 
@@ -509,7 +510,7 @@ export async function deleteEntity(id: string) {
   revalidatePath("/builder");
 }
 
-export async function duplicateEntity(id: string) {
+async function duplicateEntityImpl(id: string) {
   await requirePermission("editLayout");
   const location = await requireOwnedLocation(id);
   if (LOCATION_TYPES[location.kind as LocationKind].spatial === "store") {
@@ -531,7 +532,7 @@ export async function duplicateEntity(id: string) {
 // prior kind/box/bays/levels, not a kind's defaults — the same distinction
 // duplicateEntity above already gets right, just driven by a caller-supplied
 // spec instead of an existing row.
-export async function restoreEntity(
+async function restoreEntityImpl(
   facilityId: string,
   spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number },
 ) {
@@ -549,4 +550,59 @@ export async function restoreEntity(
   );
   revalidatePath("/builder");
   return created;
+}
+
+export async function updateFacility(
+  facilityId: string,
+  patch: { name?: string; widthM?: number; heightM?: number },
+) {
+  return attempt(() => updateFacilityImpl(facilityId, patch));
+}
+
+export async function createEntity(
+  facilityId: string,
+  kind: LocationKind,
+  xM: number,
+  yM: number,
+) {
+  return attempt(() => createEntityImpl(facilityId, kind, xM, yM));
+}
+
+export async function applyTemplate(facilityId: string, templateKey: TemplateKey, replace: boolean) {
+  return attempt(() => applyTemplateImpl(facilityId, templateKey, replace));
+}
+
+export async function addSector(facilityId: string) {
+  return attempt(() => addSectorImpl(facilityId));
+}
+
+export async function updateEntity(
+  id: string,
+  patch: {
+    name?: string;
+    code?: string;
+    xM?: number;
+    yM?: number;
+    widthM?: number;
+    heightM?: number;
+    bays?: number;
+    levels?: number;
+  },
+) {
+  return attempt(() => updateEntityImpl(id, patch));
+}
+
+export async function deleteEntity(id: string) {
+  return attempt(() => deleteEntityImpl(id));
+}
+
+export async function duplicateEntity(id: string) {
+  return attempt(() => duplicateEntityImpl(id));
+}
+
+export async function restoreEntity(
+  facilityId: string,
+  spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number },
+) {
+  return attempt(() => restoreEntityImpl(facilityId, spec));
 }

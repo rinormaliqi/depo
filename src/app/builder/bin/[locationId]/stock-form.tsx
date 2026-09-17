@@ -3,7 +3,11 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { pickStock, receiveStock } from "./actions";
+import * as rawActions from "./actions";
+import { unwrap } from "@/lib/action-result";
+
+const receiveStock = unwrap(rawActions.receiveStock);
+const pickStock = unwrap(rawActions.pickStock);
 
 type Item = { id: string; name: string; unitOfMeasure: string };
 

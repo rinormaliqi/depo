@@ -3,7 +3,14 @@
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { formatDate } from "@/lib/format-date";
-import { changeMemberRole, createInvite, getTeam, removeMember, resendInvite, revokeInvite } from "./actions";
+import { createInvite, getTeam } from "./actions";
+import * as rawActions from "./actions";
+import { unwrap } from "@/lib/action-result";
+
+const revokeInvite = unwrap(rawActions.revokeInvite);
+const resendInvite = unwrap(rawActions.resendInvite);
+const changeMemberRole = unwrap(rawActions.changeMemberRole);
+const removeMember = unwrap(rawActions.removeMember);
 
 type TeamData = Awaited<ReturnType<typeof getTeam>>;
 type Member = TeamData["members"][number];

@@ -38,7 +38,7 @@ export default async function BinPage({
           userEmail={session.user.email ?? ""}
         />
       )}
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 26 }}>
+      <div className="bin-page" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <div style={{ marginBottom: 6 }}>
             <Link href="/builder" style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>

@@ -55,7 +55,7 @@ export function ScanForm({ items }: { items: Item[] }) {
   }
 
   return (
-    <div className="blueprint" style={{ width: 344, flex: "none", padding: 10, background: "#fff", boxShadow: "var(--shadow-lg)" }}>
+    <div className="blueprint scan-form" style={{ padding: 10, background: "#fff", boxShadow: "var(--shadow-lg)" }}>
       <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
       <div style={{ border: "1px solid var(--color-divider)", padding: 13, display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ border: "1px dashed var(--color-accent-500)", background: "var(--color-accent-100)", height: 110, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, padding: "0 12px", textAlign: "center" }}>
@@ -82,11 +82,11 @@ export function ScanForm({ items }: { items: Item[] }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 9 }}>
           <div className="field">
             <label>{t("quantity")}</label>
-            <input className="input" type="number" min="1" placeholder="200" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            <input className="input" type="number" inputMode="numeric" min="1" placeholder="200" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
           </div>
           <div className="field">
             <label>{t("location")}</label>
-            <input className="input" type="text" placeholder="A-01-3" value={code} onChange={(e) => setCode(e.target.value)} />
+            <input className="input" type="text" autoCapitalize="characters" autoCorrect="off" placeholder="A-01-3" value={code} onChange={(e) => setCode(e.target.value)} />
           </div>
         </div>
         <div style={{ fontSize: 10, color: "color-mix(in srgb, var(--color-text) 50%, transparent)", marginTop: -4 }}>

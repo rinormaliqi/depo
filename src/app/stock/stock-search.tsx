@@ -59,6 +59,7 @@ export function StockSearch({
             <div key={i} style={{ border: "1px solid var(--color-divider)" }}>
               <Link
                 href={`/builder?bin=${r.locationId}`}
+                className="stock-result-primary"
                 style={{
                   display: "block",
                   padding: "7px 8px",
@@ -66,10 +67,11 @@ export function StockSearch({
                   color: "inherit",
                 }}
               >
-                <div style={{ fontSize: 12, lineHeight: 1.25 }}>
+                <div className="stock-result-main" style={{ fontSize: 12, lineHeight: 1.25 }}>
                   {r.itemName} · {r.quantity} {r.unitOfMeasure}
                 </div>
                 <div
+                  className="stock-result-meta"
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -86,6 +88,7 @@ export function StockSearch({
               </Link>
               <Link
                 href={`/builder/bin/${r.locationId}`}
+                className="stock-result-link"
                 style={{
                   display: "block",
                   padding: "4px 8px 6px",

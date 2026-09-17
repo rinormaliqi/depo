@@ -22,7 +22,8 @@
     },
     "verifyEmail": "Verifiko email-in",
     "planExpired": "{plan} · Skaduar",
-    "planRenewSoon": "{plan} · Rinovo brenda {n} ditësh"
+    "planRenewSoon": "{plan} · Rinovo brenda {n} ditësh",
+    "menu": "Menuja"
   },
   "nav": {
     "blueprint": "Skema",

@@ -325,6 +325,30 @@ confirmed every write path above is blocked with the correct translated message 
 own distinct message; confirmed zero partial writes against Postgres directly, not just the
 UI; then restored the org and confirmed normal writes resume immediately.
 
+## Phone layout for the worker surfaces
+
+`docs/concept.md` promised "mobile-first" and there wasn't a single media query. The four
+surfaces a worker touches — `AppHeader`, `/stock`, `/scanner`, `/builder/bin/[id]` — now have a
+phone layout under 768px, done as class hooks on the existing inline-styled markup plus one
+block of media queries in `globals.css`, so desktop rendering is byte-for-byte what it was.
+The builder canvas is deliberately untouched (a desk tool, per the role split).
+
+- **Header**: row 1 logo + facility + plan pill + a ⋯ toggle; row 2 the four tabs at equal
+  width; the search/Items/Team/Billing/locale/sign-out row is hidden until ⋯ is tapped. Two
+  rules needed `!important` because the markup sets `display:flex` inline for the desktop row.
+- **Inputs go to 16px** on phones — iOS zooms the whole page when a focused input is smaller,
+  which was the single most disorienting thing on the old layout. Buttons get 44px targets.
+  Quantity fields carry `inputMode="numeric"`; the location code field turns off autocorrect and
+  capitalises (codes are `A-01-3`, the keyboard kept "fixing" them).
+- **/stock** collapses to search-on-top, zones below; result cards get 15px text and roomier
+  taps. **/scanner** form fills the width and the movements table scrolls inside its own box
+  rather than widening the page. **Bin detail** stacks item select → quantity + Shto → Hiq.
+
+Verified at 375×812 in the Browser pane (not just a narrow desktop window): searched an item and
+read its location with zero horizontal overflow; booked stock through the Scanner with touch
+clicks only; added/removed from the bin page; opened the ⋯ menu. Re-checked at 1280 that the
+desktop layout is unchanged.
+
 ## QR codes
 
 Not implemented yet. The Scanner page (below) currently takes a typed location `code`

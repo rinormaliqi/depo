@@ -37,12 +37,12 @@ export default async function StockPage({
         floorText={t("common.floorText", { width: facility.widthM.toFixed(1), height: facility.heightM.toFixed(1) })}
         userEmail={session.user.email ?? ""}
       />
-      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "minmax(0,280px) 1fr", overflow: "auto" }}>
-        <div style={{ borderRight: "1px solid var(--color-divider)", background: "#fff", overflow: "auto", padding: 13 }}>
+      <div className="stock-layout" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+        <div className="stock-search-pane" style={{ background: "#fff", overflow: "auto" }}>
           <StockSearch initialQuery={q ?? ""} initialResults={initialResults} />
         </div>
 
-        <div style={{ padding: 22, overflow: "auto" }}>
+        <div className="stock-zones-pane" style={{ overflow: "auto" }}>
           <div
             style={{
               fontFamily: "var(--font-heading)",

@@ -22,7 +22,8 @@
     },
     "verifyEmail": "Verify your email",
     "planExpired": "{plan} · Expired",
-    "planRenewSoon": "{plan} · Renew in {n}d"
+    "planRenewSoon": "{plan} · Renew in {n}d",
+    "menu": "Menu"
   },
   "nav": {
     "blueprint": "Blueprint",

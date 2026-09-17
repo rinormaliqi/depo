@@ -19,3 +19,68 @@ body {
 input[type="number"] {
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Phone layout (#2) ───────────────────────────────────────────────────
+   The worker surfaces — header, /stock, /scanner, bin detail — get a
+   single-column layout and 44px tap targets under 768px. The blueprint
+   builder is deliberately left desktop-only (docs/concept.md role split).
+   Layout hooks are class names on otherwise inline-styled markup so the
+   desktop rendering is unchanged. */
+
+.app-header { position: relative; }
+.app-header-toggle { display: none; }
+
+.stock-layout { display: grid; grid-template-columns: minmax(0, 280px) 1fr; }
+.stock-search-pane { border-right: 1px solid var(--color-divider); padding: 13px; }
+.stock-zones-pane { padding: 22px; }
+
+.scan-page { padding: 26px; }
+.scan-layout { display: flex; gap: 30px; flex-wrap: wrap; align-items: flex-start; }
+.scan-form { width: 344px; flex: none; }
+.scan-recent { flex: 1; min-width: 300px; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.bin-page { padding: 26px; }
+.bin-form { display: flex; flex-wrap: wrap; gap: 8px; }
+.bin-form-item { flex: 1; min-width: 160px; }
+.bin-form-qty { width: 80px; }
+
+@media (max-width: 768px) {
+  /* iOS zooms the page when a focused input is under 16px. */
+  .input, select.input { font-size: 16px; min-height: 44px; }
+  .btn { min-height: 44px; }
+
+  /* Header: row 1 logo + facility + pill + ⋯ ; row 2 the four tabs;
+     the secondary row (search, items, team, billing, locale, sign out)
+     is hidden until ⋯ is tapped. */
+  .app-header { padding: 8px 10px !important; gap: 8px !important; }
+  .app-header .app-header-divider { display: none; }
+  .app-header .app-header-facility { flex: 1 1 0; min-width: 0; }
+  .app-header .app-header-toggle { display: inline-flex; flex: none; min-width: 44px; }
+  .app-header .app-header-tabs { order: 10; flex: 1 1 100%; display: flex; }
+  .app-header .app-header-tabs .seg-opt { flex: 1; justify-content: center; padding: 10px 4px; font-size: 12px; }
+  /* !important: the markup sets display:flex inline for the desktop row. */
+  .app-header .app-header-secondary { order: 11; flex: 1 1 100%; display: none !important; margin-left: 0 !important; }
+  .app-header.is-open .app-header-secondary { display: flex !important; }
+  .app-header .app-header-secondary .input { flex: 1 1 100%; max-width: none; }
+  .app-header .app-header-secondary .btn { flex: 1 1 30%; }
+  .app-header .app-header-email { display: none; }
+
+  .stock-layout { grid-template-columns: 1fr; }
+  .stock-search-pane { border-right: 0; border-bottom: 1px solid var(--color-divider); padding: 12px; }
+  .stock-zones-pane { padding: 16px 12px; }
+  .stock-result-main { font-size: 15px !important; line-height: 1.3 !important; }
+  .stock-result-meta { font-size: 12px !important; }
+  .stock-result-link { font-size: 13px !important; padding: 10px 8px !important; }
+  .stock-result-primary { padding: 12px 10px !important; }
+
+  .scan-page { padding: 12px; }
+  .scan-layout { flex-direction: column; gap: 20px; }
+  .scan-form { width: 100%; }
+  .scan-recent { min-width: 0; width: 100%; }
+
+  .bin-page { padding: 14px 12px; }
+  .bin-form-item { flex: 1 1 100%; min-width: 0; }
+  .bin-form-qty { flex: 1 1 80px; width: auto; }
+  .bin-form .btn { flex: 1 1 40%; }
+}

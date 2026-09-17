@@ -218,7 +218,7 @@
     "limitFacilities": "{n} objekte",
     "limitBins": "{n} vende",
     "blockedBy": "Tashmë përdor më shumë {what} sesa lejon ky plan.",
-    "enterprisePrice": "nga €449/muaj",
+    "enterprisePrice": "nga €{price}/muaj",
     "enterpriseBody": "Përdorues, objekte dhe vende pa limit, me historik lëvizjesh të ruajtur përgjithmonë. Çmim sipas klientit.",
     "contactUs": "Na kontakto",
     "periodLabel": "Paguaj për",

@@ -42,7 +42,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const [facility, billing, t, { canceled }] = await Promise.all([getMyFacility(), getMyBilling(), getTranslations(), searchParams]);
   const tb = await getTranslations("billing");
 
-  const { org, plan, usage, lockReason, role, options, history, onlinePaymentsEnabled } = billing;
+  const { org, plan, usage, lockReason, role, options, enterprisePriceCents, history, onlinePaymentsEnabled } = billing;
   const now = Date.now();
   const daysUntil = (d: Date | null) => (d ? Math.ceil((new Date(d).getTime() - now) / (1000 * 60 * 60 * 24)) : null);
   const trialDaysLeft = org.subscriptionStatus === "trialing" ? daysUntil(org.trialEndsAt) : null;
@@ -103,7 +103,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <SectionTitle>{tb("choosePlan")}</SectionTitle>
           {isAdmin ? (
             <div style={{ marginBottom: 28 }}>
-              <PlanPicker options={options} currentPlanKey={plan?.key ?? ""} onlinePaymentsEnabled={onlinePaymentsEnabled} supportEmail={supportEmail} />
+              <PlanPicker options={options} currentPlanKey={plan?.key ?? ""} enterprisePriceCents={enterprisePriceCents} onlinePaymentsEnabled={onlinePaymentsEnabled} supportEmail={supportEmail} />
             </div>
           ) : (
             <p className="text-muted" style={{ fontSize: 13, marginBottom: 28 }}>{tb("adminOnlyBody")}</p>

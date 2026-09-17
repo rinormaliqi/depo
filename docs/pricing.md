@@ -9,17 +9,29 @@
   experience the "instant lookup" value.
 - When a trial ends without a payment method, the organization moves to a locked/read-only
   state (data preserved, not deleted) rather than losing access to what they built.
-- Positioning: **premium**, not budget. The core paid tier is priced in the $150-300/mo band
-  deliberately — B2B buyers tend to value "stop paying workers to walk around looking for
+- Positioning: **premium for the market**, not budget. The core paid tier was first drafted in
+  the $150-300/mo band — B2B buyers tend to value "stop paying workers to walk around looking for
   things" well above what a founder instinctively prices it at.
+
+## 2026-09-17: repriced for Kosovo — €49 / €119 / from €249
+
+The original 99/219/449 draft assumed a generic Western SMB. The first real conversations are
+Kosovo companies, and the founder's read is that 219/month reads as "enterprise software" to a
+10–15-person depot there, not as a tool they'd buy on their own authority. Halving keeps the
+same shape (Business is still the anchor, ~2.4× Starter; Enterprise is a negotiation floor) and
+the economics still work: hosting is ~€14/month, Paysera takes 1%, so three Starter customers
+cover costs. Prices are data (`src/db/seed.ts` upserts them), so this was a seed change plus a
+re-run against production — no code change. Rule kept: never below €49, where B2B buyers stop
+reading it as a solution and start reading it as a gadget. Raising later affects only new
+purchases (terms: price changes never touch periods already paid).
 
 ## Tiers
 
 | Tier | Price/mo | Users | Facilities | Bins | Movement history |
 |---|---|---|---|---|---|
-| Starter | $99 | 5 | 1 | 500 | 12 months |
-| Business | $219 | 20 | 3 | 5,000 | 24 months |
-| Enterprise | from $449 | unlimited | unlimited | unlimited | unlimited |
+| Starter | €49 | 5 | 1 | 500 | 12 months |
+| Business | €119 | 20 | 3 | 5,000 | 24 months |
+| Enterprise | from €249 | unlimited | unlimited | unlimited | unlimited |
 
 Business is the anchor tier — sized for the ~10-15 worker company that's the primary target
 customer. Enterprise's price is a negotiable starting point, not a hard number, meant for

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
@@ -19,11 +19,9 @@ export async function getMyBilling() {
   const [plan] = await db.select().from(plans).where(eq(plans.id, org.planId));
   const usage = await getOrgUsage(session.organizationId);
 
-  const selfServePlans = await db
-    .select()
-    .from(plans)
-    .where(and(inArray(plans.key, [...SELF_SERVE_PLAN_KEYS]), eq(plans.isActive, true)))
-    .orderBy(plans.priceCents);
+  const activePlans = await db.select().from(plans).where(eq(plans.isActive, true)).orderBy(plans.priceCents);
+  const selfServePlans = activePlans.filter((p) => (SELF_SERVE_PLAN_KEYS as readonly string[]).includes(p.key));
+  const enterprise = activePlans.find((p) => p.key === "enterprise") ?? null;
 
   const history = await db
     .select()
@@ -41,6 +39,7 @@ export async function getMyBilling() {
     onlinePaymentsEnabled: getPayseraConfig() !== null,
     // Each purchasable plan with why (if at all) the org can't move to it.
     options: selfServePlans.map((p) => ({ plan: p, blockedBy: limitsExceeded(p, usage) })),
+    enterprisePriceCents: enterprise?.priceCents ?? null,
     history,
   };
 }

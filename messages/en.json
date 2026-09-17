@@ -218,7 +218,7 @@
     "limitFacilities": "{n} facilities",
     "limitBins": "{n} bins",
     "blockedBy": "You already use more {what} than this plan allows.",
-    "enterprisePrice": "from €449/mo",
+    "enterprisePrice": "from €{price}/mo",
     "enterpriseBody": "Unlimited users, facilities and bins, with movement history kept forever. Priced per customer.",
     "contactUs": "Contact us",
     "periodLabel": "Pay for",

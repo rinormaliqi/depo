@@ -10,9 +10,10 @@ type Option = {
   blockedBy: ("users" | "facilities" | "bins")[];
 };
 
-export function PlanPicker({ options, currentPlanKey, onlinePaymentsEnabled, supportEmail }: {
+export function PlanPicker({ options, currentPlanKey, enterprisePriceCents, onlinePaymentsEnabled, supportEmail }: {
   options: Option[];
   currentPlanKey: string;
+  enterprisePriceCents: number | null;
   onlinePaymentsEnabled: boolean;
   supportEmail?: string;
 }) {
@@ -63,7 +64,7 @@ export function PlanPicker({ options, currentPlanKey, onlinePaymentsEnabled, sup
         })}
         <div style={{ padding: 14, border: "1px dashed var(--color-divider)" }}>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 17 }}>Enterprise</div>
-          <div style={{ fontSize: 13, marginTop: 4 }}>{t("enterprisePrice")}</div>
+          {enterprisePriceCents !== null && <div style={{ fontSize: 13, marginTop: 4 }}>{t("enterprisePrice", { price: (enterprisePriceCents / 100).toFixed(0) })}</div>}
           <p style={{ fontSize: 12, marginTop: 10, lineHeight: 1.5, color: "color-mix(in srgb,var(--color-text) 70%,transparent)" }}>{t("enterpriseBody")}</p>
           {supportEmail && (
             <a href={`mailto:${supportEmail}?subject=SmartDepo Enterprise`} className="btn btn-secondary" style={{ marginTop: 10, fontSize: 12 }}>{t("contactUs")}</a>

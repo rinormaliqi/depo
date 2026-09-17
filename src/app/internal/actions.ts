@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { memberships, organizations, payments, plans } from "@/db/schema";
 import { BILLING_CURRENCY, applyPaidPayment, priceForPeriod } from "@/lib/billing";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
+import { attempt } from "@/lib/action-result";
 
 export async function listOrganizations() {
   await requirePlatformAdmin();
@@ -30,7 +31,7 @@ export async function listOrganizations() {
   };
 }
 
-export async function updateOrgBilling(
+async function updateOrgBillingImpl(
   orgId: string,
   patch: {
     planId?: string;
@@ -56,7 +57,7 @@ export async function updateOrgBilling(
 // The bank-transfer path: the founder saw the money land and records it
 // here. Goes through the same applyPaidPayment() as a Paysera callback,
 // so the period maths and the audit row are identical either way.
-export async function recordManualPayment(orgId: string, input: { planId: string; months: number; amountCents?: number; note?: string }) {
+async function recordManualPaymentImpl(orgId: string, input: { planId: string; months: number; amountCents?: number; note?: string }) {
   await requirePlatformAdmin();
   if (!Number.isInteger(input.months) || input.months <= 0) throw new Error("months must be a positive integer");
 
@@ -83,4 +84,20 @@ export async function recordManualPayment(orgId: string, input: { planId: string
 export async function listRecentPayments() {
   await requirePlatformAdmin();
   return db.select().from(payments).orderBy(desc(payments.createdAt)).limit(50);
+}
+
+export async function updateOrgBilling(
+  orgId: string,
+  patch: {
+    planId?: string;
+    subscriptionStatus?: "trialing" | "active" | "past_due" | "canceled";
+    trialEndsAt?: string | null;
+    paidUntil?: string | null;
+  },
+) {
+  return attempt(() => updateOrgBillingImpl(orgId, patch));
+}
+
+export async function recordManualPayment(orgId: string, input: { planId: string; months: number; amountCents?: number; note?: string }) {
+  return attempt(() => recordManualPaymentImpl(orgId, input));
 }

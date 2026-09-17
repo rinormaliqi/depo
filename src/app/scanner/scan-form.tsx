@@ -3,7 +3,10 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { commitScan } from "./actions";
+import * as rawActions from "./actions";
+import { unwrap } from "@/lib/action-result";
+
+const commitScan = unwrap(rawActions.commitScan);
 
 type Item = { id: string; name: string; sku: string | null; unitOfMeasure: string };
 

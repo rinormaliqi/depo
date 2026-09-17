@@ -10,8 +10,9 @@ import { locationLabel } from "@/lib/location-path";
 import { requirePermission } from "@/lib/permissions";
 import { requireSession } from "@/lib/session";
 import { receiveStockAt } from "@/lib/stock";
+import { attempt } from "@/lib/action-result";
 
-export async function commitScan(itemId: string, quantity: number, code: string) {
+async function commitScanImpl(itemId: string, quantity: number, code: string) {
   const { userId, organizationId } = await requirePermission("moveStock");
   const t = await getTranslations("scanner");
   const facility = await getMyFacility();
@@ -71,4 +72,8 @@ export async function getRecentMovements() {
     quantity: m.quantity,
     to: locationLabel(m.toLocationId, byId),
   }));
+}
+
+export async function commitScan(itemId: string, quantity: number, code: string) {
+  return attempt(() => commitScanImpl(itemId, quantity, code));
 }

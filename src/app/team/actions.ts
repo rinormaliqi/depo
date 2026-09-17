@@ -12,6 +12,7 @@ import { normalizeEmail } from "@/lib/email-normalize";
 import { requirePermission } from "@/lib/permissions";
 import { assertCanAddSeats } from "@/lib/plan-limits";
 import { requireSession } from "@/lib/session";
+import { attempt } from "@/lib/action-result";
 
 const INVITE_VALID_DAYS = 7;
 
@@ -144,14 +145,14 @@ async function loadOwnInvite(inviteId: string, organizationId: string) {
   return invite;
 }
 
-export async function revokeInvite(inviteId: string) {
+async function revokeInviteImpl(inviteId: string) {
   const session = await requirePermission("manageTeam");
   const invite = await loadOwnInvite(inviteId, session.organizationId);
   await db.delete(invites).where(eq(invites.id, invite.id));
   revalidatePath("/team");
 }
 
-export async function resendInvite(inviteId: string) {
+async function resendInviteImpl(inviteId: string) {
   const session = await requirePermission("manageTeam");
   const invite = await loadOwnInvite(inviteId, session.organizationId);
   const [updated] = await db.update(invites).set({ expiresAt: expiryFromNow() }).where(eq(invites.id, invite.id)).returning();
@@ -181,7 +182,7 @@ async function assertNotLastAdmin(membership: typeof memberships.$inferSelect) {
   }
 }
 
-export async function changeMemberRole(membershipId: string, role: string) {
+async function changeMemberRoleImpl(membershipId: string, role: string) {
   const t = await getTranslations("team.error");
   const session = await requirePermission("manageTeam");
   if (!isRole(role)) throw new Error(t("required"));
@@ -197,7 +198,7 @@ export async function changeMemberRole(membershipId: string, role: string) {
   revalidatePath("/team");
 }
 
-export async function removeMember(membershipId: string) {
+async function removeMemberImpl(membershipId: string) {
   const t = await getTranslations("team.error");
   const session = await requirePermission("manageTeam");
 
@@ -211,4 +212,20 @@ export async function removeMember(membershipId: string) {
   // logged keep their user_id, so history stays attributable.
   await db.delete(memberships).where(eq(memberships.id, membership.id));
   revalidatePath("/team");
+}
+
+export async function revokeInvite(inviteId: string) {
+  return attempt(() => revokeInviteImpl(inviteId));
+}
+
+export async function resendInvite(inviteId: string) {
+  return attempt(() => resendInviteImpl(inviteId));
+}
+
+export async function changeMemberRole(membershipId: string, role: string) {
+  return attempt(() => changeMemberRoleImpl(membershipId, role));
+}
+
+export async function removeMember(membershipId: string) {
+  return attempt(() => removeMemberImpl(membershipId));
 }

@@ -6,18 +6,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
 import { LOCATION_TYPES, TEMPLATE_KEYS, type TemplateKey } from "@/lib/blueprint-types";
-import {
-  addSector,
-  applyTemplate,
-  createEntity,
-  deleteEntity,
-  duplicateEntity,
-  getBlueprint,
-  restoreEntity,
-  updateEntity,
-  updateFacility,
-  type LocationRow,
-} from "./actions";
+import { getBlueprint, type LocationRow } from "./actions";
+import * as rawActions from "./actions";
+import { unwrap } from "@/lib/action-result";
+
+const addSector = unwrap(rawActions.addSector);
+const applyTemplate = unwrap(rawActions.applyTemplate);
+const createEntity = unwrap(rawActions.createEntity);
+const deleteEntity = unwrap(rawActions.deleteEntity);
+const duplicateEntity = unwrap(rawActions.duplicateEntity);
+const restoreEntity = unwrap(rawActions.restoreEntity);
+const updateEntity = unwrap(rawActions.updateEntity);
+const updateFacility = unwrap(rawActions.updateFacility);
 
 const PPM = 26;
 const SNAP = 0.25;

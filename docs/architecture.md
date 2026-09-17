@@ -231,6 +231,19 @@ env-driven because it changes exactly once, at ARBK registration. Refund policy 
 days free, then full refund within 14 days of any payment, no questions — we absorb Paysera's
 non-refundable commission on those (1%, cheaper than a dispute). Signup links both documents.
 
+### User-facing errors from server actions survive production
+
+First real bug from the Vercel deploy: applying a template on an unverified org showed "An error
+occurred in the Server Components render" instead of "Verify your email…". In production
+Next.js masks the message of any Error *thrown* from a Server Action before it reaches the
+browser; only dev shows it. Every lock, permission and plan-limit check threw, so none of those
+messages would ever have reached a real user. `src/lib/action-result.ts`: server side, an
+exported action's body runs inside `attempt()` and comes back as `{ok, value} | {ok, error}`
+(redirect/notFound are rethrown — they work by throwing); client side, `unwrap()` turns that
+back into a thrown Error, so the canvas/team/scanner `try { … } catch { setError }` code is
+unchanged. Form-state actions (`useActionState`) already returned `{error}` and needed nothing.
+Verified on a production build: the last-admin error arrives as `{"ok":false,"error":"…"}`.
+
 ## Plan-limit enforcement
 
 `plans.max_users`/`max_facilities`/`max_bins` existed as data from the start, but nothing ever

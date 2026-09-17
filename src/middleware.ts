@@ -13,7 +13,8 @@ const publicPaths = new Set(["/", "/login", "/signup", "/forgot-password", "/pri
 // one, since the token itself varies per link.
 // /api/billing/paysera/ is hit by Paysera's servers, which have no session;
 // the route verifies its own signature instead.
-const publicPrefixes = ["/invite/", "/reset-password/", "/verify-email/", "/api/billing/paysera/"];
+// /paysera_<code>.html is the static site-ownership file Paysera fetches.
+const publicPrefixes = ["/invite/", "/reset-password/", "/verify-email/", "/api/billing/paysera/", "/paysera_"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;

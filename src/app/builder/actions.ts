@@ -19,8 +19,10 @@ import {
   type TemplateKey,
 } from "@/lib/blueprint-types";
 import { assertCanAddBins } from "@/lib/plan-limits";
-import { requirePermission } from "@/lib/permissions";
-import { getMyOrgId, requireOrgId } from "@/lib/session";
+import { can, requirePermission } from "@/lib/permissions";
+import { currentFacility, listFacilities, rememberFacility } from "@/lib/facilities";
+import { assertCanAddFacilities } from "@/lib/plan-limits";
+import { getMyOrgId, getMySession, requireOrgId } from "@/lib/session";
 import { attempt } from "@/lib/action-result";
 
 export type LocationRow = typeof locations.$inferSelect;
@@ -58,17 +60,49 @@ async function requireOwnedLocation(locationId: string) {
   return { ...location, organizationId };
 }
 
-// Assumes one facility per org for now — multi-facility switching isn't built yet.
+// The facility the user is currently working in — the one the facility
+// cookie points at, or the org's first (see src/lib/facilities.ts). Every
+// facility-scoped page and action reads through this, so switching is a
+// cookie write and nothing else has to know there's more than one.
 export async function getMyFacility() {
   const organizationId = await getMyOrgId();
   if (!organizationId) return null;
+  return currentFacility(organizationId);
+}
 
-  const [facility] = await db
-    .select()
-    .from(facilities)
-    .where(eq(facilities.organizationId, organizationId))
-    .limit(1);
-  return facility ?? null;
+// What the header's switcher needs in one round trip: the org's
+// facilities and whether this user may add one.
+export async function getMyFacilities() {
+  const session = await getMySession();
+  if (!session) return { facilities: [], canAdd: false };
+  const rows = await listFacilities(session.organizationId);
+  return { facilities: rows.map((f) => ({ id: f.id, name: f.name })), canAdd: can(session.role, "editLayout") };
+}
+
+export async function switchFacility(facilityId: string) {
+  await requireOwnedFacility(facilityId);
+  await rememberFacility(facilityId);
+  // Everything facility-scoped is rendered from getMyFacility(), so a
+  // layout-wide revalidate is the honest scope here, not a single path.
+  revalidatePath("/", "layout");
+}
+
+async function createFacilityImpl(name: string) {
+  const { organizationId } = await requirePermission("editLayout");
+  const trimmed = name.trim();
+  if (!trimmed) {
+    const t = await getTranslations("builder.error");
+    throw new Error(t("nameRequired"));
+  }
+  await assertCanAddFacilities(organizationId, 1);
+  const [facility] = await db.insert(facilities).values({ organizationId, name: trimmed }).returning();
+  await rememberFacility(facility.id);
+  revalidatePath("/", "layout");
+  return facility;
+}
+
+export async function createFacility(name: string) {
+  return attempt(() => createFacilityImpl(name));
 }
 
 async function updateFacilityImpl(

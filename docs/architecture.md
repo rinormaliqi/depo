@@ -349,6 +349,41 @@ read its location with zero horizontal overflow; booked stock through the Scanne
 clicks only; added/removed from the bin page; opened the ⋯ menu. Re-checked at 1280 that the
 desktop layout is unchanged.
 
+## Multiple facilities per organization
+
+`docs/pricing.md` sold Business as "3 facilities" while `getMyFacility()` did `LIMIT 1` with a
+comment admitting switching wasn't built. Now:
+
+- **Which facility you're in is a cookie** (`smartdepo_facility`, `src/lib/facilities.ts`),
+  exactly like the locale — a per-browser preference, not a column on the membership. The same
+  admin can have one site's blueprint on a desk monitor and another site's scanner on a phone.
+  The cookie only holds an id and is validated against the org on every read; stale or forged →
+  the org's first facility. `getMyFacility()` honours it, and since every facility-scoped page and
+  action already read through that one function, switching is a cookie write plus a layout-wide
+  `revalidatePath` — nothing else had to learn there is more than one.
+- **`FacilitySwitcher`** replaces the static name in `AppHeader`: a `<select>` styled as plain
+  text, self-fetching like the billing pill (`getMyFacilities()` returns the list plus whether
+  the caller may add — the switcher must not import `src/lib/permissions.ts`, which would pull
+  server code into the client bundle). "+ Add facility" prompts for a name; `createFacility` is
+  `editLayout`-gated and the first real caller of `assertCanAddFacilities()`, written for this
+  in the plan-limits work. Renders as the plain name while the org has one facility and the
+  user can't add.
+- **`BlueprintCanvas` is keyed by facility id** — it seeds its own state from props once, and
+  `router.refresh()` alone left the old floor on screen after a switch. Real bug found in
+  testing, not theory.
+- **Scoping audit, three leaks fixed**: the bin page resolved its breadcrumb against the
+  *current* facility instead of the bin's own (a search or QR link can open a bin in another
+  site); the scanner's "recent movements" and the metrics log listed org-wide movements but
+  labelled them against one facility's locations ("→ —"). Both are now per facility. Stock
+  search stays deliberately **org-wide** — "where is X" shouldn't stop at the site you have
+  open — but resolves paths across all facilities and prefixes the facility name when the hit
+  is elsewhere (`Main Facility › A · A-01 · A-01-3`).
+
+Verified: added a second and third facility from the header, the fourth refused with the
+translated plan-limit message; each facility has its own blueprint (12 bins vs 0); billing usage
+reads 3 / 3; cross-site search shows the prefixed path; scanner/metrics are empty in the new
+site and show the movement in the original one.
+
 ## QR codes
 
 Not implemented yet. The Scanner page (below) currently takes a typed location `code`

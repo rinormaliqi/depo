@@ -549,5 +549,11 @@
       "noteRefund": "Full refund within 14 days of any payment, no questions asked.",
       "refundLink": "Read the refund policy"
     }
+  },
+  "facility": {
+    "switch": "Switch facility",
+    "addNew": "+ Add facility…",
+    "newPrompt": "Name of the new facility (e.g. \"Warehouse North\"):",
+    "error": "Couldn't add the facility"
   }
 }

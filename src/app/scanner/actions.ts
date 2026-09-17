@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
@@ -38,6 +38,16 @@ export async function getRecentMovements() {
   const { organizationId } = await requireSession();
   const facility = await getMyFacility();
 
+  // Scoped to the facility the user is in: the scanner page is "what just
+  // happened on this floor", and the labels are resolved against this
+  // facility's locations anyway.
+  const allLocations = facility
+    ? await db.select().from(locations).where(eq(locations.facilityId, facility.id))
+    : [];
+  const byId = new Map(allLocations.map((l) => [l.id, l]));
+  const locationIds = allLocations.map((l) => l.id);
+  if (locationIds.length === 0) return [];
+
   const rows = await db
     .select({
       id: movements.id,
@@ -49,14 +59,9 @@ export async function getRecentMovements() {
     })
     .from(movements)
     .innerJoin(items, eq(movements.itemId, items.id))
-    .where(eq(movements.organizationId, organizationId))
+    .where(and(eq(movements.organizationId, organizationId), inArray(movements.toLocationId, locationIds)))
     .orderBy(desc(movements.createdAt))
     .limit(10);
-
-  const allLocations = facility
-    ? await db.select().from(locations).where(eq(locations.facilityId, facility.id))
-    : [];
-  const byId = new Map(allLocations.map((l) => [l.id, l]));
 
   return rows.map((m) => ({
     id: m.id,

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getBillingSummary } from "@/app/billing/actions";
 import { logout } from "@/lib/actions/auth";
+import { FacilitySwitcher } from "./facility-switcher";
 import { LocaleSwitcher } from "./locale-switcher";
 
 type BillingSummary = Awaited<ReturnType<typeof getBillingSummary>>;
@@ -33,10 +34,12 @@ function billingPill(billing: BillingSummary, t: ReturnType<typeof useTranslatio
 }
 
 export function AppHeader({
+  facilityId,
   facilityName,
   floorText,
   userEmail,
 }: {
+  facilityId?: string;
   facilityName: string;
   floorText: string;
   userEmail: string;
@@ -103,7 +106,7 @@ export function AppHeader({
             textOverflow: "ellipsis",
           }}
         >
-          {facilityName}
+          {facilityId ? <FacilitySwitcher currentId={facilityId} currentName={facilityName} /> : facilityName}
         </div>
         <div
           style={{

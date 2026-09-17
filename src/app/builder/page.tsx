@@ -33,11 +33,15 @@ export default async function BuilderPage({
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
       <AppHeader
-        facilityName={facility.name}
+        facilityId={facility.id}
+          facilityName={facility.name}
         floorText={t("common.floorText", { width: facility.widthM.toFixed(1), height: facility.heightM.toFixed(1) })}
         userEmail={session.user.email ?? ""}
       />
       <BlueprintCanvas
+        // Remount on facility change: the canvas seeds its own state from
+        // these props once, and router.refresh() alone wouldn't reset it.
+        key={facility.id}
         facility={{ id: facility.id, name: facility.name, widthM: facility.widthM, heightM: facility.heightM }}
         initialLocations={locations}
         initialOccupiedBinIds={occupiedBinIds}

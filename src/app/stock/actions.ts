@@ -3,7 +3,7 @@
 import { and, eq, gt, ilike, inArray, or } from "drizzle-orm";
 import { getMyFacility } from "@/app/builder/actions";
 import { db } from "@/db";
-import { items, locations, stock } from "@/db/schema";
+import { facilities, items, locations, stock } from "@/db/schema";
 import { locationLabel } from "@/lib/location-path";
 import { requireOrgId } from "@/lib/session";
 
@@ -33,20 +33,34 @@ export async function searchStock(query: string) {
 
   if (rows.length === 0) return [];
 
-  const facility = await getMyFacility();
-  const allLocations = facility
-    ? await db.select().from(locations).where(eq(locations.facilityId, facility.id))
-    : [];
-  const byId = new Map(allLocations.map((l) => [l.id, l]));
+  // Items are org-wide, so a hit can sit in any of the org's facilities:
+  // resolve paths against all of them and name the facility when it isn't
+  // the one the user is currently in — "where is X" shouldn't stop at the
+  // site you happen to have open.
+  const [current, orgLocations] = await Promise.all([
+    getMyFacility(),
+    db
+      .select({ location: locations, facilityName: facilities.name })
+      .from(locations)
+      .innerJoin(facilities, eq(locations.facilityId, facilities.id))
+      .where(eq(facilities.organizationId, organizationId)),
+  ]);
+  const byId = new Map(orgLocations.map(({ location }) => [location.id, location]));
+  const facilityNameByLocation = new Map(orgLocations.map(({ location, facilityName }) => [location.id, facilityName]));
 
-  return rows.map((r) => ({
-    itemName: r.itemName,
-    sku: r.sku,
-    unitOfMeasure: r.unitOfMeasure,
-    quantity: r.quantity,
-    locationId: r.locationId,
-    path: locationLabel(r.locationId, byId),
-  }));
+  return rows.map((r) => {
+    const loc = byId.get(r.locationId);
+    const elsewhere = loc && current && loc.facilityId !== current.id ? facilityNameByLocation.get(r.locationId) : null;
+    const path = locationLabel(r.locationId, byId);
+    return {
+      itemName: r.itemName,
+      sku: r.sku,
+      unitOfMeasure: r.unitOfMeasure,
+      quantity: r.quantity,
+      locationId: r.locationId,
+      path: elsewhere ? `${elsewhere} › ${path}` : path,
+    };
+  });
 }
 
 export async function getZoneUtilization() {

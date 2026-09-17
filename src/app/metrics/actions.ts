@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { getMyFacility } from "@/app/builder/actions";
 import { getZoneUtilization } from "@/app/stock/actions";
 import { db } from "@/db";
@@ -64,7 +64,17 @@ export async function getMetrics() {
     .from(movements)
     .innerJoin(items, eq(movements.itemId, items.id))
     .innerJoin(users, eq(movements.performedBy, users.id))
-    .where(eq(movements.organizationId, organizationId))
+    // Metrics are per facility (the stats above are computed from this
+    // facility's bins), so the log is too — a movement touches this floor
+    // if either end of it is one of its locations.
+    .where(
+      and(
+        eq(movements.organizationId, organizationId),
+        binIds.length > 0
+          ? or(inArray(movements.toLocationId, binIds), inArray(movements.fromLocationId, binIds))
+          : sql`false`,
+      ),
+    )
     .orderBy(desc(movements.createdAt))
     .limit(30);
 

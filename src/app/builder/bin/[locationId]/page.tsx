@@ -19,11 +19,14 @@ export default async function BinPage({
 
   const { locationId } = await params;
   const bin = await getBinInfo(locationId);
+  // The header shows the facility the user is *in*; the path is resolved
+  // against the facility the bin actually belongs to — a link from a
+  // search or QR label can open a bin in another site.
   const facility = await getMyFacility();
   const [stockRows, myItems, allLocations, t] = await Promise.all([
     getBinStock(locationId),
     getMyItems(),
-    facility ? getFacilityLocations(facility.id) : Promise.resolve([]),
+    getFacilityLocations(bin.facilityId),
     getTranslations(),
   ]);
   const byId = new Map(allLocations.map((l) => [l.id, l]));
@@ -33,6 +36,7 @@ export default async function BinPage({
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
       {facility && (
         <AppHeader
+          facilityId={facility.id}
           facilityName={facility.name}
           floorText={t("common.floorText", { width: facility.widthM.toFixed(1), height: facility.heightM.toFixed(1) })}
           userEmail={session.user.email ?? ""}

@@ -55,6 +55,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
       {facility && (
         <AppHeader
+          facilityId={facility.id}
           facilityName={facility.name}
           floorText={t("common.floorText", { width: facility.widthM.toFixed(1), height: facility.heightM.toFixed(1) })}
           userEmail={session.user.email ?? ""}

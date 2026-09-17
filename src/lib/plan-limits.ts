@@ -56,10 +56,7 @@ export async function assertCanAddSeats(organizationId: string, additional: numb
   }
 }
 
-// No facility-creation action exists yet (multi-facility switching isn't
-// built — see docs/architecture.md), so nothing calls this today. Written
-// now so that feature can wire it in directly rather than needing its own
-// limit-checking logic invented later.
+// Called by createFacility() in src/app/builder/actions.ts.
 export async function assertCanAddFacilities(organizationId: string, additional: number) {
   if (additional <= 0) return;
   const plan = await getOrgPlan(organizationId);

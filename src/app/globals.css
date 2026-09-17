@@ -84,3 +84,7 @@ input[type="number"] {
   .bin-form-qty { flex: 1 1 80px; width: auto; }
   .bin-form .btn { flex: 1 1 40%; }
 }
+
+/* Facility switcher in the header: looks like the plain name until hovered. */
+.facility-select { appearance: none; -webkit-appearance: none; text-overflow: ellipsis; }
+.facility-select:hover, .facility-select:focus-visible { text-decoration: underline; outline: none; }

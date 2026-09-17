@@ -37,8 +37,8 @@ const planRows: (typeof plans.$inferInsert)[] = [
 // Limits are updated too. Existing orgs keep their plan row (same id);
 // what changes is what the next payment costs.
 for (const plan of planRows) {
-  const { key: _key, ...rest } = plan;
-  await db.insert(plans).values(plan).onConflictDoUpdate({ target: plans.key, set: rest });
+  const set = Object.fromEntries(Object.entries(plan).filter(([k]) => k !== "key"));
+  await db.insert(plans).values(plan).onConflictDoUpdate({ target: plans.key, set });
 }
 
 console.log("Seeded plans:", planRows.map((p) => p.key).join(", "));

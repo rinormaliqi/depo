@@ -549,5 +549,11 @@
       "noteRefund": "Kthim i plotë brenda 14 ditësh nga çdo pagesë, pa pyetje.",
       "refundLink": "Lexo politikën e kthimit"
     }
+  },
+  "facility": {
+    "switch": "Ndërro objektin",
+    "addNew": "+ Shto objekt…",
+    "newPrompt": "Emri i objektit të ri (p.sh. \"Depoja Veri\"):",
+    "error": "Objekti nuk u shtua"
   }
 }

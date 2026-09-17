@@ -5,6 +5,7 @@ import * as schema from "./schema";
 type Db = ReturnType<typeof drizzle<typeof schema>>;
 
 let instance: Db | null = null;
+let client: ReturnType<typeof postgres> | null = null;
 
 function connect(): Db {
   const connectionString = process.env.DATABASE_URL;
@@ -14,8 +15,16 @@ function connect(): Db {
   // `prepare: false` keeps the driver compatible with pooled/serverless
   // Postgres (Neon, Supabase pooler) which don't support named prepared
   // statements across connections.
-  const client = postgres(connectionString, { prepare: false });
+  client = postgres(connectionString, { prepare: false });
   return drizzle(client, { schema });
+}
+
+// For the test runner: node --test waits for the event loop, and an open
+// pool would keep it alive forever. The app itself never calls this.
+export async function closeDb() {
+  await client?.end();
+  client = null;
+  instance = null;
 }
 
 // Connects on first use, not at import — `next build` imports every

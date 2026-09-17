@@ -28,6 +28,9 @@ Open http://localhost:3000.
 - `pnpm dev` — start the dev server
 - `pnpm build` / `pnpm start` — production build and run
 - `pnpm lint` / `pnpm type-check`
+- `pnpm test` — integration tests against a throwaway `smartdepo_test` database on the local
+  Postgres (created and migrated automatically; needs `docker compose up -d`). `pnpm test:unit`
+  runs only the pure tests (no database).
 - `pnpm db:push` — sync the Drizzle schema to the database (local dev)
 - `pnpm db:generate` — generate a SQL migration from schema changes
 - `pnpm db:migrate` — apply migrations (production: `vercel.json` runs it in the build; `render.yaml` as the pre-deploy command)

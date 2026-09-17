@@ -7,6 +7,7 @@ import { memberships, organizations, payments, plans } from "@/db/schema";
 import { BILLING_CURRENCY, applyPaidPayment, priceForPeriod } from "@/lib/billing";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { attempt } from "@/lib/action-result";
+import { UserError } from "@/lib/user-error";
 
 export async function listOrganizations() {
   await requirePlatformAdmin();
@@ -59,10 +60,10 @@ async function updateOrgBillingImpl(
 // so the period maths and the audit row are identical either way.
 async function recordManualPaymentImpl(orgId: string, input: { planId: string; months: number; amountCents?: number; note?: string }) {
   await requirePlatformAdmin();
-  if (!Number.isInteger(input.months) || input.months <= 0) throw new Error("months must be a positive integer");
+  if (!Number.isInteger(input.months) || input.months <= 0) throw new UserError("months must be a positive integer");
 
   const [plan] = await db.select().from(plans).where(eq(plans.id, input.planId));
-  if (!plan) throw new Error("Unknown plan");
+  if (!plan) throw new UserError("Unknown plan");
 
   const [payment] = await db
     .insert(payments)
@@ -95,9 +96,22 @@ export async function updateOrgBilling(
     paidUntil?: string | null;
   },
 ) {
-  return attempt(() => updateOrgBillingImpl(orgId, patch));
+  return attempt(() => updateOrgBillingImpl(orgId, patch), "updateOrgBilling");
 }
 
 export async function recordManualPayment(orgId: string, input: { planId: string; months: number; amountCents?: number; note?: string }) {
-  return attempt(() => recordManualPaymentImpl(orgId, input));
+  return attempt(() => recordManualPaymentImpl(orgId, input), "recordManualPayment");
+}
+
+// Founder-only smoke test for error monitoring: throws a plain Error (not
+// a UserError) so attempt() treats it as a bug and reports it to Sentry.
+// The client sees the generic message — which is itself the check that
+// raw failures don't leak to users.
+async function throwTestErrorImpl() {
+  await requirePlatformAdmin();
+  throw new Error(`Sentry server-side test error ${new Date().toISOString()}`);
+}
+
+export async function throwTestError() {
+  return attempt(() => throwTestErrorImpl(), "throwTestError");
 }

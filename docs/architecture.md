@@ -248,6 +248,31 @@ back into a thrown Error, so the canvas/team/scanner `try { … } catch { setErr
 unchanged. Form-state actions (`useActionState`) already returned `{error}` and needed nothing.
 Verified on a production build: the last-admin error arrives as `{"ok":false,"error":"…"}`.
 
+### Error monitoring: Sentry, and the UserError split
+
+`@sentry/nextjs` with the standard three inits (`src/instrumentation-client.ts`,
+`sentry.server.config.ts`, `sentry.edge.config.ts` via `src/instrumentation.ts`), `onRequestError`
+for server-component/route-handler failures, `src/app/global-error.tsx` for a crash in the root
+layout, and `withSentryConfig` in `next.config.ts`. Errors only: tracing and session replay are
+sampled at 0 — they burn the free tier and would record more of a customer's warehouse than the
+privacy policy promises. The SDK posts through `/monitoring` (a tunnel route, allowlisted in the
+middleware) so ad blockers don't eat reports. With no `NEXT_PUBLIC_SENTRY_DSN` everything is a
+no-op, same as email and payments; source-map upload only happens when `SENTRY_AUTH_TOKEN` is set
+at build time.
+
+The more important change is what wiring it exposed: `attempt()` was returning *every* thrown
+message to the browser, so a DB outage would have shown a customer `Failed query: select …` —
+and Sentry would never have heard about it, because nothing threw past the action. Now there is
+`UserError` (`src/lib/user-error.ts`), and every `throw new Error(t(…))` in the app is a
+`UserError` — by construction those are the messages meant for a person. `attempt()` forwards a
+`UserError`'s message; anything else is captured to Sentry tagged with the action name, logged,
+and the user gets `common.errorGeneric`. Verified on a production build: a bad UUID into
+`changeMemberRole` yields `{"ok":false,"error":"Diçka shkoi keq"}` with the real query error in
+the server log, while the last-admin rule still returns its own sentence.
+
+`/internal` has two founder-only buttons ("Throw server error" / "Throw client error") to prove
+the pipeline end to end once a DSN exists — the ticket's acceptance test, made repeatable.
+
 ## Plan-limit enforcement
 
 `plans.max_users`/`max_facilities`/`max_bins` existed as data from the start, but nothing ever

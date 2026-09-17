@@ -44,9 +44,9 @@ async function pickStockImpl(locationId: string, itemId: string, quantity: numbe
 }
 
 export async function receiveStock(locationId: string, itemId: string, quantity: number) {
-  return attempt(() => receiveStockImpl(locationId, itemId, quantity));
+  return attempt(() => receiveStockImpl(locationId, itemId, quantity), "receiveStock");
 }
 
 export async function pickStock(locationId: string, itemId: string, quantity: number) {
-  return attempt(() => pickStockImpl(locationId, itemId, quantity));
+  return attempt(() => pickStockImpl(locationId, itemId, quantity), "pickStock");
 }

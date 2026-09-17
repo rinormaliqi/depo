@@ -8,6 +8,7 @@ import { unwrap } from "@/lib/action-result";
 
 const updateOrgBilling = unwrap(rawActions.updateOrgBilling);
 const recordManualPayment = unwrap(rawActions.recordManualPayment);
+const throwTestError = unwrap(rawActions.throwTestError);
 
 type Data = Awaited<ReturnType<typeof listOrganizations>>;
 type Org = Data["organizations"][number];
@@ -104,6 +105,42 @@ function OrgRow({ org, plans }: { org: Org; plans: Plan[] }) {
   );
 }
 
+function SentryTest() {
+  const [serverResult, setServerResult] = useState<string | null>(null);
+  const [boom, setBoom] = useState(false);
+  if (boom) throw new Error(`Sentry client-side test error ${new Date().toISOString()}`);
+  return (
+    <div style={{ marginTop: 28, paddingTop: 14, borderTop: "1px solid var(--color-divider)", fontSize: 12 }}>
+      <div style={{ fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)", marginBottom: 8 }}>
+        Error monitoring
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <button
+          className="btn btn-secondary"
+          style={{ fontSize: 12 }}
+          onClick={async () => {
+            try {
+              await throwTestError();
+              setServerResult("no error?!");
+            } catch (e) {
+              setServerResult(`user saw: "${e instanceof Error ? e.message : String(e)}"`);
+            }
+          }}
+        >
+          Throw server error
+        </button>
+        <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setBoom(true)}>
+          Throw client error
+        </button>
+        {serverResult && <span className="text-muted">{serverResult} — check Sentry</span>}
+      </div>
+      <p className="text-muted" style={{ marginTop: 6 }}>
+        Both should appear in the Sentry project within a minute. The server one proves attempt() reports unexpected errors and shows the user only the generic line; the client one is caught by global-error.tsx.
+      </p>
+    </div>
+  );
+}
+
 export function InternalClient({ organizations, plans }: { organizations: Org[]; plans: Plan[] }) {
   return (
     <div>
@@ -119,6 +156,7 @@ export function InternalClient({ organizations, plans }: { organizations: Org[];
         <OrgRow key={org.id} org={org} plans={plans} />
       ))}
       {organizations.length === 0 && <p className="text-muted" style={{ fontSize: 13, marginTop: 12 }}>No organizations yet.</p>}
+      <SentryTest />
     </div>
   );
 }

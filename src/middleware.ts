@@ -14,7 +14,9 @@ const publicPaths = new Set(["/", "/login", "/signup", "/forgot-password", "/pri
 // /api/billing/paysera/ is hit by Paysera's servers, which have no session;
 // the route verifies its own signature instead.
 // /paysera_<code>.html is the static site-ownership file Paysera fetches.
-const publicPrefixes = ["/invite/", "/reset-password/", "/verify-email/", "/api/billing/paysera/", "/paysera_"];
+// /monitoring is Sentry's tunnel (next.config.ts) — the browser SDK posts
+// error reports there, with or without a session.
+const publicPrefixes = ["/invite/", "/reset-password/", "/verify-email/", "/api/billing/paysera/", "/paysera_", "/monitoring"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;

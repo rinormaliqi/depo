@@ -24,6 +24,7 @@ import { currentFacility, listFacilities, rememberFacility } from "@/lib/facilit
 import { assertCanAddFacilities } from "@/lib/plan-limits";
 import { getMyOrgId, getMySession, requireOrgId } from "@/lib/session";
 import { attempt } from "@/lib/action-result";
+import { UserError } from "@/lib/user-error";
 
 export type LocationRow = typeof locations.$inferSelect;
 
@@ -36,7 +37,7 @@ async function requireOwnedFacility(facilityId: string) {
   const [facility] = await db.select().from(facilities).where(eq(facilities.id, facilityId));
   if (!facility || facility.organizationId !== organizationId) {
     const t = await getTranslations("builder.error");
-    throw new Error(t("facilityNotFound"));
+    throw new UserError(t("facilityNotFound"));
   }
 
   return facility;
@@ -47,14 +48,14 @@ async function requireOwnedLocation(locationId: string) {
   const t = await getTranslations("builder.error");
 
   const [location] = await db.select().from(locations).where(eq(locations.id, locationId));
-  if (!location) throw new Error(t("locationNotFound"));
+  if (!location) throw new UserError(t("locationNotFound"));
 
   const [facility] = await db
     .select()
     .from(facilities)
     .where(eq(facilities.id, location.facilityId));
   if (!facility || facility.organizationId !== organizationId) {
-    throw new Error(t("locationNotFound"));
+    throw new UserError(t("locationNotFound"));
   }
 
   return { ...location, organizationId };
@@ -92,7 +93,7 @@ async function createFacilityImpl(name: string) {
   const trimmed = name.trim();
   if (!trimmed) {
     const t = await getTranslations("builder.error");
-    throw new Error(t("nameRequired"));
+    throw new UserError(t("nameRequired"));
   }
   await assertCanAddFacilities(organizationId, 1);
   const [facility] = await db.insert(facilities).values({ organizationId, name: trimmed }).returning();
@@ -102,7 +103,7 @@ async function createFacilityImpl(name: string) {
 }
 
 export async function createFacility(name: string) {
-  return attempt(() => createFacilityImpl(name));
+  return attempt(() => createFacilityImpl(name), "createFacility");
 }
 
 async function updateFacilityImpl(
@@ -117,7 +118,7 @@ async function updateFacilityImpl(
     const trimmed = patch.name.trim();
     if (!trimmed) {
       const t = await getTranslations("builder.error");
-      throw new Error(t("nameRequired"));
+      throw new UserError(t("nameRequired"));
     }
     values.name = trimmed;
   }
@@ -192,7 +193,7 @@ async function checkNoStock(
     .where(and(inArray(stock.locationId, ids), gt(stock.quantity, 0)));
   if (withStock.length > 0) {
     const t = await getTranslations("builder.error");
-    throw new Error(t(errorKey));
+    throw new UserError(t(errorKey));
   }
 }
 
@@ -275,7 +276,7 @@ async function applyTemplateImpl(facilityId: string, templateKey: TemplateKey, r
   if (existing.length > 0) {
     if (!replace) {
       const t = await getTranslations("builder.error");
-      throw new Error(t("confirmationRequired"));
+      throw new UserError(t("confirmationRequired"));
     }
     // The scheme's structure can be freely replaced once confirmed — but
     // real stock is never silently destroyed, confirmation or not.
@@ -446,18 +447,18 @@ async function updateEntityImpl(
   const values: Partial<typeof locations.$inferInsert> = {};
   if (patch.name !== undefined) {
     const trimmed = patch.name.trim();
-    if (!trimmed) throw new Error(t("nameRequired"));
+    if (!trimmed) throw new UserError(t("nameRequired"));
     values.name = trimmed;
   }
   if (patch.code !== undefined) {
     const trimmed = patch.code.trim().toUpperCase();
-    if (!trimmed) throw new Error(t("codeRequired"));
+    if (!trimmed) throw new UserError(t("codeRequired"));
     const clash = await db
       .select()
       .from(locations)
       .where(and(eq(locations.facilityId, location.facilityId), eq(locations.code, trimmed)));
     if (clash.some((c) => c.id !== id)) {
-      throw new Error(t("codeInUse", { code: trimmed }));
+      throw new UserError(t("codeInUse", { code: trimmed }));
     }
     values.code = trimmed;
   }
@@ -590,7 +591,7 @@ export async function updateFacility(
   facilityId: string,
   patch: { name?: string; widthM?: number; heightM?: number },
 ) {
-  return attempt(() => updateFacilityImpl(facilityId, patch));
+  return attempt(() => updateFacilityImpl(facilityId, patch), "updateFacility");
 }
 
 export async function createEntity(
@@ -599,15 +600,15 @@ export async function createEntity(
   xM: number,
   yM: number,
 ) {
-  return attempt(() => createEntityImpl(facilityId, kind, xM, yM));
+  return attempt(() => createEntityImpl(facilityId, kind, xM, yM), "createEntity");
 }
 
 export async function applyTemplate(facilityId: string, templateKey: TemplateKey, replace: boolean) {
-  return attempt(() => applyTemplateImpl(facilityId, templateKey, replace));
+  return attempt(() => applyTemplateImpl(facilityId, templateKey, replace), "applyTemplate");
 }
 
 export async function addSector(facilityId: string) {
-  return attempt(() => addSectorImpl(facilityId));
+  return attempt(() => addSectorImpl(facilityId), "addSector");
 }
 
 export async function updateEntity(
@@ -623,20 +624,20 @@ export async function updateEntity(
     levels?: number;
   },
 ) {
-  return attempt(() => updateEntityImpl(id, patch));
+  return attempt(() => updateEntityImpl(id, patch), "updateEntity");
 }
 
 export async function deleteEntity(id: string) {
-  return attempt(() => deleteEntityImpl(id));
+  return attempt(() => deleteEntityImpl(id), "deleteEntity");
 }
 
 export async function duplicateEntity(id: string) {
-  return attempt(() => duplicateEntityImpl(id));
+  return attempt(() => duplicateEntityImpl(id), "duplicateEntity");
 }
 
 export async function restoreEntity(
   facilityId: string,
   spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number },
 ) {
-  return attempt(() => restoreEntityImpl(facilityId, spec));
+  return attempt(() => restoreEntityImpl(facilityId, spec), "restoreEntity");
 }

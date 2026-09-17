@@ -40,8 +40,8 @@ export function StockForm({ locationId, items }: { locationId: string; items: It
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        <select className="input" value={itemId} onChange={(e) => setItemId(e.target.value)} style={{ flex: 1, minWidth: 160 }}>
+      <div className="bin-form">
+        <select className="input bin-form-item" value={itemId} onChange={(e) => setItemId(e.target.value)}>
           {items.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name} ({item.unitOfMeasure})
@@ -49,13 +49,13 @@ export function StockForm({ locationId, items }: { locationId: string; items: It
           ))}
         </select>
         <input
-          className="input"
+          className="input bin-form-qty"
           type="number"
+          inputMode="numeric"
           min={1}
           step={1}
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
-          style={{ width: 80 }}
         />
         <button className="btn btn-primary" onClick={() => handle(receiveStock)} disabled={isPending}>
           {t("bin.add")}

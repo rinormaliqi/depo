@@ -46,6 +46,7 @@ export function AppHeader({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [billing, setBilling] = useState<BillingSummary | null>(null);
+  const [open, setOpen] = useState(false);
 
   // A self-contained fetch rather than a prop every page would need to pass
   // — AppHeader is rendered from ~7 different page types, and this way none
@@ -63,6 +64,7 @@ export function AppHeader({
 
   return (
     <div
+      className={open ? "app-header is-open" : "app-header"}
       style={{
         flex: "none",
         display: "flex",
@@ -88,8 +90,8 @@ export function AppHeader({
       >
         SMART<span style={{ color: "var(--color-accent)" }}>/</span>DEPO
       </Link>
-      <div style={{ width: 1, height: 24, background: "var(--color-divider)" }} />
-      <div style={{ minWidth: 0 }}>
+      <div className="app-header-divider" style={{ width: 1, height: 24, background: "var(--color-divider)" }} />
+      <div className="app-header-facility" style={{ minWidth: 0 }}>
         <div
           style={{
             fontFamily: "var(--font-heading)",
@@ -128,7 +130,18 @@ export function AppHeader({
         );
       })()}
 
-      <div className="seg" style={{ marginLeft: 8 }}>
+      <button
+        type="button"
+        className="btn btn-secondary app-header-toggle"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label={t("common.menu")}
+        style={{ padding: "4px 10px", fontSize: 18, lineHeight: 1 }}
+      >
+        {open ? "×" : "⋯"}
+      </button>
+
+      <div className="seg app-header-tabs" style={{ marginLeft: 8 }}>
         {tabs.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(tab.href + "/");
           return (
@@ -150,7 +163,7 @@ export function AppHeader({
         })}
       </div>
 
-      <div style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+      <div className="app-header-secondary" style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
         <input
           className="input"
           type="search"
@@ -175,6 +188,7 @@ export function AppHeader({
         </Link>
         <LocaleSwitcher />
         <span
+          className="app-header-email"
           style={{
             fontSize: 11,
             color: "color-mix(in srgb, var(--color-text) 50%, transparent)",

@@ -31,8 +31,8 @@ export default async function ScannerPage() {
         floorText={t("common.floorText", { width: facility.widthM.toFixed(1), height: facility.heightM.toFixed(1) })}
         userEmail={session.user.email ?? ""}
       />
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 26 }}>
-        <div style={{ maxWidth: 880, margin: "0 auto", display: "flex", gap: 30, flexWrap: "wrap", alignItems: "flex-start" }}>
+      <div className="scan-page" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+        <div className="scan-layout" style={{ maxWidth: 880, margin: "0 auto" }}>
           {items.length === 0 ? (
             <p className="text-muted">
               {t("scanner.noItemsYet")}{" "}
@@ -45,10 +45,11 @@ export default async function ScannerPage() {
             <ScanForm items={items} />
           )}
 
-          <div style={{ flex: 1, minWidth: 300 }}>
+          <div className="scan-recent">
             <div style={{ fontFamily: "var(--font-heading)", fontSize: 13, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 11 }}>
               {t("scanner.recentMovements")}
             </div>
+            <div className="table-scroll">
             <table className="table">
               <thead>
                 <tr>
@@ -68,6 +69,7 @@ export default async function ScannerPage() {
                 ))}
               </tbody>
             </table>
+            </div>
             {recent.length === 0 && <p className="text-muted" style={{ fontSize: 13, marginTop: 10 }}>{t("scanner.noMovements")}</p>}
             <div style={{ marginTop: 14, fontSize: 12, lineHeight: 1.55, color: "color-mix(in srgb, var(--color-text) 60%, transparent)", maxWidth: "44ch" }}>
               {t("scanner.footerNote")}

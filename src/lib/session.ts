@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { memberships, organizations } from "@/db/schema";
+import { UserError } from "@/lib/user-error";
 
 // Assumes one org per user for now — no multi-org switching UI yet.
 export async function getMySession() {
@@ -76,7 +77,7 @@ export async function requireActiveOrg() {
   const reason = await getOrgLockReason(session.organizationId);
   if (reason) {
     const t = await getTranslations("orgLocked");
-    throw new Error(t(reason));
+    throw new UserError(t(reason));
   }
   return session;
 }

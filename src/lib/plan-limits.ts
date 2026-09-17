@@ -2,6 +2,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { facilities, invites, locations, memberships, organizations, plans } from "@/db/schema";
+import { UserError } from "@/lib/user-error";
 
 async function getOrgPlan(organizationId: string) {
   const [org] = await db.select().from(organizations).where(eq(organizations.id, organizationId));
@@ -29,7 +30,7 @@ export async function assertCanAddBins(organizationId: string, additional: numbe
 
   if (existing.length + additional > plan.maxBins) {
     const t = await getTranslations("planLimit");
-    throw new Error(t("bins", { max: plan.maxBins }));
+    throw new UserError(t("bins", { max: plan.maxBins }));
   }
 }
 
@@ -52,7 +53,7 @@ export async function assertCanAddSeats(organizationId: string, additional: numb
 
   if (memberRows.length + inviteRows.length + additional > plan.maxUsers) {
     const t = await getTranslations("planLimit");
-    throw new Error(t("users", { max: plan.maxUsers }));
+    throw new UserError(t("users", { max: plan.maxUsers }));
   }
 }
 
@@ -66,6 +67,6 @@ export async function assertCanAddFacilities(organizationId: string, additional:
 
   if (existing.length + additional > plan.maxFacilities) {
     const t = await getTranslations("planLimit");
-    throw new Error(t("facilities", { max: plan.maxFacilities }));
+    throw new UserError(t("facilities", { max: plan.maxFacilities }));
   }
 }

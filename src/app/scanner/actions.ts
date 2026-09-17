@@ -11,22 +11,23 @@ import { requirePermission } from "@/lib/permissions";
 import { requireSession } from "@/lib/session";
 import { receiveStockAt } from "@/lib/stock";
 import { attempt } from "@/lib/action-result";
+import { UserError } from "@/lib/user-error";
 
 async function commitScanImpl(itemId: string, quantity: number, code: string) {
   const { userId, organizationId } = await requirePermission("moveStock");
   const t = await getTranslations("scanner");
   const facility = await getMyFacility();
-  if (!facility) throw new Error(t("errorNoFacility"));
+  if (!facility) throw new UserError(t("errorNoFacility"));
 
   const trimmedCode = code.trim().toUpperCase();
-  if (!trimmedCode) throw new Error(t("errorEnterLocation"));
+  if (!trimmedCode) throw new UserError(t("errorEnterLocation"));
 
   const [location] = await db
     .select()
     .from(locations)
     .where(and(eq(locations.facilityId, facility.id), eq(locations.code, trimmedCode)));
   if (!location || !location.isBin) {
-    throw new Error(t("errorLocationNotFound", { code: trimmedCode }));
+    throw new UserError(t("errorLocationNotFound", { code: trimmedCode }));
   }
 
   await receiveStockAt(organizationId, userId, location.id, itemId, quantity);
@@ -80,5 +81,5 @@ export async function getRecentMovements() {
 }
 
 export async function commitScan(itemId: string, quantity: number, code: string) {
-  return attempt(() => commitScanImpl(itemId, quantity, code));
+  return attempt(() => commitScanImpl(itemId, quantity, code), "commitScan");
 }

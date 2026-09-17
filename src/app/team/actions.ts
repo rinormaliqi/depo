@@ -13,6 +13,7 @@ import { requirePermission } from "@/lib/permissions";
 import { assertCanAddSeats } from "@/lib/plan-limits";
 import { requireSession } from "@/lib/session";
 import { attempt } from "@/lib/action-result";
+import { UserError } from "@/lib/user-error";
 
 const INVITE_VALID_DAYS = 7;
 
@@ -141,7 +142,7 @@ export async function createInvite(_prevState: { error?: string } | undefined, f
 async function loadOwnInvite(inviteId: string, organizationId: string) {
   const t = await getTranslations("team.error");
   const [invite] = await db.select().from(invites).where(eq(invites.id, inviteId));
-  if (!invite || invite.organizationId !== organizationId) throw new Error(t("inviteNotFound"));
+  if (!invite || invite.organizationId !== organizationId) throw new UserError(t("inviteNotFound"));
   return invite;
 }
 
@@ -166,7 +167,7 @@ async function resendInviteImpl(inviteId: string) {
 async function loadOwnMembership(membershipId: string, organizationId: string) {
   const t = await getTranslations("team.error");
   const [membership] = await db.select().from(memberships).where(eq(memberships.id, membershipId));
-  if (!membership || membership.organizationId !== organizationId) throw new Error(t("memberNotFound"));
+  if (!membership || membership.organizationId !== organizationId) throw new UserError(t("memberNotFound"));
   return membership;
 }
 
@@ -178,19 +179,19 @@ async function assertNotLastAdmin(membership: typeof memberships.$inferSelect) {
     .where(and(eq(memberships.organizationId, membership.organizationId), eq(memberships.role, "admin"), ne(memberships.id, membership.id)));
   if (others.length === 0) {
     const t = await getTranslations("team.error");
-    throw new Error(t("lastAdmin"));
+    throw new UserError(t("lastAdmin"));
   }
 }
 
 async function changeMemberRoleImpl(membershipId: string, role: string) {
   const t = await getTranslations("team.error");
   const session = await requirePermission("manageTeam");
-  if (!isRole(role)) throw new Error(t("required"));
+  if (!isRole(role)) throw new UserError(t("required"));
 
   const membership = await loadOwnMembership(membershipId, session.organizationId);
   // A manager can shuffle workers/managers but never touch an admin seat
   // in either direction — same cap as inviting.
-  if (session.role !== "admin" && (role === "admin" || membership.role === "admin")) throw new Error(t("onlyAdminCanChangeAdmin"));
+  if (session.role !== "admin" && (role === "admin" || membership.role === "admin")) throw new UserError(t("onlyAdminCanChangeAdmin"));
   if (membership.role === role) return;
   if (membership.role === "admin") await assertNotLastAdmin(membership);
 
@@ -203,8 +204,8 @@ async function removeMemberImpl(membershipId: string) {
   const session = await requirePermission("manageTeam");
 
   const membership = await loadOwnMembership(membershipId, session.organizationId);
-  if (session.role !== "admin" && membership.role === "admin") throw new Error(t("onlyAdminCanChangeAdmin"));
-  if (membership.userId === session.userId) throw new Error(t("cannotRemoveSelf"));
+  if (session.role !== "admin" && membership.role === "admin") throw new UserError(t("onlyAdminCanChangeAdmin"));
+  if (membership.userId === session.userId) throw new UserError(t("cannotRemoveSelf"));
   if (membership.role === "admin") await assertNotLastAdmin(membership);
 
   // The membership is the only thing tying the user to this org; the
@@ -215,17 +216,17 @@ async function removeMemberImpl(membershipId: string) {
 }
 
 export async function revokeInvite(inviteId: string) {
-  return attempt(() => revokeInviteImpl(inviteId));
+  return attempt(() => revokeInviteImpl(inviteId), "revokeInvite");
 }
 
 export async function resendInvite(inviteId: string) {
-  return attempt(() => resendInviteImpl(inviteId));
+  return attempt(() => resendInviteImpl(inviteId), "resendInvite");
 }
 
 export async function changeMemberRole(membershipId: string, role: string) {
-  return attempt(() => changeMemberRoleImpl(membershipId, role));
+  return attempt(() => changeMemberRoleImpl(membershipId, role), "changeMemberRole");
 }
 
 export async function removeMember(membershipId: string) {
-  return attempt(() => removeMemberImpl(membershipId));
+  return attempt(() => removeMemberImpl(membershipId), "removeMember");
 }

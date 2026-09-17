@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import type { MembershipRole } from "@/db/schema";
 import { requireActiveOrg, requireSession } from "@/lib/session";
+import { UserError } from "@/lib/user-error";
 
 // What each role may do. Roles were stored on memberships from the start
 // but only the invite flow ever read them — a worker could redraw the
@@ -38,7 +39,7 @@ export async function requirePermission(permission: Permission) {
   const session = await requireActiveOrg();
   if (!can(session.role, permission)) {
     const t = await getTranslations("permission");
-    throw new Error(t(permission));
+    throw new UserError(t(permission));
   }
   return session;
 }

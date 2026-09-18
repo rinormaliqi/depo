@@ -799,6 +799,30 @@ change to build on Vercel at all, and both are improvements regardless of host:
 `vercel.json` runs `pnpm db:migrate` as part of the build command — the Vercel equivalent of
 Render's pre-deploy step; a failing migration fails the build.
 
+**Where things stand (2026-09-18).** Production is `https://depo-zeta.vercel.app` — Vercel
+Hobby, Neon free Postgres, `fra1`, deploying from `main` on every merge. Env vars, migrations,
+plan seeding and the full signup → verify → builder → stock → Paysera test-payment path are
+done and verified there. `render.yaml` is *not* read by Vercel: every value in it, including
+the Gmail SMTP block (`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`EMAIL_FROM`, plus the secret
+`SMTP_PASS`), has to be entered by hand under Vercel → Project → Settings → Environment
+Variables, then redeployed. Until `SMTP_PASS` is set there, production mail still goes
+through whatever `RESEND_API_KEY` is configured — or the console log.
+
+What's left before the first paying customer, in order:
+
+1. **Domain.** Buy one at any registrar, add it under Vercel → Domains, point the registrar's
+   DNS at Vercel (one CNAME / A record, shown in that screen); TLS is automatic. Every
+   printed bin label's QR encodes the host it was printed from (`appBaseUrl()`), so print
+   real labels only *after* the domain is live — labels printed from `depo-zeta.vercel.app`
+   would stop resolving if that URL ever goes away.
+2. **Hosting tier.** Vercel Hobby's terms don't cover commercial use: either Vercel Pro
+   ($20/mo) or the Render blueprint above (~$14/mo, no cold starts). Neon's free tier
+   suspends the database after inactivity — a first request of the day can take seconds, which
+   is exactly the "instant answer" the product sells; a paid Postgres (Neon Launch or Render)
+   removes that. Both are a dashboard decision, not a code change.
+3. **Email domain.** Once the domain exists, verify it at Resend and set `EMAIL_FROM` to an
+   address on it; SMTP via Gmail is the bridge until then.
+
 ### Why Render over the alternatives considered
 - **Vercel Hobby + Neon/Supabase free:** $0/mo, but Hobby tier's terms expect commercial
   projects to upgrade to Pro ($20/mo), and free-tier Postgres can cold-start/pause —

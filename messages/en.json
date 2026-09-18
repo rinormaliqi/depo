@@ -623,7 +623,9 @@
       "notePrepaid": "Payment: prepaid for 1, 3 or 12 months via Paysera (cards, e-banking, bank transfer) or by invoice. No automatic renewal — you are never charged without initiating a payment.",
       "noteVat": "All prices in EUR. VAT is added where required by law and shown before you pay.",
       "noteRefund": "Full refund within 14 days of any payment, no questions asked.",
-      "refundLink": "Read the refund policy"
+      "refundLink": "Read the refund policy",
+      "periodsNote": "Pay {periods} months up front — the total is worked out at checkout.",
+      "or": "or"
     },
     "privacy": {
       "title": "Privacy Policy",

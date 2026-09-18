@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { plans } from "@/db/schema";
-import { BILLING_PERIODS, SELF_SERVE_PLAN_KEYS, priceForPeriod } from "@/lib/billing-plans";
+import { BILLING_PERIODS, SELF_SERVE_PLAN_KEYS } from "@/lib/billing-plans";
 import { companyInfo } from "@/lib/company";
 
 // The plan grid shown on /pricing and on the landing page. Reads the same
@@ -17,6 +17,8 @@ export async function PlanCards() {
   const rows = await db.select().from(plans).where(eq(plans.isActive, true)).orderBy(plans.priceCents);
   const limit = (n: number | null) => (n === null ? tb("unlimited") : String(n));
   const eur = (cents: number) => `€${(cents / 100).toFixed(0)}`;
+  // "1, 3 or 12" — the offered periods, with the localized "or" before the last.
+  const periodsText = `${BILLING_PERIODS.slice(0, -1).join(", ")} ${t("or")} ${BILLING_PERIODS[BILLING_PERIODS.length - 1]}`;
 
   return (
   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14, margin: "24px 0" }}>
@@ -40,11 +42,9 @@ export async function PlanCards() {
               <li>{plan.movementHistoryMonths === null ? t("historyUnlimited") : t("historyMonths", { n: plan.movementHistoryMonths })}</li>
             </ul>
             {selfServe ? (
-              <div style={{ marginTop: 14, fontSize: 12, color: "color-mix(in srgb,var(--color-text) 60%,transparent)" }}>
-                {BILLING_PERIODS.map((m) => (
-                  <div key={m}>{tb("months", { n: m })}: <strong>{eur(priceForPeriod(plan, m))}</strong></div>
-                ))}
-              </div>
+              <p style={{ marginTop: 14, fontSize: 12, color: "color-mix(in srgb,var(--color-text) 60%,transparent)" }}>
+                {t("periodsNote", { periods: periodsText })}
+              </p>
             ) : (
               <p style={{ marginTop: 14, fontSize: 12, color: "color-mix(in srgb,var(--color-text) 60%,transparent)" }}>{t("enterpriseNote")}</p>
             )}

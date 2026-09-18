@@ -7,20 +7,9 @@ import { companyInfo } from "@/lib/company";
 // contact). Same footer everywhere so the payment provider's reviewers —
 // and customers — can reach the legal pages from any of them.
 export async function PublicPage({ title, children, wide = false }: { title: string; children: React.ReactNode; wide?: boolean }) {
-  const t = await getTranslations("public");
   return (
     <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid var(--color-divider)" }}>
-        <Link href="/" style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 19, letterSpacing: ".06em", color: "var(--color-text)", textDecoration: "none" }}>
-          SMART<span style={{ color: "var(--color-accent)" }}>/</span>DEPO
-        </Link>
-        <nav style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 13 }}>
-          <Link href="/pricing" style={{ color: "var(--color-text)" }}>{t("nav.pricing")}</Link>
-          <Link href="/login" style={{ color: "var(--color-text)" }}>{t("nav.login")}</Link>
-          <Link href="/signup" className="btn btn-primary" style={{ fontSize: 12 }}>{t("nav.signup")}</Link>
-          <LocaleSwitcher />
-        </nav>
-      </header>
+      <PublicHeader />
       <div style={{ flex: 1, padding: "32px 24px" }}>
         <div style={{ maxWidth: wide ? 960 : 720, margin: "0 auto" }}>
           <h1 style={{ fontFamily: "var(--font-heading)", fontSize: 26, fontWeight: 600, margin: "0 0 20px" }}>{title}</h1>
@@ -29,6 +18,23 @@ export async function PublicPage({ title, children, wide = false }: { title: str
       </div>
       <PublicFooter />
     </main>
+  );
+}
+
+export async function PublicHeader() {
+  const t = await getTranslations("public");
+  return (
+    <header className="public-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 24px", borderBottom: "1px solid var(--color-divider)" }}>
+      <Link href="/" style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 19, letterSpacing: ".06em", color: "var(--color-text)", textDecoration: "none" }}>
+        SMART<span style={{ color: "var(--color-accent)" }}>/</span>DEPO
+      </Link>
+      <nav style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 13 }}>
+        <Link href="/pricing" className="public-header-pricing" style={{ color: "var(--color-text)" }}>{t("nav.pricing")}</Link>
+        <Link href="/login" style={{ color: "var(--color-text)" }}>{t("nav.login")}</Link>
+        <Link href="/signup" className="btn btn-primary" style={{ fontSize: 12 }}>{t("nav.signup")}</Link>
+        <LocaleSwitcher />
+      </nav>
+    </header>
   );
 }
 

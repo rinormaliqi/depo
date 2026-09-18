@@ -29,8 +29,8 @@ export const terms: Record<Locale, Section[]> = {
       "Pagesa e kryer para mbarimit të periudhës aktuale e zgjat atë; ndërrimi i planit fillon një periudhë të re nga dita e pagesës. Nuk mund të kalosh në një plan limitet e të cilit organizata jote tashmë i tejkalon.",
       "Kur periudha e paguar mbaron pa u rinovuar, llogaria kalon në vetëm-lexim, njësoj si pas provës. Të njoftojmë me email 7 ditë para mbarimit.",
     ]},
-    { title: "Kthimi i parave", paragraphs: [
-      "Kushtet e kthimit përshkruhen në Politikën e Kthimit të Parave, që është pjesë e këtyre kushteve.",
+    { title: "Rimbursimi", paragraphs: [
+      "Kushtet e kthimit përshkruhen në Politikën e Rimbursimit, që është pjesë e këtyre kushteve.",
     ]},
     { title: "Të dhënat e tua", paragraphs: [
       "Të dhënat që fut në SmartDepo (planimetria, artikujt, stoku, lëvizjet, përdoruesit) mbeten pronë e Klientit. Ne i përdorim vetëm për të ofruar shërbimin dhe nuk ia shesim apo ia japim palëve të treta, përveç nënkontraktorëve që e mundësojnë shërbimin (hosting, dërgim email-esh, procesim pagesash), të cilët veprojnë sipas udhëzimeve tona.",

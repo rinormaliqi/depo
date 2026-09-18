@@ -907,11 +907,14 @@ What's left before the first paying customer, in order:
    printed bin label's QR encodes the host it was printed from (`appBaseUrl()`), so print
    real labels only *after* the domain is live — labels printed from `depo-zeta.vercel.app`
    would stop resolving if that URL ever goes away.
-2. **Hosting tier.** Vercel Hobby's terms don't cover commercial use: either Vercel Pro
-   ($20/mo) or the Render blueprint above (~$14/mo, no cold starts). Neon's free tier
-   suspends the database after inactivity — a first request of the day can take seconds, which
-   is exactly the "instant answer" the product sells; a paid Postgres (Neon Launch or Render)
-   removes that. Both are a dashboard decision, not a code change.
+2. **Hosting tier — decided 2026-09-18: stay on Vercel + Neon, upgrade both.** Vercel Pro
+   (1 seat, $20/mo, commercial use) and Neon Launch with autosuspend *disabled* at 0.25 CU
+   (~$19–22/mo) — about $45/mo all-in, flat to ~50 customers and to ~100 before Neon needs
+   0.5 CU. Chosen over the Render blueprint (~$14/mo) because nothing that works has to move;
+   the difference is ~€25/mo. Neon free tier suspends after 5 min idle, so until the upgrade a
+   first request can take seconds. Two things to check when upgrading: `DATABASE_URL` in Vercel
+   must be Neon's *pooled* endpoint (`-pooler`), and Launch gives 7-day point-in-time restore —
+   add an off-Neon weekly `pg_dump` before the customer base is worth losing.
 3. **Email domain.** Once the domain exists, verify it at Resend and set `EMAIL_FROM` to an
    address on it; SMTP via Gmail is the bridge until then.
 

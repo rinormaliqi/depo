@@ -32,11 +32,82 @@
     "scanner": "Scanner"
   },
   "home": {
-    "tagline": "Digitize your storage. Find anything in seconds.",
+    "kicker": "For depots, yards and stockrooms",
+    "h1a": "“Where are the 40×40 profiles?”",
+    "h1b": "A · A-01 · 3. Two seconds.",
+    "lead": "SmartDepo is a drawn map of your storage with every item registered against the exact bin it sits in. Workers search on their phone and the bin lights up on the plan — instead of asking the one person who knows.",
+    "ctaTrial": "Start a 30-day free trial",
+    "ctaNote": "No card needed. Nothing is deleted when the trial ends.",
+    "ctaContact": "Talk to us",
+    "logIn": "Log in",
     "openBlueprint": "Open the blueprint",
     "signOutWithEmail": "Sign out ({email})",
-    "logIn": "Log in",
-    "signUp": "Sign up"
+    "demo": {
+      "searchLabel": "Search an item",
+      "placeholder": "Item name or SKU…",
+      "tryOne": "Try “{example}”",
+      "noMatch": "Nothing by that name in this demo depot.",
+      "caption": "A real depot plan: zone A with three racks of six bays, a pallet row in zone B, a loading dock. Type an item — the bin lights up.",
+      "facility": "Demo depot",
+      "exampleItem": "Aluminium profile 40×40"
+    },
+    "howKicker": "How it works",
+    "howTitle": "Draw it once. Label it once. Then it just works.",
+    "steps": {
+      "draw": {
+        "title": "Draw your floor",
+        "body": "Drop zones, racks, pallet rows and docks onto a canvas and drag them to where they really are. A rack gets bays and levels; each cell becomes a bin with its own code, like A-01-3. Setup for a 15-person depot is an afternoon, not a project."
+      },
+      "label": {
+        "title": "Print the labels",
+        "body": "Every bin gets a printable 70×40 mm label — code in big type, path underneath, QR on the side. Print a rack’s worth at a time on ordinary label sheets and stick them on the shelf."
+      },
+      "scan": {
+        "title": "Scan, count, done",
+        "body": "A worker points the phone camera at the label, picks the item, types the quantity. That one scan updates the map, the stock level and the movement log at the same moment — no end-of-day catch-up."
+      }
+    },
+    "scanFigure": {
+      "item": "ITEM",
+      "qty": "Quantity",
+      "location": "Location",
+      "commit": "Commit to location"
+    },
+    "factsKicker": "Built for depots here",
+    "factsTitle": "What it is — and what it isn’t",
+    "facts": {
+      "phone": {
+        "title": "Runs on the phone they already have",
+        "body": "A web app, Albanian and English, sized for a worker’s phone and a tablet by the dock. Nothing to install, nothing to update."
+      },
+      "hardware": {
+        "title": "No scanners, no RFID, no hardware",
+        "body": "The camera and a sheet of labels. If a label tears, the code is printed on it and can be typed."
+      },
+      "lang": {
+        "title": "Any layout, your own words",
+        "body": "Zones, aisles, racks, platforms, pallets — nested as deep as your floor is, named the way your people already call them."
+      },
+      "prepaid": {
+        "title": "Prepaid, per company, in euro",
+        "body": "One price per organization, not per user. Pay 1, 3 or 12 months up front by card, e-banking or bank transfer, with an invoice. No automatic charges."
+      },
+      "roles": {
+        "title": "Admin, manager, worker",
+        "body": "Admins draw and invite; managers approve and report; workers scan and search. A worker can’t accidentally move a rack."
+      },
+      "person": {
+        "title": "One person builds it",
+        "body": "SmartDepo is built and run by one person in Prishtina. When you write in, that’s who answers — and who ships the fix."
+      }
+    },
+    "pricingKicker": "Pricing",
+    "pricingTitle": "Three plans, one price per company",
+    "pricingLead": "Sized for a 5-person stockroom, a 15-person depot, and multi-site operations. Every plan starts with the full product for 30 days.",
+    "pricingNote": "VAT, trial and refund details:",
+    "pricingLink": "see the full pricing page",
+    "finalTitle": "Map your depot this week",
+    "finalBody": "Start the trial, draw the floor from a template, and print the first rack’s labels today. If it isn’t obviously faster than asking around, don’t pay."
   },
   "auth": {
     "email": "Email",

@@ -1,51 +1,161 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import QRCode from "qrcode";
 import { auth } from "@/auth";
-import { LocaleSwitcher } from "@/components/locale-switcher";
-import { PublicFooter } from "@/components/public-page";
+import { PlanCards } from "@/components/plan-cards";
+import { PublicFooter, PublicHeader } from "@/components/public-page";
+import { appBaseUrl } from "@/lib/app-url";
 import { logout } from "@/lib/actions/auth";
+import { DemoBlueprint } from "./landing/demo-blueprint";
 
+// The landing page shows the product rather than describing it: the hero
+// is the search-to-highlight loop running live (DemoBlueprint), the
+// "how it works" strip is built from the real UI — a label exactly as
+// /labels prints it, the scanner form's shape — and the plan grid is the
+// same component /pricing renders from the plans table. Copy is specific
+// on purpose: a depot in Kosovo, the worker's phone, no hardware.
 export default async function Home() {
-  const session = await auth();
-  const t = await getTranslations();
+  const [session, t, base] = await Promise.all([auth(), getTranslations("home"), appBaseUrl()]);
+  const labelQr = await QRCode.toString(`${base}/builder/bin/demo`, { type: "svg", margin: 0, errorCorrectionLevel: "M" });
+
+  const steps = ["draw", "label", "scan"] as const;
 
   return (
-    <main style={{ display: "flex", minHeight: "100vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: "0 24px", textAlign: "center" }}>
-      <div style={{ position: "fixed", top: 14, right: 14 }}>
-        <LocaleSwitcher />
-      </div>
-      <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 26, letterSpacing: ".06em" }}>
-        SMART<span style={{ color: "var(--color-accent)" }}>/</span>DEPO
-      </div>
-      <p className="text-muted">{t("home.tagline")}</p>
+    <main className="lp">
+      <PublicHeader />
 
-      {session?.user ? (
-        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-          <Link href="/builder" className="btn btn-primary">
-            {t("home.openBlueprint")}
-          </Link>
-          <form action={async () => { "use server"; await logout(); }}>
-            <button type="submit" className="btn btn-ghost" style={{ fontSize: 12 }}>
-              {t("home.signOutWithEmail", { email: session.user.email ?? "" })}
-            </button>
-          </form>
+      <section className="lp-hero">
+        <div className="lp-hero-copy">
+          <div className="lp-kicker">{t("kicker")}</div>
+          <h1 className="lp-h1">
+            {t("h1a")}<br />
+            <span className="lp-h1-accent">{t("h1b")}</span>
+          </h1>
+          <p className="lp-lead">{t("lead")}</p>
+          {session?.user ? (
+            <div className="lp-cta">
+              <Link href="/builder" className="btn btn-primary">{t("openBlueprint")}</Link>
+              <form action={async () => { "use server"; await logout(); }}>
+                <button type="submit" className="btn btn-ghost" style={{ fontSize: 12 }}>
+                  {t("signOutWithEmail", { email: session.user.email ?? "" })}
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="lp-cta">
+              <Link href="/signup" className="btn btn-primary">{t("ctaTrial")}</Link>
+              <Link href="/login" className="btn btn-secondary">{t("logIn")}</Link>
+              <span className="lp-cta-note text-muted">{t("ctaNote")}</span>
+            </div>
+          )}
         </div>
-      ) : (
-        <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
-          <Link href="/pricing" className="btn btn-secondary">
-            {t("public.nav.pricing")}
-          </Link>
-          <Link href="/login" className="btn btn-secondary">
-            {t("home.logIn")}
-          </Link>
-          <Link href="/signup" className="btn btn-primary">
-            {t("home.signUp")}
-          </Link>
+        <DemoBlueprint />
+      </section>
+
+      <section className="lp-section">
+        <div className="lp-section-head">
+          <div className="lp-kicker">{t("howKicker")}</div>
+          <h2 className="lp-h2">{t("howTitle")}</h2>
         </div>
-      )}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0 }}>
-        <PublicFooter />
-      </div>
+        <div className="lp-steps">
+          {steps.map((step, i) => (
+            <div key={step} className="lp-step">
+              <div className="lp-step-n">0{i + 1}</div>
+              <h3 className="lp-step-title">{t(`steps.${step}.title`)}</h3>
+              <p className="lp-step-body">{t(`steps.${step}.body`)}</p>
+              <div className="lp-step-figure">
+                {step === "draw" && <DrawFigure />}
+                {step === "label" && (
+                  <div className="label lp-label">
+                    <div className="label-text">
+                      <div className="label-facility">{t("demo.facility")}</div>
+                      <div className="label-code">A-01-3</div>
+                      <div className="label-path">A · A-01</div>
+                    </div>
+                    <div className="label-qr" dangerouslySetInnerHTML={{ __html: labelQr }} />
+                  </div>
+                )}
+                {step === "scan" && <ScanFigure t={t} />}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="lp-section lp-facts-section">
+        <div className="lp-section-head">
+          <div className="lp-kicker">{t("factsKicker")}</div>
+          <h2 className="lp-h2">{t("factsTitle")}</h2>
+        </div>
+        <dl className="lp-facts">
+          {(["phone", "hardware", "lang", "prepaid", "roles", "person"] as const).map((k) => (
+            <div key={k} className="lp-fact">
+              <dt>{t(`facts.${k}.title`)}</dt>
+              <dd>{t(`facts.${k}.body`)}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section className="lp-section" id="pricing">
+        <div className="lp-section-head">
+          <div className="lp-kicker">{t("pricingKicker")}</div>
+          <h2 className="lp-h2">{t("pricingTitle")}</h2>
+          <p className="lp-section-lead">{t("pricingLead")}</p>
+        </div>
+        <PlanCards />
+        <p className="text-muted" style={{ fontSize: 13, marginTop: 4 }}>
+          {t("pricingNote")}{" "}
+          <Link href="/pricing" style={{ color: "var(--color-accent)" }}>{t("pricingLink")}</Link>
+        </p>
+      </section>
+
+      <section className="lp-section lp-final">
+        <h2 className="lp-h2">{t("finalTitle")}</h2>
+        <p className="lp-section-lead">{t("finalBody")}</p>
+        <div className="lp-cta" style={{ justifyContent: "center" }}>
+          <Link href="/signup" className="btn btn-primary">{t("ctaTrial")}</Link>
+          <Link href="/contact" className="btn btn-secondary">{t("ctaContact")}</Link>
+        </div>
+      </section>
+
+      <PublicFooter />
     </main>
+  );
+}
+
+// A rack with six bays, drawn with the builder's own kind style — the
+// thing step one says you draw.
+function DrawFigure() {
+  return (
+    <div className="lp-draw">
+      <div className="lp-draw-rack">
+        <span className="lp-draw-code">A-01</span>
+        <div className="lp-draw-bays">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <div key={n} className={n === 1 || n === 3 ? "lp-demo-bay is-stocked" : "lp-demo-bay"}>{n}</div>
+          ))}
+        </div>
+      </div>
+      <div className="lp-draw-handle" />
+    </div>
+  );
+}
+
+// The Scanner form's silhouette on a phone: item, quantity, location — the
+// three fields a worker fills, with the location coming off the label.
+function ScanFigure({ t }: { t: Awaited<ReturnType<typeof getTranslations<"home">>> }) {
+  return (
+    <div className="lp-phone">
+      <div className="lp-phone-row lp-phone-item">
+        <span className="lp-phone-kicker">{t("scanFigure.item")}</span>
+        <span>{t("demo.exampleItem")}</span>
+      </div>
+      <div className="lp-phone-grid">
+        <div className="lp-phone-field"><label>{t("scanFigure.qty")}</label><div className="lp-phone-input">24</div></div>
+        <div className="lp-phone-field"><label>{t("scanFigure.location")}</label><div className="lp-phone-input is-filled">A-01-3</div></div>
+      </div>
+      <div className="lp-phone-btn">{t("scanFigure.commit")}</div>
+    </div>
   );
 }

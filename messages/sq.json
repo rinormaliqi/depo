@@ -32,11 +32,82 @@
     "scanner": "Skaneri"
   },
   "home": {
-    "tagline": "Digjitalizo hapësirën e depos. Gjej çdo gjë brenda sekondash.",
-    "openBlueprint": "Hap skemën",
-    "signOutWithEmail": "Dilni ({email})",
+    "kicker": "Për depo, oborre dhe magazina",
+    "h1a": "“Ku janë profilet 40×40?”",
+    "h1b": "A · A-01 · 3. Dy sekonda.",
+    "lead": "SmartDepo është një hartë e vizatuar e depos tuaj, ku çdo artikull është i regjistruar te kutia e saktë ku qëndron. Punëtori kërkon në telefon dhe kutia ndizet në plan — në vend që ta pyesë atë njeriun e vetëm që e di.",
+    "ctaTrial": "Fillo provën falas 30-ditëshe",
+    "ctaNote": "Pa kartelë. Asgjë nuk fshihet kur mbaron prova.",
+    "ctaContact": "Na shkruaj",
     "logIn": "Kyçu",
-    "signUp": "Regjistrohu"
+    "openBlueprint": "Hap skemën",
+    "signOutWithEmail": "Dil ({email})",
+    "demo": {
+      "searchLabel": "Kërko një artikull",
+      "placeholder": "Emri i artikullit ose SKU…",
+      "tryOne": "Provo “{example}”",
+      "noMatch": "S’ka asgjë me këtë emër në këtë depo demo.",
+      "caption": "Një plan i vërtetë depoje: zona A me tre rafte nga gjashtë vende, një rresht paletash në zonën B, një rampë ngarkimi. Shkruaj një artikull — kutia ndizet.",
+      "facility": "Depo demo",
+      "exampleItem": "Profil alumini 40×40"
+    },
+    "howKicker": "Si funksionon",
+    "howTitle": "Vizatoje një herë. Etiketoje një herë. Pastaj thjesht punon.",
+    "steps": {
+      "draw": {
+        "title": "Vizato depon",
+        "body": "Vër zona, rafte, rreshta paletash dhe rampa në një kanavacë dhe tërhiqi aty ku janë në të vërtetë. Rafti merr vende dhe nivele; çdo qeli bëhet kuti me kodin e vet, si A-01-3. Një depo me 15 vetë vendoset brenda një pasditeje, jo një projekti."
+      },
+      "label": {
+        "title": "Printo etiketat",
+        "body": "Çdo kuti merr një etiketë 70×40 mm për printim — kodi me shkronja të mídha, rruga poshtë, QR-kodi anës. Printo një raft të tërë njëherësh në fletë etiketash të zakonshme dhe ngjite në raft."
+      },
+      "scan": {
+        "title": "Skano, numëro, gati",
+        "body": "Punëtori drejton kamerën e telefonit te etiketa, zgjedh artikullin, shkruan sasinë. Ai skanim i vetëm përditëson hartën, gjendjen e stokut dhe historikun e lëvizjeve në të njëjtin moment — pa “t’i fusim në mbrëmje”."
+      }
+    },
+    "scanFigure": {
+      "item": "ARTIKULLI",
+      "qty": "Sasia",
+      "location": "Vendndodhja",
+      "commit": "Regjistro në vendndodhje"
+    },
+    "factsKicker": "Ndërtuar për depot këtu",
+    "factsTitle": "Çka është — dhe çka nuk është",
+    "facts": {
+      "phone": {
+        "title": "Punon në telefonin që e kanë tashmë",
+        "body": "Aplikacion web, shqip dhe anglisht, i përshtatur për telefonin e punëtorit dhe një tablet te rampa. Asgjë për t’u instaluar, asgjë për t’u përditësuar."
+      },
+      "hardware": {
+        "title": "Pa skanerë, pa RFID, pa pajisje",
+        "body": "Kamera dhe një fletë etiketash. Nëse etiketa griset, kodi është i shtypur në të dhe mund të shkruhet me dorë."
+      },
+      "lang": {
+        "title": "Çdo planimetri, me fjalët tuaja",
+        "body": "Zona, korridore, rafte, platforma, paleta — të futura sa thellë është depoja juaj, të emërtuara ashtu si i quajnë tashmë njerëzit tuaj."
+      },
+      "prepaid": {
+        "title": "Parapagim, për kompani, në euro",
+        "body": "Një çmim për organizatë, jo për përdorues. Paguaj 1, 3 ose 12 muaj përpara me kartelë, e-banking ose transfer bankar, me faturë. Pa pagesa automatike."
+      },
+      "roles": {
+        "title": "Admin, menaxher, punëtor",
+        "body": "Adminët vizatojnë dhe ftojnë; menaxherët aprovojnë dhe raportojnë; punëtorët skanojnë dhe kërkojnë. Një punëtor s’mund ta lëvizë raftin gabimisht."
+      },
+      "person": {
+        "title": "E ndërton një njeri",
+        "body": "SmartDepo ndërtohet dhe mirëmbahet nga një person në Prishtinë. Kur shkruani, ai ju përgjigjet — dhe ai e bën rregullimin."
+      }
+    },
+    "pricingKicker": "Çmimet",
+    "pricingTitle": "Tre plane, një çmim për kompani",
+    "pricingLead": "Të përmasuara për një magazinë me 5 vetë, një depo me 15 vetë dhe operacione me disa objekte. Çdo plan fillon me produktin e plotë për 30 ditë.",
+    "pricingNote": "TVSH, prova dhe kthimi i parave:",
+    "pricingLink": "shih faqen e plotë të çmimeve",
+    "finalTitle": "Hartoje depon këtë javë",
+    "finalBody": "Fillo provën, vizato depon nga një shabllon dhe printo etiketat e raftit të parë sot. Nëse nuk është dukshëm më shpejt se të pyesësh përreth, mos paguaj."
   },
   "auth": {
     "email": "Email",

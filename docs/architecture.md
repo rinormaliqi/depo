@@ -601,6 +601,22 @@ independently of any zone is left where it is rather than attempting a full gene
 layout engine that reflows the whole floor. The new zone itself is created empty; a user fills
 it from the palette like any other zone.
 
+## Landing page
+
+`/` (`src/app/page.tsx`) shows the product instead of describing it. The hero is the core loop
+running live — `src/app/landing/demo-blueprint.tsx`, a hand-drawn demo depot (three racks,
+a pallet row, a dock, drawn with the builder's own kind styles) and a search box over a
+five-item catalog; a match lights the bin with the same `locate-ping` the real search uses.
+It cycles through the catalog on its own until the visitor types. The "how it works" strip
+reuses real UI: a rack as the builder draws it, a label exactly as `/labels` prints it (real
+QR, generated server-side), and the scanner form's silhouette. Pricing is `PlanCards`
+(`src/components/plan-cards.tsx`), the same component `/pricing` renders from the `plans`
+table, so the two can't drift. Copy is in `messages/*.json` under `home`, written for a
+depot in Kosovo rather than a generic SMB — a worker's phone, no hardware, prepaid in euro,
+one person building it — and it stays honest to what's shipped: nothing promised that the
+product doesn't do today. No screenshots as images: everything on the page is markup, so it
+stays current when the design system changes and weighs nothing.
+
 ## Internationalization
 
 **next-intl**, cookie-based (`NEXT_LOCALE`), no URL locale prefixes — this is a logged-in

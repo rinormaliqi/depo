@@ -462,7 +462,7 @@
     "item": "Artikulli",
     "quantity": "Sasia",
     "location": "Vendndodhja",
-    "locationHint": "Shkruani kodin e vendndodhjes të shtypur në etiketën e kutisë.",
+    "locationHint": "Shkruaj kodin e vendndodhjes nga etiketa e kutisë, ose skano QR-kodin e saj.",
     "commit": "Regjistro në vendndodhje",
     "recentMovements": "Lëvizjet e fundit",
     "noMovements": "Ende nuk ka lëvizje.",
@@ -475,7 +475,18 @@
     "successBooked": "{qty} {unit} e {name} u regjistrua në {code}.",
     "errorEnterLocation": "Shkruani një vendndodhje, p.sh. A-01-3",
     "errorLocationNotFound": "{code} nuk është një vendndodhje në këtë planimetri",
-    "errorNoFacility": "Nuk u gjet asnjë depo"
+    "errorNoFacility": "Nuk u gjet asnjë depo",
+    "scanWithCamera": "Skano etiketën me kamerë",
+    "cameraTitle": "Skano një etiketë",
+    "cameraHint": "Drejtoje kamerën te QR-kodi në etiketën e kutisë. Vendndodhja plotësohet vetë.",
+    "cameraStarting": "Kamera po hapet…",
+    "cameraClose": "Mbyll",
+    "cameraNeedsHttps": "Kamera punon vetëm me lidhje të sigurt (https).",
+    "cameraUnsupported": "Ky shfletues s'mund ta hapë kamerën. Shkruaje kodin.",
+    "cameraDenied": "Qasja në kamerë u bllokua. Lejoje te cilësimet e faqes në shfletues, ose shkruaje kodin.",
+    "cameraNone": "S'u gjet kamerë në këtë pajisje.",
+    "errorScanUnknown": "Ky QR-kod nuk është një nga etiketat e kutive tuaja",
+    "errorScanOtherFacility": "{code} është në {facility} — kalo te ai objekt për ta regjistruar stokun aty"
   },
   "verifyEmail": {
     "pendingTitle": "Kontrollo email-in",

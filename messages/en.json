@@ -462,7 +462,7 @@
     "item": "Item",
     "quantity": "Quantity",
     "location": "Location",
-    "locationHint": "Type the location code printed on the bin's label.",
+    "locationHint": "Type the location code printed on the bin's label, or scan its QR code.",
     "commit": "Commit to location",
     "recentMovements": "Recent movements",
     "noMovements": "No movements yet.",
@@ -475,7 +475,18 @@
     "successBooked": "{qty} {unit} of {name} booked into {code}.",
     "errorEnterLocation": "Enter a location, e.g. A-01-3",
     "errorLocationNotFound": "{code} is not a location on this floor",
-    "errorNoFacility": "No facility found"
+    "errorNoFacility": "No facility found",
+    "scanWithCamera": "Scan label with camera",
+    "cameraTitle": "Scan a label",
+    "cameraHint": "Point the camera at the QR code on the bin's label. The location fills in automatically.",
+    "cameraStarting": "Starting camera…",
+    "cameraClose": "Close",
+    "cameraNeedsHttps": "The camera only works over a secure (https) connection.",
+    "cameraUnsupported": "This browser can't open the camera. Type the code instead.",
+    "cameraDenied": "Camera access was blocked. Allow it in the browser's site settings, or type the code.",
+    "cameraNone": "No camera found on this device.",
+    "errorScanUnknown": "That QR code isn't one of your bin labels",
+    "errorScanOtherFacility": "{code} is in {facility} — switch to that facility to book stock there"
   },
   "verifyEmail": {
     "pendingTitle": "Check your inbox",

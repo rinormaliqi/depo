@@ -139,7 +139,7 @@
       "errorPlansNotSeeded": "Planet ende nuk janë ngarkuar — ekzekutoni pnpm db:seed",
       "errorSignInFailed": "Llogaria u krijua, por kyçja dështoi — provoni të kyçeni përsëri",
       "errorDisposableEmail": "Adresat e përkohshme të email-it nuk lejohen — përdor email-in e punës",
-      "agree": "Duke hapur llogari pajtohesh me <terms>Kushtet e Shërbimit</terms>, <refunds>Politikën e Kthimit</refunds> dhe <privacy>Politikën e Privatësisë</privacy>."
+      "agree": "Duke hapur llogari pajtohesh me <terms>Kushtet e Shërbimit</terms>, <refunds>Politikën e Rimbursimit</refunds> dhe <privacy>Politikën e Privatësisë</privacy>."
     }
   },
   "forgotPassword": {
@@ -597,7 +597,7 @@
       "login": "Hyr",
       "signup": "Fillo provën falas",
       "terms": "Kushtet",
-      "refunds": "Kthimi i parave",
+      "refunds": "Rimbursimi",
       "contact": "Kontakti",
       "privacy": "Privatësia"
     },
@@ -608,12 +608,12 @@
       "title": "Kushtet e Shërbimit"
     },
     "refunds": {
-      "title": "Politika e Kthimit të Parave",
+      "title": "Politika e Rimbursimit",
       "intro": "Shkurt: provoje falas 30 ditë, dhe nëse paguan e ndërron mendje brenda 14 ditësh, i merr të gjitha paratë mbrapsht."
     },
     "contact": {
       "title": "Kontakti",
-      "intro": "Pyetje për SmartDepo, planin tënd, një faturë apo kthim parash — na shkruaj dhe të përgjigjet një person, zakonisht brenda ditës së punës.",
+      "intro": "Pyetje për SmartDepo, planin tënd, një faturë apo rimbursim — na shkruaj dhe të përgjigjet një person, zakonisht brenda ditës së punës.",
       "company": "Kompania",
       "regNo": "Nr. i regjistrimit",
       "address": "Adresa",
@@ -633,8 +633,10 @@
       "noteTrial": "Prova: 30 ditë, të gjitha funksionet, pa të dhëna pagese. Pas saj llogaria bëhet vetëm-lexim derisa të aktivizohet një plan — asgjë nuk fshihet.",
       "notePrepaid": "Pagesa: paraprakisht për 1, 3 ose 12 muaj përmes Paysera (kartë, e-banking, transfer bankar) ose me faturë. Pa rinovim automatik — nuk faturohesh kurrë pa e nisur vetë pagesën.",
       "noteVat": "Të gjitha çmimet në EUR. TVSH-ja shtohet aty ku e kërkon ligji dhe tregohet para pagesës.",
-      "noteRefund": "Kthim i plotë brenda 14 ditësh nga çdo pagesë, pa pyetje.",
-      "refundLink": "Lexo politikën e kthimit"
+      "noteRefund": "Rimbursim i plotë brenda 14 ditësh nga çdo pagesë, pa pyetje.",
+      "refundLink": "Lexo politikën e rimbursimit",
+      "periodsNote": "Paguhet {periods} muaj përpara — totali llogaritet te pagesa.",
+      "or": "ose"
     },
     "privacy": {
       "title": "Politika e Privatësisë",

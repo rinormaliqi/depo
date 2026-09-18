@@ -7,6 +7,8 @@ import type { Locale } from "@/i18n/locales";
 // version (docs/architecture.md: Albanian is the primary market); `en`
 // is a courtesy translation, and the terms say so.
 export const LEGAL_UPDATED = "2026-09-15";
+// The privacy policy moves on its own when a processor changes.
+export const PRIVACY_UPDATED = "2026-09-18";
 
 type Section = { title: string; paragraphs: string[] };
 
@@ -156,7 +158,7 @@ export const privacy: Record<Locale, Section[]> = {
       "Për detyrime ligjore: ruajtja e të dhënave të faturimit sa kohë e kërkon ligji tatimor dhe i kontabilitetit.",
     ]},
     { title: "Kush i sheh të dhënat (nënpërpunuesit)", paragraphs: [
-      "Nuk i shesim dhe nuk i ndajmë të dhënat me palë të treta për qëllimet e tyre. I përdorim këta ofrues, të cilët i përpunojnë vetëm sipas udhëzimeve tona: Vercel (hostimi i aplikacionit), Neon (baza e të dhënave, rajoni Frankfurt, BE), Resend (dërgimi i email-eve operacionale), Paysera (procesimi i pagesave — merr emrin, email-in dhe shumën e pagesës).",
+      "Nuk i shesim dhe nuk i ndajmë të dhënat me palë të treta për qëllimet e tyre. I përdorim këta ofrues, të cilët i përpunojnë vetëm sipas udhëzimeve tona: Vercel (hostimi i aplikacionit), Neon (baza e të dhënave, rajoni Frankfurt, BE), Google (Gmail — dërgimi i email-eve operacionale: verifikim, rivendosje fjalëkalimi, ftesa, kujtesa faturimi), Sentry (raportim i gabimeve teknike; një raport mund të përmbajë adresën e email-it të përdoruesit të kyçur dhe të dhëna teknike të kërkesës), Paysera (procesimi i pagesave — merr emrin, email-in dhe shumën e pagesës).",
       "Brenda organizatës tënde, administratorët dhe menaxherët shohin listën e anëtarëve (emër, email, rol) dhe historikun e lëvizjeve me emrin e personit që i ka kryer.",
     ]},
     { title: "Sa kohë i ruajmë", paragraphs: [
@@ -199,7 +201,7 @@ export const privacy: Record<Locale, Section[]> = {
       "For legal obligations: keeping billing records for as long as tax and accounting law requires.",
     ]},
     { title: "Who sees it (subprocessors)", paragraphs: [
-      "We do not sell or share data with third parties for their own purposes. We use these providers, who process it only on our instructions: Vercel (application hosting), Neon (database, Frankfurt region, EU), Resend (operational email), Paysera (payment processing — receives name, email and the payment amount).",
+      "We do not sell or share data with third parties for their own purposes. We use these providers, who process it only on our instructions: Vercel (application hosting), Neon (database, Frankfurt region, EU), Google (Gmail — operational email: verification, password reset, invites, billing reminders), Sentry (technical error reporting; a report may include the signed-in user's email address and technical request data), Paysera (payment processing — receives name, email and the payment amount).",
       "Within your organization, admins and managers see the member list (name, email, role) and the movement history with the name of the person who performed each movement.",
     ]},
     { title: "How long we keep it", paragraphs: [

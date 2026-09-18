@@ -403,7 +403,10 @@
     },
     "viewOnly": "Vetëm shikim",
     "viewOnlyHint": "Punëtorët mund të kërkojnë dhe lëvizin stokun, por jo të ndryshojnë planimetrinë. Pyet një menaxher ose administrator nëse diçka duhet ndryshuar.",
-    "emptyFloorBodyReadOnly": "Ende nuk është hartuar asgjë. Një menaxher ose administrator e ndërton planimetrinë."
+    "emptyFloorBodyReadOnly": "Ende nuk është hartuar asgjë. Një menaxher ose administrator e ndërton planimetrinë.",
+    "printLabel": "Printo etiketën",
+    "printLabels": "Printo etiketat e kutive",
+    "printAllLabels": "Printo të gjitha etiketat"
   },
   "bin": {
     "kicker": "Kuti",
@@ -413,7 +416,8 @@
     "first": "së pari.",
     "add": "Shto",
     "remove": "Hiq",
-    "errorPickItem": "Zgjidhni një artikull dhe një sasi pozitive të plotë"
+    "errorPickItem": "Zgjidhni një artikull dhe një sasi pozitive të plotë",
+    "printLabel": "Printo etiketën"
   },
   "stockError": {
     "binNotFound": "Kutia nuk u gjet",
@@ -560,5 +564,14 @@
     "addNew": "+ Shto objekt…",
     "newPrompt": "Emri i objektit të ri (p.sh. \"Depoja Veri\"):",
     "error": "Objekti nuk u shtua"
+  },
+  "labels": {
+    "kicker": "Etiketa",
+    "print": "Printo",
+    "backToBin": "← Kthehu te kutia",
+    "count": "{n, plural, =1 {1 etiketë} other {# etiketa}}",
+    "printWholeFacility": "printo gjithë objektin",
+    "empty": "Ende s'ka kuti me kod vendndodhjeje këtu — shto një raft në planimetri së pari.",
+    "errorNotFound": "Vendndodhja nuk u gjet"
   }
 }

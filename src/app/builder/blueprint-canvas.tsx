@@ -1151,6 +1151,9 @@ export function BlueprintCanvas({
                     {t("viewStock")}
                   </Link>
                 )}
+                <Link href={selected.isBin ? `/labels?bin=${selected.id}` : `/labels?parent=${selected.id}`} className="btn btn-secondary btn-block" style={{ marginTop: 9 }}>
+                  {selected.isBin ? t("printLabel") : t("printLabels")}
+                </Link>
               </div>
             )}
 
@@ -1171,6 +1174,9 @@ export function BlueprintCanvas({
             <div style={{ fontSize: 13, lineHeight: 1.5, color: "color-mix(in srgb,var(--color-text) 72%,transparent)" }}>
               {t("nothingSelectedBody")}
             </div>
+            <Link href="/labels" className="btn btn-secondary btn-block">
+              {t("printAllLabels")}
+            </Link>
             <div style={{ height: 1, background: "var(--color-divider)" }} />
             <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
               {t("composition")}

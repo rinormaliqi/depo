@@ -277,6 +277,38 @@ the server log, while the last-admin rule still returns its own sentence.
 `/internal` has two founder-only buttons ("Throw server error" / "Throw client error") to prove
 the pipeline end to end once a DSN exists — the ticket's acceptance test, made repeatable.
 
+### Tests: the paths a regression would hurt most
+
+Zero tests was fine while it was one person building; it isn't once there's customer data and
+money. `pnpm test` (node's built-in runner via `tsx`) covers the four areas in the ticket, as
+**integration tests against a real Postgres** — the guarantees are about SQL scoping and
+arithmetic, and mocking the database would prove nothing:
+
+- **Tenant isolation** — org A can't read or write org B's bins, items or stock through the
+  helpers every write path uses, nor through the read actions a signed-in user calls.
+- **Stock arithmetic** — after any receive/pick sequence `stock.quantity` equals the signed sum
+  of `movements`; an over-pick or a non-positive quantity changes nothing; a locked org can't
+  move stock.
+- **Plan limits, lockout, permissions, payment maths** — every `getOrgLockReason()` state,
+  seats counting live-but-not-expired invites, `requirePermission()` checking lock *and* role,
+  and `applyPaidPayment()`'s extend-vs-restart rule and idempotency.
+- **Flows** — signup creates an unverified user with no trial end and refuses aliases and
+  disposable domains; the verification token starts a 30-day trial once; invite acceptance
+  joins with the right role and marks the inbox verified; the Paysera callback activates on a
+  valid signature, ignores replays, rejects a bad signature, fails on a wrong amount, and still
+  answers `OK` to what it ignores.
+
+How it runs: `src/test-support/setup.ts` points `DATABASE_URL` at `smartdepo_test` on the same
+local server as dev, creates and migrates it on first use, and truncates between files.
+Files run serially (`--test-concurrency=1`) because they share that database. A Node loader
+(`src/test-support/loader.mjs`) swaps the modules that only work inside a Next request —
+`next/headers`, `next-intl/server` (translations resolve to their key, so assertions match on
+`planLimit.bins` rather than copy), `@/auth` (settable `actAs()`, `signIn()` throws the same
+redirect production does), Sentry, cache revalidation — so the real `src/lib` and action code
+runs unchanged. `src/db/index.ts` gained `closeDb()` purely so the runner's event loop can
+exit. `.github/workflows/ci.yml` runs lint, type-check and the suite with a Postgres service on
+every PR.
+
 ## Plan-limit enforcement
 
 `plans.max_users`/`max_facilities`/`max_bins` existed as data from the start, but nothing ever

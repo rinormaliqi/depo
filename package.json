@@ -15,7 +15,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seed.ts",
-    "test": "node --import tsx --test \"src/**/*.test.ts\""
+    "test": "node --import tsx --import ./src/test-support/register.mjs --test --test-concurrency=1 \"src/**/*.test.ts\"",
+    "test:unit": "node --import tsx --test \"src/lib/*.test.ts\""
   },
   "dependencies": {
     "@sentry/nextjs": "^10.75.0",

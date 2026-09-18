@@ -77,5 +77,4 @@ Limits are data (`plans.max_users`, `max_facilities`, `max_bins`), not hardcoded
 `src/lib/plan-limits.ts` compares live counts against the organization's plan before allowing
 an action that would exceed it (e.g. adding a bin past `max_bins`). No separate schema needed
 for that check. See `docs/architecture.md`'s "Plan-limit enforcement" section for where each
-check is actually wired in — `max_facilities` has no call site yet, since nothing creates a
-second facility until multi-facility switching exists.
+check is actually wired in (`max_facilities` is checked in `createFacility`).

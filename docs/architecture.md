@@ -306,8 +306,8 @@ about to add:
   them try to accept). Refreshing an already-pending invite (role change, resend) doesn't
   recheck — it's already counted, and re-checking there would sometimes wrongly block a
   resend once an org is sitting right at its limit.
-- **Facilities** — the check exists (`assertCanAddFacilities`) but has no call site yet, since
-  nothing creates a second facility until multi-facility switching is built.
+- **Facilities** — `assertCanAddFacilities` in `createFacility` (`src/app/builder/actions.ts`),
+  before a second (or third…) facility is inserted.
 
 Every check throws a translated `planLimit.*` error pointing at Billing; verified live by
 temporarily lowering a plan's limits below the test org's actual usage and confirming both a

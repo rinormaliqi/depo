@@ -106,7 +106,9 @@ is just the live sum of its stock records.
 - Multi-facility cross-warehouse transfers and facility-level analytics rollups
 - ERP integrations / API-webhooks
 - "Optimal placement" suggestions from movement-frequency analytics
-- Pricing/monetization model — deliberately deferred, revisit once MVP shape is solid
+- ~~Pricing/monetization model~~ — since decided, see `docs/pricing.md`
+
+The live, reconciled version of this list is `docs/backlog.md`.
 
 ## Decisions locked in so far
 1. **Name:** SmartDepo

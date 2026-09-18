@@ -403,7 +403,10 @@
     },
     "viewOnly": "View only",
     "viewOnlyHint": "Workers can look up and move stock but not change the layout. Ask a manager or admin if something needs to change.",
-    "emptyFloorBodyReadOnly": "Nothing has been mapped yet. A manager or admin sets up the floor plan."
+    "emptyFloorBodyReadOnly": "Nothing has been mapped yet. A manager or admin sets up the floor plan.",
+    "printLabel": "Print label",
+    "printLabels": "Print bin labels",
+    "printAllLabels": "Print all bin labels"
   },
   "bin": {
     "kicker": "Bin",
@@ -413,7 +416,8 @@
     "first": "first.",
     "add": "Add",
     "remove": "Remove",
-    "errorPickItem": "Pick an item and a positive whole quantity"
+    "errorPickItem": "Pick an item and a positive whole quantity",
+    "printLabel": "Print label"
   },
   "stockError": {
     "binNotFound": "Bin not found",
@@ -560,5 +564,14 @@
     "addNew": "+ Add facility…",
     "newPrompt": "Name of the new facility (e.g. \"Warehouse North\"):",
     "error": "Couldn't add the facility"
+  },
+  "labels": {
+    "kicker": "Labels",
+    "print": "Print",
+    "backToBin": "← Back to bin",
+    "count": "{n, plural, =1 {1 label} other {# labels}}",
+    "printWholeFacility": "print the whole facility",
+    "empty": "No bins with a location code here yet — add a rack on the blueprint first.",
+    "errorNotFound": "Location not found"
   }
 }

@@ -26,6 +26,7 @@
     "next-auth": "5.0.0-beta.32",
     "next-intl": "^4.14.4",
     "postgres": "^3.4.9",
+    "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
@@ -33,6 +34,7 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",

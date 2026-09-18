@@ -51,7 +51,12 @@ export default async function BinPage({
           </div>
           <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--color-accent)" }}>{t("bin.kicker")}</div>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 28, letterSpacing: ".03em", marginBottom: 4 }}>{bin.code}</div>
-          <div style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)", marginBottom: 20 }}>{path}</div>
+          <div style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)", marginBottom: 6 }}>{path}</div>
+          <div style={{ marginBottom: 20 }}>
+            <Link href={`/labels?bin=${locationId}`} style={{ fontSize: 12 }} className="underline">
+              {t("bin.printLabel")}
+            </Link>
+          </div>
 
           <div style={{ display: "flex", flexDirection: "column" }}>
             {stockRows.map((row) => (

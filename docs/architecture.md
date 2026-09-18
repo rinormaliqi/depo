@@ -413,14 +413,29 @@ translated plan-limit message; each facility has its own blueprint (12 bins vs 0
 reads 3 / 3; cross-site search shows the prefixed path; scanner/metrics are empty in the new
 site and show the movement in the original one.
 
-## QR codes
+## QR codes and printable labels
 
-Not implemented yet. The Scanner page (below) currently takes a typed location `code`
-instead of a camera scan — real QR/barcode scanning is deferred, not abandoned. When it's
-built: generated on request with the `qrcode` npm package (SVG/PNG for printing), nothing
-persisted — no blob storage needed. If item photos are added later, use Cloudflare R2 (zero
-egress fees) over Azure Blob (tender-ai's choice, which bills per download — bad fit for
-something phones fetch repeatedly).
+**Labels are built** (`/labels`, `src/app/labels/`): one 70×40mm label per bin — the code
+in large type, the zone · rack path, the facility name, and a QR code — laid out as a grid
+that prints on A4 at true scale (`@media print` in `globals.css` hides the app chrome and
+keeps each label whole across page breaks). Scope comes from the query string: nothing =
+every bin in the current facility, `?parent=<id>` = every bin nested under a rack or zone
+(how labels are applied on the floor — one rack at a time), `?bin=<id>` = just that one.
+Entry points are the builder inspector (a bin → "Print label", a rack/zone → "Print bin
+labels", nothing selected → "Print all"), and the bin page.
+
+Generated on request with the `qrcode` package as inline SVG, nothing persisted — no blob
+storage needed. The QR encodes the bin's URL (`<host>/builder/bin/<id>`, host from
+`appBaseUrl()`) rather than the bare code: a phone's stock camera app opens the bin page
+directly (logged in → receive/pick right there), and the in-app camera scanner, when it
+lands, can take the id off the end of the URL while the printed code stays the typed-code
+fallback. In local dev the URL is `localhost`, so a phone can't follow it — it resolves once
+deployed under a real host.
+
+The Scanner page (below) still takes a typed location `code` — camera decoding is the
+remaining half of this, deferred, not abandoned. If item photos are added later, use
+Cloudflare R2 (zero egress fees) over Azure Blob (tender-ai's choice, which bills per
+download — bad fit for something phones fetch repeatedly).
 
 ## Visual builder — the Depot Blueprint import
 

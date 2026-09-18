@@ -32,17 +32,27 @@ services:
       - key: PLATFORM_ADMIN_EMAILS
         sync: false
       - key: NEXT_PUBLIC_SUPPORT_EMAIL
-        sync: false
+        value: pikembipresje@gmail.com
       - key: NEXT_PUBLIC_LEGAL_NAME
         sync: false
       - key: NEXT_PUBLIC_COMPANY_REG_NO
         sync: false
       - key: NEXT_PUBLIC_COMPANY_ADDRESS
         sync: false
+      # Outgoing mail: Gmail SMTP with an App Password (set SMTP_PASS in
+      # the dashboard), or leave SMTP_PASS empty and set RESEND_API_KEY.
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER
+        value: pikembipresje@gmail.com
+      - key: SMTP_PASS
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
-        sync: false
+        value: SmartDepo <pikembipresje@gmail.com>
       - key: PAYSERA_PROJECT_ID
         sync: false
       - key: PAYSERA_SIGN_PASSWORD

@@ -1,7 +1,10 @@
 import { getTranslations } from "next-intl/server";
 import { PublicPage } from "@/components/public-page";
 import { companyInfo } from "@/lib/company";
+import { pageMetadata } from "@/lib/seo";
 
+
+export const generateMetadata = () => pageMetadata("contact", "/contact");
 export default async function ContactPage() {
   const t = await getTranslations("public.contact");
   const company = companyInfo();

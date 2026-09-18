@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { siteMetadata } from "@/lib/seo";
 import "./globals.css";
 
 // Paysera verifies ownership of the Checkout project's site by looking
@@ -14,11 +15,9 @@ function payseraVerification(): Record<string, string> {
   return name && value ? { [name]: value } : {};
 }
 
-export const metadata: Metadata = {
-  title: "SmartDepo",
-  description: "Digitize your storage. Find anything in seconds.",
-  other: payseraVerification(),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...(await siteMetadata()), other: payseraVerification() };
+}
 
 export default async function RootLayout({
   children,

@@ -4,7 +4,10 @@ import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ForgotPasswordForm } from "./forgot-password-form";
+import { pageMetadata } from "@/lib/seo";
 
+
+export const generateMetadata = () => pageMetadata("forgotPassword", "/forgot-password");
 export default async function ForgotPasswordPage() {
   const session = await auth();
   if (session?.user) redirect("/builder");

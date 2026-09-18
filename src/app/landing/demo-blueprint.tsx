@@ -94,8 +94,9 @@ export function DemoBlueprint() {
     <div className="blueprint lp-demo">
       <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
       <div className="lp-demo-search">
-        <label className="lp-demo-label">{t("searchLabel")}</label>
+        <label className="lp-demo-label" htmlFor="lp-demo-search">{t("searchLabel")}</label>
         <input
+          id="lp-demo-search"
           className="input"
           type="text"
           value={touched ? query : (active?.name ?? "")}

@@ -4,7 +4,10 @@ import { LEGAL_UPDATED, refunds } from "@/content/legal";
 import { isLocale } from "@/i18n/locales";
 import { companyInfo } from "@/lib/company";
 import { fillCompany } from "@/lib/legal-text";
+import { pageMetadata } from "@/lib/seo";
 
+
+export const generateMetadata = () => pageMetadata("refunds", "/refunds");
 export default async function RefundsPage() {
   const locale = await getLocale();
   const t = await getTranslations("public");

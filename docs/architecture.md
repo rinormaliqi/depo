@@ -653,6 +653,30 @@ one person building it — and it stays honest to what's shipped: nothing promis
 product doesn't do today. No screenshots as images: everything on the page is markup, so it
 stays current when the design system changes and weighs nothing.
 
+## Search and share metadata
+
+`src/lib/seo.ts` builds it; all copy is under `meta` in `messages/*.json`, so Albanian pages
+carry Albanian titles and descriptions ("menaxhim depoje", "program magazine" — what the primary
+market types into Google) and English pages English. The root layout's `generateMetadata` sets
+the site title/template, description, keywords, Open Graph and Twitter cards; each public page
+adds its own title, description and canonical via `pageMetadata(key, path)`; the home page uses
+the brand-first absolute title. `src/app/opengraph-image.tsx` renders the share card on request
+with `next/og` in the page's language (no image file to keep in sync); `icon.png` /
+`apple-icon.png` are the square logo. The landing page embeds JSON-LD (`Organization` +
+`SoftwareApplication` with the live plan prices as offers). Token pages (`/invite/*`,
+`/reset-password/*`, `/verify-email/*`) are `noindex`.
+
+`src/app/robots.ts` and `sitemap.ts` derive the host from the request like email links do.
+The URL space is classified once in `src/lib/routes.ts` — public paths, protected prefixes —
+and the middleware only redirects *protected* paths to `/login`; anything unknown falls through
+to `not-found.tsx`, so a mistyped URL (or a crawler's `robots.txt` fetch) no longer lands on the
+login form. `src/tests/routes.test.ts` fails if a directory under `src/app` isn't classified, which
+is what keeps "new routes are protected" true without protect-by-default.
+
+Known gap: the locale is a cookie, not a URL segment, so crawlers only ever see the default
+(Albanian) version and there are no `hreflang` alternates — the English pages aren't indexable
+as such until locales move into the URL (`/en/…`). Tracked as its own issue.
+
 ## Internationalization
 
 **next-intl**, cookie-based (`NEXT_LOCALE`), no URL locale prefixes — this is a logged-in

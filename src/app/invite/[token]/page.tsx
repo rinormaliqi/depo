@@ -5,7 +5,10 @@ import { invites, organizations, users } from "@/db/schema";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { normalizeEmail } from "@/lib/email-normalize";
 import { AcceptInviteForm } from "./accept-invite-form";
+import { NOINDEX } from "@/lib/seo";
 
+
+export const metadata = NOINDEX;
 export default async function InvitePage({
   params,
 }: {

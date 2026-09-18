@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PublicLink } from "@/components/public-link";
 import { getTranslations } from "next-intl/server";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { companyInfo } from "@/lib/company";
@@ -25,13 +25,13 @@ export async function PublicHeader() {
   const t = await getTranslations("public");
   return (
     <header className="public-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 24px", borderBottom: "1px solid var(--color-divider)" }}>
-      <Link href="/" style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 19, letterSpacing: ".06em", color: "var(--color-text)", textDecoration: "none" }}>
+      <PublicLink href="/" style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 19, letterSpacing: ".06em", color: "var(--color-text)", textDecoration: "none" }}>
         SMART<span style={{ color: "var(--color-accent)" }}>/</span>DEPO
-      </Link>
+      </PublicLink>
       <nav style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 13 }}>
-        <Link href="/pricing" className="public-header-pricing" style={{ color: "var(--color-text)" }}>{t("nav.pricing")}</Link>
-        <Link href="/login" style={{ color: "var(--color-text)" }}>{t("nav.login")}</Link>
-        <Link href="/signup" className="btn btn-primary" style={{ fontSize: 12 }}>{t("nav.signup")}</Link>
+        <PublicLink href="/pricing" className="public-header-pricing" style={{ color: "var(--color-text)" }}>{t("nav.pricing")}</PublicLink>
+        <PublicLink href="/login" style={{ color: "var(--color-text)" }}>{t("nav.login")}</PublicLink>
+        <PublicLink href="/signup" className="btn btn-primary" style={{ fontSize: 12 }}>{t("nav.signup")}</PublicLink>
         <LocaleSwitcher />
       </nav>
     </header>
@@ -50,11 +50,11 @@ export async function PublicFooter() {
           {" · "}{company.address}
         </span>
         <span style={{ display: "flex", gap: 14 }}>
-          <Link href="/pricing" style={{ color: "inherit" }}>{t("nav.pricing")}</Link>
-          <Link href="/terms" style={{ color: "inherit" }}>{t("nav.terms")}</Link>
-          <Link href="/refunds" style={{ color: "inherit" }}>{t("nav.refunds")}</Link>
-          <Link href="/privacy" style={{ color: "inherit" }}>{t("nav.privacy")}</Link>
-          <Link href="/contact" style={{ color: "inherit" }}>{t("nav.contact")}</Link>
+          <PublicLink href="/pricing" style={{ color: "inherit" }}>{t("nav.pricing")}</PublicLink>
+          <PublicLink href="/terms" style={{ color: "inherit" }}>{t("nav.terms")}</PublicLink>
+          <PublicLink href="/refunds" style={{ color: "inherit" }}>{t("nav.refunds")}</PublicLink>
+          <PublicLink href="/privacy" style={{ color: "inherit" }}>{t("nav.privacy")}</PublicLink>
+          <PublicLink href="/contact" style={{ color: "inherit" }}>{t("nav.contact")}</PublicLink>
         </span>
       </div>
     </footer>

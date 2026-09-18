@@ -1,8 +1,9 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 import en from "../../messages/en.json";
 import sq from "../../messages/sq.json";
 import { defaultLocale, isLocale, localeCookieName, type Locale } from "./locales";
+import { LOCALE_HEADER } from "@/lib/locale-path";
 
 // Static imports, not a `import(`../../messages/${locale}.json`)` template
 // dynamic import — the dynamic form resolves through a runtime module cache
@@ -13,9 +14,11 @@ import { defaultLocale, isLocale, localeCookieName, type Locale } from "./locale
 const messagesByLocale: Record<Locale, typeof en> = { en, sq };
 
 export default getRequestConfig(async () => {
-  const cookieStore = await cookies();
-  const cookieLocale = cookieStore.get(localeCookieName)?.value;
-  const locale = isLocale(cookieLocale) ? cookieLocale : defaultLocale;
+  // A URL-prefixed public page (middleware rewrote /en/… and stamped the
+  // header) wins over the cookie; everything else is the cookie.
+  const headerLocale = (await headers()).get(LOCALE_HEADER) ?? undefined;
+  const cookieLocale = (await cookies()).get(localeCookieName)?.value;
+  const locale = isLocale(headerLocale) ? headerLocale : isLocale(cookieLocale) ? cookieLocale : defaultLocale;
 
   return {
     locale,

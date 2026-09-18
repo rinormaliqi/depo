@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PublicLink } from "@/components/public-link";
 import { getTranslations } from "next-intl/server";
 import QRCode from "qrcode";
 import { auth } from "@/auth";
@@ -87,8 +88,8 @@ export default async function Home() {
             </div>
           ) : (
             <div className="lp-cta">
-              <Link href="/signup" className="btn btn-primary">{t("ctaTrial")}</Link>
-              <Link href="/login" className="btn btn-secondary">{t("logIn")}</Link>
+              <PublicLink href="/signup" className="btn btn-primary">{t("ctaTrial")}</PublicLink>
+              <PublicLink href="/login" className="btn btn-secondary">{t("logIn")}</PublicLink>
               <span className="lp-cta-note text-muted">{t("ctaNote")}</span>
             </div>
           )}
@@ -150,7 +151,7 @@ export default async function Home() {
         <PlanCards />
         <p className="text-muted" style={{ fontSize: 13, marginTop: 4 }}>
           {t("pricingNote")}{" "}
-          <Link href="/pricing" style={{ color: "var(--color-accent)" }}>{t("pricingLink")}</Link>
+          <PublicLink href="/pricing" style={{ color: "var(--color-accent)" }}>{t("pricingLink")}</PublicLink>
         </p>
       </section>
 
@@ -158,8 +159,8 @@ export default async function Home() {
         <h2 className="lp-h2">{t("finalTitle")}</h2>
         <p className="lp-section-lead">{t("finalBody")}</p>
         <div className="lp-cta" style={{ justifyContent: "center" }}>
-          <Link href="/signup" className="btn btn-primary">{t("ctaTrial")}</Link>
-          <Link href="/contact" className="btn btn-secondary">{t("ctaContact")}</Link>
+          <PublicLink href="/signup" className="btn btn-primary">{t("ctaTrial")}</PublicLink>
+          <PublicLink href="/contact" className="btn btn-secondary">{t("ctaContact")}</PublicLink>
         </div>
       </section>
 

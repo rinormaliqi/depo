@@ -701,9 +701,17 @@ to `not-found.tsx`, so a mistyped URL (or a crawler's `robots.txt` fetch) no lon
 login form. `src/tests/routes.test.ts` fails if a directory under `src/app` isn't classified, which
 is what keeps "new routes are protected" true without protect-by-default.
 
-Known gap: the locale is a cookie, not a URL segment, so crawlers only ever see the default
-(Albanian) version and there are no `hreflang` alternates — the English pages aren't indexable
-as such until locales move into the URL (`/en/…`). Tracked as its own issue.
+**Locale in the URL, public pages only.** `src/lib/locale-path.ts`: `/pricing` is Albanian (the
+default, no prefix), `/en/pricing` English. The middleware rewrites `/en/<public path>` to the
+unprefixed route with an `x-locale` header that `src/i18n/request.ts` reads ahead of the cookie,
+and sets the cookie so the app behind the login follows; a public path reached without a prefix
+while the cookie says English redirects to its `/en` twin, so English content has exactly one URL
+(what canonical/hreflang promise — crawlers carry no cookie, so `/` is always Albanian for them).
+`/en/<app page>` just drops the prefix; the app stays cookie-only. `pageMetadata()` emits the
+language-specific canonical plus `hreflang` sq/en/x-default; the sitemap lists both versions of
+every page with alternates. `PublicLink` (client) prefixes hrefs on public pages; the locale
+switcher navigates to the sibling URL there and refreshes elsewhere. `src/lib/locale-path.test.ts`
+covers the prefix parsing.
 
 ## Internationalization
 

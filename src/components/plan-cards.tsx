@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PublicLink } from "@/components/public-link";
 import { eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
@@ -50,11 +50,11 @@ export async function PlanCards() {
             )}
             <div style={{ marginTop: 16 }}>
               {selfServe ? (
-                <Link href="/signup" className="btn btn-primary btn-block">{t("startTrial")}</Link>
+                <PublicLink href="/signup" className="btn btn-primary btn-block">{t("startTrial")}</PublicLink>
               ) : company.supportEmail ? (
                 <a href={`mailto:${company.supportEmail}?subject=SmartDepo Enterprise`} className="btn btn-secondary btn-block">{tb("contactUs")}</a>
               ) : (
-                <Link href="/contact" className="btn btn-secondary btn-block">{tb("contactUs")}</Link>
+                <PublicLink href="/contact" className="btn btn-secondary btn-block">{tb("contactUs")}</PublicLink>
               )}
             </div>
           </div>

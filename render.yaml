@@ -53,6 +53,10 @@ services:
         sync: false
       - key: EMAIL_FROM
         value: SmartDepo <pikembipresje@gmail.com>
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
       - key: PAYSERA_PROJECT_ID
         sync: false
       - key: PAYSERA_SIGN_PASSWORD

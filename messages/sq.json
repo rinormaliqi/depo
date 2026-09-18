@@ -140,6 +140,11 @@
       "errorSignInFailed": "Llogaria u krijua, por kyçja dështoi — provoni të kyçeni përsëri",
       "errorDisposableEmail": "Adresat e përkohshme të email-it nuk lejohen — përdor email-in e punës",
       "agree": "Duke hapur llogari pajtohesh me <terms>Kushtet e Shërbimit</terms>, <refunds>Politikën e Rimbursimit</refunds> dhe <privacy>Politikën e Privatësisë</privacy>."
+    },
+    "google": {
+      "continue": "Vazhdo me Google",
+      "redirecting": "Po hapet Google…",
+      "or": "ose"
     }
   },
   "forgotPassword": {
@@ -256,7 +261,9 @@
       "passwordLength": "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
       "accountExists": "Ekziston tashmë një llogari me atë email — provo ta pranosh nga lidhja e hyrjes",
       "signInFailed": "U bashkua, por hyrja dështoi — provo të hysh"
-    }
+    },
+    "acceptWithGoogle": "Prano me Google",
+    "signedInAsOther": "Je kyçur si {current}, por kjo ftesë është për {invited}. Dil dhe hape linkun sërish, ose kërko një ftesë për {current}."
   },
   "billing": {
     "title": "Faturimi",
@@ -707,5 +714,15 @@
       "body": "S'ka asgjë në këtë adresë. Skema, stoku dhe skaneri janë pas kyçjes; gjithçka publike është e lidhur më poshtë.",
       "home": "Kthehu në fillim"
     }
+  },
+  "welcome": {
+    "title": "Edhe një gjë: kompania jote",
+    "body": "Kyçur si {email}. Shkruaj emrin e kompanisë që i takon kjo depo dhe prova 30-ditëshe fillon tani — pa email verifikimi, Google e konfirmoi tashmë adresën.",
+    "companyName": "Emri i kompanisë",
+    "companyPlaceholder": "Depo Rinia",
+    "create": "Krijo kompaninë",
+    "creating": "Po krijohet…",
+    "errorRequired": "Shkruaj emrin e kompanisë",
+    "errorGeneric": "Kompania s'u krijua — provo sërish"
   }
 }

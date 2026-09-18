@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { auth } from "@/auth";
+import { auth, isGoogleSignInEnabled } from "@/auth";
+import { GoogleButton } from "@/components/google-button";
 import { AuthShell } from "@/components/auth-shell";
 import { SignupForm } from "./signup-form";
 import { pageMetadata } from "@/lib/seo";
@@ -19,6 +20,7 @@ export default async function SignupPage() {
         <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, textAlign: "center", marginBottom: 24 }}>
           {t("signup.title")}
         </div>
+        {isGoogleSignInEnabled() && <GoogleButton redirectTo="/welcome" />}
         <SignupForm />
         <p className="text-muted" style={{ marginTop: 16, textAlign: "center", fontSize: 13 }}>
           {t("signup.haveAccount")}{" "}

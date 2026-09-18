@@ -11,7 +11,7 @@ const VERIFY_VALID_HOURS = 24;
 // "resend" button is the only thing that hits this, and without a floor
 // it's a free way to make us spam an inbox (and burn Resend quota).
 const RESEND_COOLDOWN_SECONDS = 60;
-const TRIAL_DAYS = 30;
+export const TRIAL_DAYS = 30;
 
 export async function sendVerificationEmail(user: { id: string; email: string }) {
   const t = await getTranslations("verifyEmail.email");

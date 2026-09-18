@@ -164,6 +164,34 @@ middleware's public-prefix list, same as reset links: the click can come from a 
 with no session. `appBaseUrl()` (`src/lib/app-url.ts`) is the request-host-derived base every
 emailed link now uses, pulled out of the reset flow so this one didn't copy it.
 
+## Sign in with Google
+
+Optional, on only when `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are set (`isGoogleSignInEnabled()`
+in `src/auth.ts`; the button simply doesn't render otherwise). The provider requests identity
+only (`openid email profile`, no offline access). What's ours is in `src/lib/onboarding.ts`:
+
+- **One inbox, one user.** The `signIn` callback runs `ensureUserFromGoogle()`: an address
+  Google hasn't marked `email_verified` is refused; otherwise the user is looked up on the same
+  alias-collapsed `normalized_email` the password signup uses, so a password user who later taps
+  "Continue with Google" with the same address gets *their* account. A new address gets a row
+  with no `password_hash` and `email_verified_at` set — Google vouched for the inbox, so there
+  is no verification email. The `jwt` callback then puts our user id (not Google's) in the token.
+- **The company question.** A Google sign-in lands on `/welcome` (protected): a user who already
+  has a membership is bounced to `/builder`; a new one is asked the one thing the signup form
+  asks that Google can't answer, the company name, and `createOrganizationForFounder()` creates
+  org + admin membership + facility with the 30-day trial starting immediately. The password
+  signup now goes through the same function with `emailVerified: false` (trial starts at
+  verification, as before). `/builder` redirects a session with no membership to `/welcome`.
+- **Invites.** The invite page, when opened with a session (right after "Accept with Google"
+  from that page), runs `acceptInviteViaSession()`: joined if the session's normalized email is
+  the invited one, a "signed in as X, invited as Y" message otherwise. Password acceptance is
+  unchanged.
+- `signInWithGoogle(redirectTo)` only honours `/welcome` and `/invite/<token>` as landing places.
+
+Google Cloud side: APIs & Services → Credentials → OAuth client ID (Web application) with
+authorized redirect URI `<host>/api/auth/callback/google` for each host (the `*.vercel.app`
+one and, later, the domain). Tests: `src/tests/google-signin.test.ts`.
+
 ## Billing — prepaid periods via Paysera, with manual activation kept
 
 `docs/pricing.md` ("Billing v2") has the why: Paysera because Stripe won't onboard a Kosovo

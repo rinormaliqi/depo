@@ -6,9 +6,10 @@ import { AuthError } from "next-auth";
 import { getTranslations } from "next-intl/server";
 import { signIn } from "@/auth";
 import { db } from "@/db";
-import { facilities, memberships, organizations, plans, users } from "@/db/schema";
+import { plans, users } from "@/db/schema";
 import { isDisposableEmail, normalizeEmail } from "@/lib/email-normalize";
 import { sendVerificationEmail } from "@/lib/email-verification";
+import { createOrganizationForFounder } from "@/lib/onboarding";
 
 type FormState = { error?: string } | undefined;
 
@@ -38,7 +39,9 @@ export async function signUp(_prevState: FormState, formData: FormData): Promise
     return { error: t("errorEmailExists") };
   }
 
-  const [businessPlan] = await db.select().from(plans).where(eq(plans.key, "business"));
+  // Checked before the user row exists, so a missing seed can't leave an
+  // orphaned user behind.
+  const [businessPlan] = await db.select({ id: plans.id }).from(plans).where(eq(plans.key, "business"));
   if (!businessPlan) {
     return { error: t("errorPlansNotSeeded") };
   }
@@ -49,18 +52,7 @@ export async function signUp(_prevState: FormState, formData: FormData): Promise
   // trialEndsAt stays null until the email is verified — markEmailVerified()
   // starts the 30-day clock then. Until that point getOrgLockReason() treats
   // the org as "unverified": viewable, nothing writable.
-  const [org] = await db
-    .insert(organizations)
-    .values({
-      name: companyName,
-      planId: businessPlan.id,
-      subscriptionStatus: "trialing",
-      trialEndsAt: null,
-    })
-    .returning();
-
-  await db.insert(memberships).values({ userId: user.id, organizationId: org.id, role: "admin" });
-  await db.insert(facilities).values({ organizationId: org.id, name: "Main Facility" });
+  await createOrganizationForFounder({ userId: user.id, companyName, emailVerified: false });
 
   await sendVerificationEmail(user);
 

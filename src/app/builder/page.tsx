@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
 import { getMyPermissions } from "@/lib/permissions";
+import { getMySession } from "@/lib/session";
 import { getBlueprint, getMyFacility } from "./actions";
 import { BlueprintCanvas } from "./blueprint-canvas";
 
@@ -17,6 +18,9 @@ export default async function BuilderPage({
   }
 
   const { bin } = await searchParams;
+  // Signed in but not yet in any organization (a Google sign-in that
+  // hasn't named its company): finish onboarding first.
+  if (!(await getMySession())) redirect("/welcome");
   const facility = await getMyFacility();
   const t = await getTranslations();
 

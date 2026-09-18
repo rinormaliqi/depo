@@ -1,9 +1,13 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { auth, isGoogleSignInEnabled } from "@/auth";
+import { GoogleButton } from "@/components/google-button";
 import { db } from "@/db";
 import { invites, organizations, users } from "@/db/schema";
 import { AuthShell } from "@/components/auth-shell";
 import { normalizeEmail } from "@/lib/email-normalize";
+import { acceptInviteViaSession } from "@/lib/onboarding";
 import { AcceptInviteForm } from "./accept-invite-form";
 import { NOINDEX } from "@/lib/seo";
 
@@ -24,6 +28,17 @@ export default async function InvitePage({
 
   const organization = invite ? (await db.select().from(organizations).where(eq(organizations.id, invite.organizationId)))[0] : null;
   const existingUser = invite ? (await db.select().from(users).where(eq(users.normalizedEmail, normalizeEmail(invite.email))))[0] : null;
+
+  // Already signed in — straight after "Continue with Google" from this
+  // page, or an existing user who was logged in when they opened the
+  // link. If it's the invited inbox, the join happens right here.
+  const session = await auth();
+  let mismatchEmail: string | null = null;
+  if (session?.user?.id && invite) {
+    const result = await acceptInviteViaSession(token, session.user.id);
+    if (result === "joined" || result === "already-member") redirect("/builder");
+    if (result === "mismatch") mismatchEmail = session.user.email ?? "";
+  }
 
   return (
     <AuthShell>
@@ -47,7 +62,16 @@ export default async function InvitePage({
                 {t("joinAs", { role: t(`role.${invite.role}`), email: invite.email })}
               </p>
             </div>
-            <AcceptInviteForm token={token} isExistingUser={!!existingUser} />
+            {mismatchEmail !== null ? (
+              <p style={{ fontSize: 13, textAlign: "center", color: "var(--color-accent-800)" }}>
+                {t("signedInAsOther", { current: mismatchEmail, invited: invite.email })}
+              </p>
+            ) : (
+              <>
+                {isGoogleSignInEnabled() && <GoogleButton redirectTo={`/invite/${token}`} label={t("acceptWithGoogle")} />}
+                <AcceptInviteForm token={token} isExistingUser={!!existingUser} />
+              </>
+            )}
           </>
         )}
       </div>

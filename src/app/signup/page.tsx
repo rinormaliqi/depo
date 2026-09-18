@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
-import { LocaleSwitcher } from "@/components/locale-switcher";
+import { AuthShell } from "@/components/auth-shell";
 import { SignupForm } from "./signup-form";
 import { pageMetadata } from "@/lib/seo";
 
@@ -14,10 +14,7 @@ export default async function SignupPage() {
   const t = await getTranslations("auth");
 
   return (
-    <main style={{ display: "flex", minHeight: "100vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24, padding: "0 24px" }}>
-      <div style={{ position: "fixed", top: 14, right: 14 }}>
-        <LocaleSwitcher />
-      </div>
+    <AuthShell>
       <div style={{ width: "100%", maxWidth: 360 }}>
         <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, textAlign: "center", marginBottom: 24 }}>
           {t("signup.title")}
@@ -30,6 +27,6 @@ export default async function SignupPage() {
           </Link>
         </p>
       </div>
-    </main>
+    </AuthShell>
   );
 }

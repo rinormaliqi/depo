@@ -2,7 +2,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { invites, organizations, users } from "@/db/schema";
-import { LocaleSwitcher } from "@/components/locale-switcher";
+import { AuthShell } from "@/components/auth-shell";
 import { normalizeEmail } from "@/lib/email-normalize";
 import { AcceptInviteForm } from "./accept-invite-form";
 import { NOINDEX } from "@/lib/seo";
@@ -26,10 +26,7 @@ export default async function InvitePage({
   const existingUser = invite ? (await db.select().from(users).where(eq(users.normalizedEmail, normalizeEmail(invite.email))))[0] : null;
 
   return (
-    <main style={{ display: "flex", minHeight: "100vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24, padding: "0 24px" }}>
-      <div style={{ position: "fixed", top: 14, right: 14 }}>
-        <LocaleSwitcher />
-      </div>
+    <AuthShell>
       <div style={{ width: "100%", maxWidth: 360 }}>
         <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 19, letterSpacing: ".06em", textAlign: "center", marginBottom: 8 }}>
           SMART<span style={{ color: "var(--color-accent)" }}>/</span>DEPO
@@ -54,6 +51,6 @@ export default async function InvitePage({
           </>
         )}
       </div>
-    </main>
+    </AuthShell>
   );
 }

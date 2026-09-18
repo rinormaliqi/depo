@@ -1,6 +1,6 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
-import { LocaleSwitcher } from "@/components/locale-switcher";
+import { AuthShell } from "@/components/auth-shell";
 import { db } from "@/db";
 import { passwordResets } from "@/db/schema";
 import { ResetPasswordForm } from "./reset-password-form";
@@ -22,10 +22,7 @@ export default async function ResetPasswordPage({
     .where(and(eq(passwordResets.token, token), isNull(passwordResets.usedAt), gt(passwordResets.expiresAt, new Date())));
 
   return (
-    <main style={{ display: "flex", minHeight: "100vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24, padding: "0 24px" }}>
-      <div style={{ position: "fixed", top: 14, right: 14 }}>
-        <LocaleSwitcher />
-      </div>
+    <AuthShell>
       <div style={{ width: "100%", maxWidth: 360 }}>
         <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 19, letterSpacing: ".06em", textAlign: "center", marginBottom: 8 }}>
           SMART<span style={{ color: "var(--color-accent)" }}>/</span>DEPO
@@ -45,6 +42,6 @@ export default async function ResetPasswordPage({
           </>
         )}
       </div>
-    </main>
+    </AuthShell>
   );
 }

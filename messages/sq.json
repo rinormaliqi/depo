@@ -657,5 +657,55 @@
     "printWholeFacility": "printo gjithë objektin",
     "empty": "Ende s'ka kuti me kod vendndodhjeje këtu — shto një raft në planimetri së pari.",
     "errorNotFound": "Vendndodhja nuk u gjet"
+  },
+  "meta": {
+    "siteName": "SmartDepo",
+    "title": "SmartDepo — Menaxhim depoje dhe magazine me hartë vizuale dhe etiketa QR",
+    "description": "Softuer për menaxhim depoje dhe magazine në Kosovë dhe Shqipëri: vizato depon si hartë, regjistro çdo artikull te kutia e saktë, printo etiketa QR dhe lëri punëtorët ta gjejnë ose lëvizin çdo gjë nga telefoni brenda sekondash. Provë falas 30 ditë.",
+    "keywords": "menaxhim depoje, menaxhim magazine, softuer depo, program magazine, inventar depo, menaxhim stoku, aplikacion depo, sistem magazinimi, WMS Kosovë, WMS Shqipëri, etiketa QR, SmartDepo",
+    "ogAlt": "SmartDepo — depoja në hartë, çdo artikull në kutinë e vet",
+    "pages": {
+      "home": {
+        "title": "Menaxhim depoje dhe magazine me hartë vizuale",
+        "description": "Vizato depon, etiketo çdo kuti me QR-kod dhe lëri punëtorët ta gjejnë ose regjistrojnë stokun nga telefoni brenda dy sekondash. Për depo, oborre dhe magazina në Kosovë e Shqipëri. Provë falas 30 ditë, pa kartelë."
+      },
+      "pricing": {
+        "title": "Çmimet — €49, €119 ose nga €249 në muaj, për kompani",
+        "description": "Planet e SmartDepo për një magazinë me 5 vetë, një depo me 15 vetë dhe operacione me disa objekte. Një çmim për kompani, jo për përdorues; parapagim 1, 3 ose 12 muaj; provë falas 30 ditë pa kartelë."
+      },
+      "login": {
+        "title": "Kyçu",
+        "description": "Kyçu në depon tënde në SmartDepo."
+      },
+      "signup": {
+        "title": "Fillo provën falas 30-ditëshe",
+        "description": "Krijo llogarinë në SmartDepo: vizato depon, printo etiketat e kutive dhe fillo regjistrimin e stokut që sot. Pa kartelë."
+      },
+      "forgotPassword": {
+        "title": "Rivendos fjalëkalimin",
+        "description": "Merr një link për rivendosjen e fjalëkalimit të llogarisë në SmartDepo."
+      },
+      "terms": {
+        "title": "Kushtet e Shërbimit",
+        "description": "Kushtet me të cilat ofrohet SmartDepo."
+      },
+      "refunds": {
+        "title": "Politika e Rimbursimit",
+        "description": "Rimbursim i plotë brenda 14 ditësh nga çdo pagesë në SmartDepo, pa pyetje."
+      },
+      "privacy": {
+        "title": "Politika e Privatësisë",
+        "description": "Çka mbledh SmartDepo, pse, kush i përpunon të dhënat dhe si merr eksport ose fshirje."
+      },
+      "contact": {
+        "title": "Kontakti",
+        "description": "Pyetje për SmartDepo, planin tënd ose një faturë — na shkruaj dhe të përgjigjet një person, zakonisht brenda ditës së punës."
+      }
+    },
+    "notFound": {
+      "title": "Faqja nuk u gjet",
+      "body": "S'ka asgjë në këtë adresë. Skema, stoku dhe skaneri janë pas kyçjes; gjithçka publike është e lidhur më poshtë.",
+      "home": "Kthehu në fillim"
+    }
   }
 }

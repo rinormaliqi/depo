@@ -7,6 +7,11 @@ import { PublicFooter, PublicHeader } from "@/components/public-page";
 import { appBaseUrl } from "@/lib/app-url";
 import { logout } from "@/lib/actions/auth";
 import { DemoBlueprint } from "./landing/demo-blueprint";
+import { pageMetadata } from "@/lib/seo";
+import { companyInfo } from "@/lib/company";
+import { db } from "@/db";
+import { plans } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 // The landing page shows the product rather than describing it: the hero
 // is the search-to-highlight loop running live (DemoBlueprint), the
@@ -14,14 +19,53 @@ import { DemoBlueprint } from "./landing/demo-blueprint";
 // /labels prints it, the scanner form's shape — and the plan grid is the
 // same component /pricing renders from the plans table. Copy is specific
 // on purpose: a depot in Kosovo, the worker's phone, no hardware.
+
+export const generateMetadata = () => pageMetadata("home", "/");
 export default async function Home() {
-  const [session, t, base] = await Promise.all([auth(), getTranslations("home"), appBaseUrl()]);
+  const [session, t, tm, base, planRows] = await Promise.all([
+    auth(),
+    getTranslations("home"),
+    getTranslations("meta"),
+    appBaseUrl(),
+    db.select().from(plans).where(eq(plans.isActive, true)).orderBy(plans.priceCents),
+  ]);
+  const company = companyInfo();
+  // Structured data for search: what the product is, what it costs, who
+  // runs it. Prices come from the same `plans` rows the page shows.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: company.legalName,
+        url: base,
+        email: company.supportEmail || undefined,
+        address: { "@type": "PostalAddress", addressLocality: company.address, addressCountry: "XK" },
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: tm("siteName"),
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        description: tm("pages.home.description"),
+        url: base,
+        offers: planRows.map((p) => ({
+          "@type": "Offer",
+          name: p.name,
+          price: (p.priceCents / 100).toFixed(0),
+          priceCurrency: "EUR",
+          category: "subscription",
+        })),
+      },
+    ],
+  };
   const labelQr = await QRCode.toString(`${base}/builder/bin/demo`, { type: "svg", margin: 0, errorCorrectionLevel: "M" });
 
   const steps = ["draw", "label", "scan"] as const;
 
   return (
     <main className="lp">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PublicHeader />
 
       <section className="lp-hero">

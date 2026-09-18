@@ -4,7 +4,10 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { db } from "@/db";
 import { passwordResets } from "@/db/schema";
 import { ResetPasswordForm } from "./reset-password-form";
+import { NOINDEX } from "@/lib/seo";
 
+
+export const metadata = NOINDEX;
 export default async function ResetPasswordPage({
   params,
 }: {

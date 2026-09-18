@@ -4,7 +4,10 @@ import { LEGAL_UPDATED, privacy } from "@/content/legal";
 import { isLocale } from "@/i18n/locales";
 import { companyInfo } from "@/lib/company";
 import { fillCompany } from "@/lib/legal-text";
+import { pageMetadata } from "@/lib/seo";
 
+
+export const generateMetadata = () => pageMetadata("privacy", "/privacy");
 export default async function PrivacyPage() {
   const locale = await getLocale();
   const t = await getTranslations("public");

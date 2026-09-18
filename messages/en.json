@@ -657,5 +657,55 @@
     "printWholeFacility": "print the whole facility",
     "empty": "No bins with a location code here yet — add a rack on the blueprint first.",
     "errorNotFound": "Location not found"
+  },
+  "meta": {
+    "siteName": "SmartDepo",
+    "title": "SmartDepo — Warehouse & depot management with a visual map and QR labels",
+    "description": "Warehouse management software for Kosovo and Albania: draw your depot as a map, register every item to its exact bin, print QR labels and let workers find or move anything from their phone in seconds. Free 30-day trial.",
+    "keywords": "warehouse management software, depot management, inventory management, stock management, warehouse app, WMS Kosovo, WMS Albania, QR bin labels, stockroom software, SmartDepo",
+    "ogAlt": "SmartDepo — the depot on a map, every item in its bin",
+    "pages": {
+      "home": {
+        "title": "Warehouse & depot management with a visual map",
+        "description": "Draw your depot, label every bin with a QR code, and let workers find or book stock from their phone in two seconds. Built for depots, yards and stockrooms in Kosovo and Albania. 30-day free trial, no card."
+      },
+      "pricing": {
+        "title": "Pricing — €49, €119 or from €249 per month, per company",
+        "description": "SmartDepo plans for a 5-person stockroom, a 15-person depot and multi-site operations. One price per company, not per user; prepaid 1, 3 or 12 months; 30-day free trial without a card."
+      },
+      "login": {
+        "title": "Log in",
+        "description": "Log in to your SmartDepo depot."
+      },
+      "signup": {
+        "title": "Start your free 30-day trial",
+        "description": "Create your SmartDepo account: draw your depot, print bin labels and start booking stock today. No card required."
+      },
+      "forgotPassword": {
+        "title": "Reset your password",
+        "description": "Get a password reset link for your SmartDepo account."
+      },
+      "terms": {
+        "title": "Terms of Service",
+        "description": "The terms under which SmartDepo is provided."
+      },
+      "refunds": {
+        "title": "Refund Policy",
+        "description": "Full refund within 14 days of any SmartDepo payment, no questions asked."
+      },
+      "privacy": {
+        "title": "Privacy Policy",
+        "description": "What SmartDepo collects, why, who processes it, and how to get an export or deletion."
+      },
+      "contact": {
+        "title": "Contact",
+        "description": "Questions about SmartDepo, your plan or an invoice — write to us and a person answers, usually within the working day."
+      }
+    },
+    "notFound": {
+      "title": "Page not found",
+      "body": "There's nothing at this address. The blueprint, stock and scanner live behind a login; everything public is linked below.",
+      "home": "Back to the start"
+    }
   }
 }

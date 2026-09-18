@@ -3,12 +3,15 @@ import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { consumeVerificationToken } from "@/lib/email-verification";
+import { NOINDEX } from "@/lib/seo";
 
 // Public (middleware allowlists /verify-email/<token>) — the click can come
 // from a different browser than the one that signed up, e.g. a phone's
 // mail app, so a session isn't required. Redeeming is a GET side effect,
 // which is fine here: the token is single-use and only ever flips a flag
 // the user wants flipped.
+
+export const metadata = NOINDEX;
 export default async function VerifyEmailTokenPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const t = await getTranslations("verifyEmail");

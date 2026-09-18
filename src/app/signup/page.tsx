@@ -4,7 +4,10 @@ import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SignupForm } from "./signup-form";
+import { pageMetadata } from "@/lib/seo";
 
+
+export const generateMetadata = () => pageMetadata("signup", "/signup");
 export default async function SignupPage() {
   const session = await auth();
   if (session?.user) redirect("/builder");

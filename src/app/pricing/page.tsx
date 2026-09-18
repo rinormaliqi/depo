@@ -2,10 +2,13 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PlanCards } from "@/components/plan-cards";
 import { PublicPage } from "@/components/public-page";
+import { pageMetadata } from "@/lib/seo";
 
 // The public price list. Reads the same `plans` rows /billing charges
 // from, so the number a prospect sees here is the number they pay — and
 // what Paysera's reviewers compare against the project application.
+
+export const generateMetadata = () => pageMetadata("pricing", "/pricing");
 export default async function PricingPage() {
   const t = await getTranslations("public.pricing");
 

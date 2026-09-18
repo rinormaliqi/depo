@@ -6,6 +6,6 @@ export function companyInfo() {
     legalName: process.env.NEXT_PUBLIC_LEGAL_NAME || "SmartDepo",
     registrationNumber: process.env.NEXT_PUBLIC_COMPANY_REG_NO || "",
     address: process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "Prishtinë, Kosovë",
-    supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "",
+    supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "pikembipresje@gmail.com",
   };
 }

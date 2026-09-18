@@ -99,12 +99,16 @@ merely *typed* an email address (rather than proving they own that inbox) would 
 take over any account. That distinction is why invites could get away with no email
 infrastructure at all and this can't: it needed an actual send path, not just a copyable link.
 
-- **`src/lib/email.ts`** — a raw `fetch()` POST to Resend's REST API, not their SDK (the whole
-  integration is one request, so a new dependency buys nothing). Chosen over an SMTP relay for
-  the same reason Auth.js was chosen over Keycloak elsewhere in this doc: free tier, zero
-  separate paid infra. Without `RESEND_API_KEY` set — true of this repo's own local dev, and of
-  any environment before a sending domain is verified — it logs the email to the server console
-  instead of failing, so `/forgot-password` stays fully testable before that's set up.
+- **`src/lib/email.ts`** — two ways out, picked by what's configured. SMTP (`SMTP_HOST` /
+  `SMTP_USER` / `SMTP_PASS`) is the production path for launch: the company Gmail
+  (`pikembipresje@gmail.com`, also `NEXT_PUBLIC_SUPPORT_EMAIL` and the `companyInfo()`
+  default) with an App Password, via nodemailer. Chosen because transactional providers only
+  send *from* a domain you own and have verified DNS for, and there isn't one yet — the Gmail
+  address is the real sender identity, and its ~500/day cap is far above verification + reset
+  + invite volume. Resend (`RESEND_API_KEY`, a raw `fetch()` POST, no SDK) stays as the path
+  once a domain is verified. With neither set — this repo's own local dev included — emails
+  log to the server console instead of failing, so every flow stays testable. Replies go to
+  the support address in both modes.
 - **`password_resets`** (`src/db/schema.ts`) — a short-lived (1 hour, vs. an invite's 7 days),
   single-use token table. `usedAt` is set the moment it's redeemed, so the same link can't be
   replayed even within its window.

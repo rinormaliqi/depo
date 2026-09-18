@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
+import { companyInfo } from "@/lib/company";
 import { formatDate } from "@/lib/format-date";
 import { getMyBilling } from "./actions";
 import { PlanPicker } from "./plan-picker";
@@ -47,7 +48,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const daysUntil = (d: Date | null) => (d ? Math.ceil((new Date(d).getTime() - now) / (1000 * 60 * 60 * 24)) : null);
   const trialDaysLeft = org.subscriptionStatus === "trialing" ? daysUntil(org.trialEndsAt) : null;
   const paidDaysLeft = org.subscriptionStatus === "active" ? daysUntil(org.paidUntil) : null;
-  const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+  const supportEmail = companyInfo().supportEmail;
   const isAdmin = role === "admin";
   const statusUrgent = lockReason !== null || (trialDaysLeft !== null && trialDaysLeft <= 5) || (paidDaysLeft !== null && paidDaysLeft <= 7);
 

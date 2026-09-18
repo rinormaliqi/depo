@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PublicLink } from "@/components/public-link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth, isGoogleSignInEnabled } from "@/auth";
@@ -24,9 +24,9 @@ export default async function LoginPage() {
         <LoginForm />
         <p className="text-muted" style={{ marginTop: 16, textAlign: "center", fontSize: 13 }}>
           {t("login.noAccount")}{" "}
-          <Link href="/signup" style={{ color: "var(--color-accent)" }}>
+          <PublicLink href="/signup" style={{ color: "var(--color-accent)" }}>
             {t("login.signUpLink")}
-          </Link>
+          </PublicLink>
         </p>
       </div>
     </AuthShell>

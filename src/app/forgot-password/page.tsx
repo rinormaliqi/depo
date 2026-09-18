@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PublicLink } from "@/components/public-link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
@@ -20,9 +20,9 @@ export default async function ForgotPasswordPage() {
         <p className="text-muted" style={{ fontSize: 13, marginBottom: 24 }}>{t("subtitle")}</p>
         <ForgotPasswordForm />
         <p className="text-muted" style={{ marginTop: 16, textAlign: "center", fontSize: 13 }}>
-          <Link href="/login" style={{ color: "var(--color-accent)" }}>
+          <PublicLink href="/login" style={{ color: "var(--color-accent)" }}>
             {t("backToLogin")}
-          </Link>
+          </PublicLink>
         </p>
       </div>
     </AuthShell>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import Link from "next/link";
+import { PublicLink } from "@/components/public-link";
 import { useActionState } from "react";
 import { signUp } from "./actions";
 
@@ -33,9 +33,9 @@ export function SignupForm() {
       </button>
       <p className="text-muted" style={{ fontSize: 11, textAlign: "center", margin: 0 }}>
         {t.rich("signup.agree", {
-          terms: (chunks) => <Link href="/terms" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</Link>,
-          refunds: (chunks) => <Link href="/refunds" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</Link>,
-          privacy: (chunks) => <Link href="/privacy" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</Link>,
+          terms: (chunks) => <PublicLink href="/terms" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</PublicLink>,
+          refunds: (chunks) => <PublicLink href="/refunds" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</PublicLink>,
+          privacy: (chunks) => <PublicLink href="/privacy" target="_blank" style={{ color: "var(--color-accent)" }}>{chunks}</PublicLink>,
         })}
       </p>
     </form>

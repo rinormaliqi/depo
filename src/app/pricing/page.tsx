@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PublicLink } from "@/components/public-link";
 import { getTranslations } from "next-intl/server";
 import { PlanCards } from "@/components/plan-cards";
 import { PublicPage } from "@/components/public-page";
@@ -24,7 +24,7 @@ export default async function PricingPage() {
         <p style={{ margin: "0 0 6px" }}>{t("noteVat")}</p>
         <p style={{ margin: 0 }}>
           {t("noteRefund")}{" "}
-          <Link href="/refunds" style={{ color: "var(--color-accent)" }}>{t("refundLink")}</Link>
+          <PublicLink href="/refunds" style={{ color: "var(--color-accent)" }}>{t("refundLink")}</PublicLink>
         </p>
       </div>
     </PublicPage>

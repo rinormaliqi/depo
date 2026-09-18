@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import Link from "next/link";
+import { PublicLink } from "@/components/public-link";
 import { useActionState } from "react";
 import { login } from "./actions";
 
@@ -20,9 +20,9 @@ export function LoginForm() {
           <label style={{ display: "block", marginBottom: 0, fontSize: 12, color: "color-mix(in srgb, var(--color-text) 70%, transparent)" }}>
             {t("password")}
           </label>
-          <Link href="/forgot-password" style={{ fontSize: 12, color: "var(--color-accent)" }}>
+          <PublicLink href="/forgot-password" style={{ fontSize: 12, color: "var(--color-accent)" }}>
             {t("login.forgotPassword")}
-          </Link>
+          </PublicLink>
         </div>
         <input className="input" name="password" type="password" placeholder="••••••••" required />
       </div>

@@ -2,11 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import * as rawActions from "./actions";
 import { unwrap } from "@/lib/action-result";
+import { CameraScanner } from "./camera-scanner";
 
 const commitScan = unwrap(rawActions.commitScan);
+const resolveScan = unwrap(rawActions.resolveScan);
 
 type Item = { id: string; name: string; sku: string | null; unitOfMeasure: string };
 
@@ -19,6 +21,21 @@ export function ScanForm({ items }: { items: Item[] }) {
   const [code, setCode] = useState("");
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+
+  // The camera pre-fills the location field rather than committing on its
+  // own: item and quantity are still the worker's to confirm, and a torn
+  // or missing label falls back to typing the code into the same field.
+  const handleDecode = useCallback(async (raw: string) => {
+    setCameraOpen(false);
+    setMsg(null);
+    try {
+      const { code: resolved } = await resolveScan(raw);
+      setCode(resolved);
+    } catch (e) {
+      setMsg({ text: e instanceof Error ? e.message : tCommon("errorGeneric"), ok: false });
+    }
+  }, [tCommon]);
 
   const selectedItem = items.find((i) => i.id === itemId);
 
@@ -92,6 +109,9 @@ export function ScanForm({ items }: { items: Item[] }) {
         <div style={{ fontSize: 10, color: "color-mix(in srgb, var(--color-text) 50%, transparent)", marginTop: -4 }}>
           {t("locationHint")}
         </div>
+        <button type="button" className="btn btn-secondary btn-block" onClick={() => setCameraOpen(true)} disabled={busy}>
+          {t("scanWithCamera")}
+        </button>
         <button className="btn btn-primary btn-block" onClick={handleCommit} disabled={busy} style={{ minHeight: 46 }}>
           {t("commit")}
         </button>
@@ -110,6 +130,7 @@ export function ScanForm({ items }: { items: Item[] }) {
           </div>
         )}
       </div>
+      {cameraOpen && <CameraScanner onDecode={handleDecode} onClose={() => setCameraOpen(false)} />}
     </div>
   );
 }

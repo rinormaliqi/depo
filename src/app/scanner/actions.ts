@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { db } from "@/db";
-import { items, locations, movements } from "@/db/schema";
+import { facilities, items, locations, movements } from "@/db/schema";
 import { locationLabel } from "@/lib/location-path";
 import { requirePermission } from "@/lib/permissions";
 import { requireSession } from "@/lib/session";
@@ -82,4 +82,36 @@ export async function getRecentMovements() {
 
 export async function commitScan(itemId: string, quantity: number, code: string) {
   return attempt(() => commitScanImpl(itemId, quantity, code), "commitScan");
+}
+
+// A printed label's QR carries the bin's URL (/builder/bin/<id>, see
+// src/app/labels/page.tsx), not the code — so a decoded scan goes through
+// here to become the code the form and commitScan work in. Anything that
+// isn't one of our bin URLs (a code typed into some other QR, a product
+// barcode) is passed back verbatim, uppercased, and commitScan's lookup
+// decides whether it's a location on this floor.
+const BIN_URL = /\/builder\/bin\/([0-9a-f-]{36})(?:[?#]|$)/i;
+
+async function resolveScanImpl(raw: string): Promise<{ code: string }> {
+  const { organizationId } = await requireSession();
+  const t = await getTranslations("scanner");
+  const match = raw.trim().match(BIN_URL);
+  if (!match) return { code: raw.trim().toUpperCase() };
+
+  const facility = await getMyFacility();
+  const [location] = await db.select().from(locations).where(eq(locations.id, match[1]));
+  if (!location || !location.isBin || !location.code) throw new UserError(t("errorScanUnknown"));
+  // Same guard as the bin page: never reveal another org's codes. A bin
+  // from one of *our* other facilities is a real situation (labels from
+  // site B scanned at site A) and gets a specific message.
+  const [owner] = await db.select().from(facilities).where(eq(facilities.id, location.facilityId));
+  if (!owner || owner.organizationId !== organizationId) throw new UserError(t("errorScanUnknown"));
+  if (!facility || facility.id !== location.facilityId) {
+    throw new UserError(t("errorScanOtherFacility", { code: location.code, facility: owner.name }));
+  }
+  return { code: location.code };
+}
+
+export async function resolveScan(raw: string) {
+  return attempt(() => resolveScanImpl(raw), "resolveScan");
 }

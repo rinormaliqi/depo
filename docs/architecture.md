@@ -432,10 +432,25 @@ lands, can take the id off the end of the URL while the printed code stays the t
 fallback. In local dev the URL is `localhost`, so a phone can't follow it — it resolves once
 deployed under a real host.
 
-The Scanner page (below) still takes a typed location `code` — camera decoding is the
-remaining half of this, deferred, not abandoned. If item photos are added later, use
-Cloudflare R2 (zero egress fees) over Azure Blob (tender-ai's choice, which bills per
-download — bad fit for something phones fetch repeatedly).
+**Camera scanning is built** (`src/app/scanner/camera-scanner.tsx`): "Scan label with
+camera" on the Scanner page opens a dialog over `getUserMedia` (rear camera preferred) and
+decodes frames with the native `BarcodeDetector` where the browser has it (Chrome/Edge —
+QR plus the common 1D formats) and `jsQR` on a canvas frame everywhere else (iOS Safari has
+no `BarcodeDetector`), at ~7 fps — plenty for a held-up label, and the jsQR path is the
+expensive one. A decode goes through `resolveScan()` (`scanner/actions.ts`): a bin-URL QR
+becomes the bin's code (refused if the bin belongs to another org; a specific message if
+it's one of our *other* facilities), anything else is passed through uppercased. The result
+**pre-fills the location field** rather than committing — item and quantity are still the
+worker's to confirm, and a torn label falls back to typing into the same field.
+
+`getUserMedia` needs a secure context: https or `localhost`. A phone on the LAN hitting
+`http://192.168.x.x:3000` gets a clear in-dialog message rather than a silent failure; test
+with `next dev --experimental-https` or against a deployed instance. The camera is released
+(tracks stopped) whenever the dialog closes or unmounts.
+
+If item photos are added later, use Cloudflare R2 (zero egress fees) over Azure Blob
+(tender-ai's choice, which bills per download — bad fit for something phones fetch
+repeatedly).
 
 ## Visual builder — the Depot Blueprint import
 

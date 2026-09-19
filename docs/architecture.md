@@ -535,6 +535,21 @@ If item photos are added later, use Cloudflare R2 (zero egress fees) over Azure 
 (tender-ai's choice, which bills per download — bad fit for something phones fetch
 repeatedly).
 
+## Facility levels
+
+`facility_levels` (migration 0008, backfilled: every facility got at least two, or as many as
+its tallest rack) is the list of heights a facility's racks may span — index 1..n, optional
+name. A rack's `levels` count is how many of those it uses, clamped to the facility's count in
+`updateEntity`. `src/lib/levels.ts`: `ensureLevels()` (lazy default of two for anything the
+migration didn't cover), `addLevel()`, `renameLevel()`, `removeTopLevel()`. Only the top level
+can be removed — deleting one in the middle would renumber every bin above it and every label
+already stuck on them — and only when no bin on it holds stock; racks that reached it shrink
+by one through the same `reshapeGrid()` the inspector uses. Adding offers to extend every rack
+at the current top onto the new level (one new bin per bay, counted against the plan first) or
+to add it empty. Bin codes stay numeric (`A-01-2-3`), so renaming a level never touches a
+printed label. Builder: the level selector lists the facility's levels (with names) and a ⚙
+opens the manage dialog for `editLayout` roles. Tests: `src/tests/facility-levels.test.ts`.
+
 ## Visual builder — the Depot Blueprint import
 
 Superseded the original "boxes nested inside boxes" drill-down builder: a Claude Design

@@ -57,6 +57,13 @@
       "when": 1789853885200,
       "tag": "0007_flawless_next_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789854404493,
+      "tag": "0008_chemical_puma",
+      "breakpoints": true
     }
   ]
 }

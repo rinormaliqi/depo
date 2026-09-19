@@ -346,3 +346,21 @@ export const contactMessages = pgTable(
   },
   (table) => [index("contact_messages_ip_idx").on(table.ip, table.createdAt)],
 );
+
+// The levels (heights) a facility's racks can have, as a list the admin
+// manages: index 1..n, an optional custom name ("Dyshemeja", "Mezanina").
+// A rack's `levels` count is how many of these it spans, from 1 up. Two
+// per facility by default; docs/architecture.md "Facility levels".
+export const facilityLevels = pgTable(
+  "facility_levels",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    facilityId: uuid("facility_id")
+      .notNull()
+      .references(() => facilities.id, { onDelete: "cascade" }),
+    index: integer("index").notNull(),
+    name: text("name"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("facility_levels_facility_index_idx").on(table.facilityId, table.index)],
+);

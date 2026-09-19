@@ -500,7 +500,27 @@
     "yFromWall": "Y nga muri",
     "subdivision": "Ndarja",
     "bays": "Hapësira",
-    "levels": "Nivele",
+    "levels": {
+      "defaultName": "Niveli {n}",
+      "manage": "Nivelet",
+      "manageBody": "Raftet mund të shtrihen deri në kaq nivele. Kodet e kutive mbeten numerike (A-01-2-3 = niveli 2, vendi 3), kështu që riemërtimi s'ndryshon asnjë etiketë.",
+      "racksOn": "{n, plural, =1 {1 raft} other {# rafte}}",
+      "rename": "Riemërto",
+      "renameTitle": "Emërto nivelin {n}",
+      "renameLabel": "Emri (lëre bosh për të parazgjedhurin)",
+      "add": "Shto nivel",
+      "addTitle": "Shto nivelin {n}",
+      "addBody": "T'i zgjerojmë të gjitha raftet që arrijnë nivelin e sotëm më të lartë edhe në të riun (një kuti e re për vend), apo ta shtojmë bosh dhe t'i zgjerosh raftet një nga një?",
+      "addExtend": "Shto dhe zgjero raftet",
+      "addOnly": "Shto bosh",
+      "added": "Niveli {n} u shtua",
+      "removeTitle": "Të hiqet {name}?",
+      "removeBody": "Raftet që arrijnë deri aty e humbin atë nivel. E mundur vetëm kur asnjë kuti aty s'ka stok.",
+      "removed": "{name} u hoq",
+      "errorMax": "Një objekt mund të ketë më së shumti {max} nivele",
+      "errorLast": "Objekti duhet të ketë të paktën një nivel",
+      "errorStock": "Niveli {level} ka ende stok në {n, plural, =1 {1 kuti} other {# kuti}} ({codes}…) — lëvize së pari"
+    },
     "occupied": "Të zëna",
     "viewStock": "Shiko stokun",
     "duplicate": "Dyfisho",
@@ -539,7 +559,8 @@
     "emptyFloorBodyReadOnly": "Ende nuk është hartuar asgjë. Një menaxher ose administrator e ndërton planimetrinë.",
     "printLabel": "Printo etiketën",
     "printLabels": "Printo etiketat e kutive",
-    "printAllLabels": "Printo të gjitha etiketat"
+    "printAllLabels": "Printo të gjitha etiketat",
+    "levelsCount": "Nivele"
   },
   "bin": {
     "kicker": "Kuti",

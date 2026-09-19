@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import * as rawActions from "./actions";
 import { unwrap } from "@/lib/action-result";
 import { CameraScanner } from "./camera-scanner";
+import { useNotify } from "@/components/notifications";
 
 const commitScan = unwrap(rawActions.commitScan);
 const resolveScan = unwrap(rawActions.resolveScan);
@@ -14,12 +15,11 @@ type Item = { id: string; name: string; sku: string | null; unitOfMeasure: strin
 
 export function ScanForm({ items }: { items: Item[] }) {
   const t = useTranslations("scanner");
-  const tCommon = useTranslations("common");
   const router = useRouter();
   const [itemId, setItemId] = useState(items[0]?.id ?? "");
   const [quantity, setQuantity] = useState("");
   const [code, setCode] = useState("");
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const notify = useNotify();
   const [busy, setBusy] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
 
@@ -28,47 +28,35 @@ export function ScanForm({ items }: { items: Item[] }) {
   // or missing label falls back to typing the code into the same field.
   const handleDecode = useCallback(async (raw: string) => {
     setCameraOpen(false);
-    setMsg(null);
-    try {
-      const { code: resolved } = await resolveScan(raw);
-      setCode(resolved);
-    } catch (e) {
-      setMsg({ text: e instanceof Error ? e.message : tCommon("errorGeneric"), ok: false });
-    }
-  }, [tCommon]);
+    const resolved = await notify.run(() => resolveScan(raw));
+    if (resolved) setCode(resolved.code);
+  }, [notify]);
 
   const selectedItem = items.find((i) => i.id === itemId);
 
   async function handleCommit() {
-    setMsg(null);
     const qty = parseInt(quantity, 10);
     if (!itemId) {
-      setMsg({ text: t("errorPickItem"), ok: false });
+      notify.warning(t("errorPickItem"));
       return;
     }
     if (!qty || qty < 1) {
-      setMsg({ text: t("errorQuantity"), ok: false });
+      notify.warning(t("errorQuantity"));
       return;
     }
     setBusy(true);
-    try {
-      await commitScan(itemId, qty, code);
-      setMsg({
-        text: t("successBooked", {
-          qty,
-          unit: selectedItem?.unitOfMeasure ?? "",
-          name: selectedItem?.name ?? "",
-          code: code.trim().toUpperCase(),
-        }),
-        ok: true,
-      });
-      setQuantity("");
-      router.refresh();
-    } catch (e) {
-      setMsg({ text: e instanceof Error ? e.message : tCommon("errorGeneric"), ok: false });
-    } finally {
-      setBusy(false);
-    }
+    const done = await notify.run(() => commitScan(itemId, qty, code), {
+      success: t("successBooked", {
+        qty,
+        unit: selectedItem?.unitOfMeasure ?? "",
+        name: selectedItem?.name ?? "",
+        code: code.trim().toUpperCase(),
+      }),
+    });
+    setBusy(false);
+    if (done === undefined) return;
+    setQuantity("");
+    router.refresh();
   }
 
   return (
@@ -115,20 +103,6 @@ export function ScanForm({ items }: { items: Item[] }) {
         <button className="btn btn-primary btn-block" onClick={handleCommit} disabled={busy} style={{ minHeight: 46 }}>
           {t("commit")}
         </button>
-        {msg && (
-          <div
-            style={{
-              padding: "8px 10px",
-              fontSize: 12,
-              lineHeight: 1.4,
-              background: msg.ok ? "color-mix(in srgb, oklch(0.56 0.07 150) 12%, #fff)" : "color-mix(in srgb, oklch(0.62 0.10 68) 14%, #fff)",
-              color: msg.ok ? "oklch(0.56 0.07 150)" : "oklch(0.62 0.10 68)",
-              border: `1px solid ${msg.ok ? "oklch(0.56 0.07 150)" : "oklch(0.62 0.10 68)"}`,
-            }}
-          >
-            {msg.text}
-          </div>
-        )}
       </div>
       {cameraOpen && <CameraScanner onDecode={handleDecode} onClose={() => setCameraOpen(false)} />}
     </div>

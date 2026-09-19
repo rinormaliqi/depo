@@ -15,7 +15,7 @@ export async function getMyItems() {
   return db.select().from(items).where(eq(items.organizationId, organizationId)).orderBy(items.name);
 }
 
-type FormState = { error?: string } | undefined;
+type FormState = { error?: string; created?: { name: string; at: number } } | undefined;
 
 export async function createItem(_prevState: FormState, formData: FormData): Promise<FormState> {
   let organizationId: string;
@@ -44,4 +44,6 @@ export async function createItem(_prevState: FormState, formData: FormData): Pro
   });
 
   revalidatePath("/items");
+  // `at` makes each success distinct, so the form's toast fires per submit.
+  return { created: { name, at: Date.now() } };
 }

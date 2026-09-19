@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { BILLING_PERIODS, type BillingMonths, priceForPeriod } from "@/lib/billing-plans";
 import { startCheckout } from "./actions";
+import { FormError } from "@/components/form-error";
 
 type Option = {
   plan: { key: string; name: string; priceCents: number; maxUsers: number | null; maxFacilities: number | null; maxBins: number | null };
@@ -119,7 +120,7 @@ export function PlanPicker({ options, currentPlanKey, enterprisePriceCents, onli
           {supportEmail ? t("bankTransferHintWithEmail", { email: supportEmail }) : t("bankTransferHint")}
         </p>
       )}
-      {state?.error && <p style={{ fontSize: 13, color: "var(--color-accent-800)" }}>{state.error}</p>}
+      <FormError>{state?.error}</FormError>
     </form>
   );
 }

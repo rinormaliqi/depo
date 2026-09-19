@@ -188,7 +188,8 @@
     "addItem": "Add item",
     "noItems": "No items yet.",
     "errorRequired": "Name and unit of measure are required",
-    "viewOnly": "Only managers and admins can add items to the catalog."
+    "viewOnly": "Only managers and admins can add items to the catalog.",
+    "created": "{name} added to the catalog"
   },
   "team": {
     "title": "Team",
@@ -234,7 +235,12 @@
     "email": {
       "subject": "You've been invited to {org} on SmartDepo",
       "body": "{inviter} invited you to join {org} on SmartDepo as {role}.\n\nAccept the invite here:\n\n{url}\n\nThe link expires in {days} days. If you weren't expecting this, you can ignore this email."
-    }
+    },
+    "removeTitle": "Remove {name}?",
+    "removed": "{name} was removed",
+    "roleChanged": "{name}'s role was updated",
+    "resent": "Invite resent to {email}",
+    "revoked": "Invite for {email} revoked"
   },
   "invite": {
     "title": "Join {org}",
@@ -495,7 +501,9 @@
     "add": "Add",
     "remove": "Remove",
     "errorPickItem": "Pick an item and a positive whole quantity",
-    "printLabel": "Print label"
+    "printLabel": "Print label",
+    "added": "Added {qty} {unit} of {name}",
+    "removed": "Removed {qty} {unit} of {name}"
   },
   "stockError": {
     "binNotFound": "Bin not found",
@@ -653,8 +661,12 @@
   "facility": {
     "switch": "Switch facility",
     "addNew": "+ Add facility…",
-    "newPrompt": "Name of the new facility (e.g. \"Warehouse North\"):",
-    "error": "Couldn't add the facility"
+    "newPrompt": "Name of the new facility",
+    "error": "Couldn't add the facility",
+    "newTitle": "Add a facility",
+    "newPlaceholder": "Warehouse North",
+    "create": "Add facility",
+    "created": "{name} added — you're now in it"
   },
   "labels": {
     "kicker": "Labels",
@@ -724,5 +736,10 @@
     "creating": "Creating…",
     "errorRequired": "Enter your company's name",
     "errorGeneric": "Couldn't create the company — try again"
+  },
+  "notify": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "close": "Close"
   }
 }

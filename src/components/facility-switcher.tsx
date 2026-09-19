@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import * as builderActions from "@/app/builder/actions";
 import { unwrap } from "@/lib/action-result";
+import { useConfirm, useNotify } from "@/components/notifications";
 
 const createFacility = unwrap(builderActions.createFacility);
 
@@ -19,7 +20,8 @@ export function FacilitySwitcher({ currentId, currentName }: { currentId: string
   const [all, setAll] = useState<Facility[] | null>(null);
   const [canAdd, setCanAdd] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const notify = useNotify();
+  const confirm = useConfirm();
 
   // Re-fetched whenever the current facility changes (a switch or an add
   // both refresh the page with a new currentId), so the list stays true.
@@ -35,18 +37,13 @@ export function FacilitySwitcher({ currentId, currentName }: { currentId: string
 
   const NEW = "__new__";
 
-  function onChange(value: string) {
-    setError(null);
+  async function onChange(value: string) {
     if (value === NEW) {
-      const name = window.prompt(t("newPrompt"));
-      if (!name?.trim()) return;
+      const name = await confirm({ title: t("newTitle"), input: { label: t("newPrompt"), placeholder: t("newPlaceholder"), required: true }, confirmLabel: t("create") });
+      if (!name) return;
       startTransition(async () => {
-        try {
-          await createFacility(name);
-          router.refresh();
-        } catch (e) {
-          setError(e instanceof Error ? e.message : t("error"));
-        }
+        const created = await notify.run(() => createFacility(name), { success: t("created", { name }), error: t("error") });
+        if (created !== undefined) router.refresh();
       });
       return;
     }
@@ -81,7 +78,6 @@ export function FacilitySwitcher({ currentId, currentName }: { currentId: string
         ))}
         {canAdd && <option value={NEW}>{t("addNew")}</option>}
       </select>
-      {error && <span style={{ fontSize: 10, color: "var(--color-accent-800)", whiteSpace: "normal" }}>{error}</span>}
     </span>
   );
 }

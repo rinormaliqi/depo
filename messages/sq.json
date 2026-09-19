@@ -188,7 +188,8 @@
     "addItem": "Shto artikull",
     "noItems": "Ende nuk ka artikuj.",
     "errorRequired": "Emri dhe njësia matëse janë të detyrueshme",
-    "viewOnly": "Vetëm menaxherët dhe administratorët mund të shtojnë artikuj në katalog."
+    "viewOnly": "Vetëm menaxherët dhe administratorët mund të shtojnë artikuj në katalog.",
+    "created": "{name} u shtua në katalog"
   },
   "team": {
     "title": "Ekipi",
@@ -234,7 +235,12 @@
     "email": {
       "subject": "Je ftuar në {org} në SmartDepo",
       "body": "{inviter} të ftoi të bashkohesh me {org} në SmartDepo si {role}.\n\nPranoje ftesën këtu:\n\n{url}\n\nLidhja skadon pas {days} ditësh. Nëse nuk e prisje këtë, mund ta injorosh këtë email."
-    }
+    },
+    "removeTitle": "Të hiqet {name}?",
+    "removed": "{name} u hoq",
+    "roleChanged": "Roli i {name} u ndryshua",
+    "resent": "Ftesa u ridërgua te {email}",
+    "revoked": "Ftesa për {email} u anulua"
   },
   "invite": {
     "title": "Bashkohu me {org}",
@@ -495,7 +501,9 @@
     "add": "Shto",
     "remove": "Hiq",
     "errorPickItem": "Zgjidhni një artikull dhe një sasi pozitive të plotë",
-    "printLabel": "Printo etiketën"
+    "printLabel": "Printo etiketën",
+    "added": "U shtuan {qty} {unit} {name}",
+    "removed": "U hoqën {qty} {unit} {name}"
   },
   "stockError": {
     "binNotFound": "Kutia nuk u gjet",
@@ -653,8 +661,12 @@
   "facility": {
     "switch": "Ndërro objektin",
     "addNew": "+ Shto objekt…",
-    "newPrompt": "Emri i objektit të ri (p.sh. \"Depoja Veri\"):",
-    "error": "Objekti nuk u shtua"
+    "newPrompt": "Emri i objektit të ri",
+    "error": "Objekti nuk u shtua",
+    "newTitle": "Shto një objekt",
+    "newPlaceholder": "Depoja Veri",
+    "create": "Shto objektin",
+    "created": "{name} u shtua — je tani në të"
   },
   "labels": {
     "kicker": "Etiketa",
@@ -724,5 +736,10 @@
     "creating": "Po krijohet…",
     "errorRequired": "Shkruaj emrin e kompanisë",
     "errorGeneric": "Kompania s'u krijua — provo sërish"
+  },
+  "notify": {
+    "confirm": "Konfirmo",
+    "cancel": "Anulo",
+    "close": "Mbyll"
   }
 }

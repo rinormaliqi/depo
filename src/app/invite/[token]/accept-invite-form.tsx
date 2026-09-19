@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { acceptInviteAsExistingUser, acceptInviteAsNewUser } from "./actions";
+import { FormError } from "@/components/form-error";
 
 export function AcceptInviteForm({ token, isExistingUser }: { token: string; isExistingUser: boolean }) {
   const t = useTranslations("invite");
@@ -32,7 +33,7 @@ export function AcceptInviteForm({ token, isExistingUser }: { token: string; isE
         />
       </div>
 
-      {state?.error && <p style={{ fontSize: 13, color: "var(--color-accent-800)" }}>{state.error}</p>}
+      <FormError>{state?.error}</FormError>
 
       <button type="submit" className="btn btn-primary btn-block" disabled={isPending}>
         {isPending ? t("joining") : isExistingUser ? t("acceptExisting") : t("acceptNew")}

@@ -6,6 +6,8 @@ import { formatDate } from "@/lib/format-date";
 import { createInvite, getTeam } from "./actions";
 import * as rawActions from "./actions";
 import { unwrap } from "@/lib/action-result";
+import { FormError } from "@/components/form-error";
+import { useConfirm, useNotify } from "@/components/notifications";
 
 const revokeInvite = unwrap(rawActions.revokeInvite);
 const resendInvite = unwrap(rawActions.resendInvite);
@@ -43,19 +45,13 @@ function InviteLink({ token }: { token: string }) {
 function PendingInviteRow({ invite, canManage }: { invite: PendingInvite; canManage: boolean }) {
   const t = useTranslations("team");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const notify = useNotify();
   const expired = new Date(invite.expiresAt).getTime() < Date.now();
 
-  async function handle(action: (id: string) => Promise<void>) {
+  async function handle(action: (id: string) => Promise<void>, success: string) {
     setBusy(true);
-    setError(null);
-    try {
-      await action(invite.id);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.notAuthorized"));
-    } finally {
-      setBusy(false);
-    }
+    await notify.run(() => action(invite.id), { success, error: t("error.notAuthorized") });
+    setBusy(false);
   }
 
   return (
@@ -72,17 +68,16 @@ function PendingInviteRow({ invite, canManage }: { invite: PendingInvite; canMan
           <InviteLink token={invite.token} />
           {canManage && (
             <>
-              <button className="btn btn-ghost" disabled={busy} onClick={() => handle(resendInvite)} style={{ fontSize: 11 }}>
+              <button className="btn btn-ghost" disabled={busy} onClick={() => handle(resendInvite, t("resent", { email: invite.email }))} style={{ fontSize: 11 }}>
                 {t("resend")}
               </button>
-              <button className="btn btn-ghost" disabled={busy} onClick={() => handle(revokeInvite)} style={{ fontSize: 11, color: "var(--color-accent-800)" }}>
+              <button className="btn btn-ghost" disabled={busy} onClick={() => handle(revokeInvite, t("revoked", { email: invite.email }))} style={{ fontSize: 11, color: "var(--color-accent-800)" }}>
                 {t("revoke")}
               </button>
             </>
           )}
         </div>
       </div>
-      {error && <p style={{ fontSize: 11, color: "var(--color-accent-800)", marginTop: 4 }}>{error}</p>}
     </div>
   );
 }
@@ -100,22 +95,17 @@ function MemberRow({
 }) {
   const t = useTranslations("team");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const notify = useNotify();
+  const confirm = useConfirm();
 
   // Mirrors the server's rules so the controls only appear where they'd
   // work: managers can't touch admins, nobody removes themselves.
   const editable = canManage && !isMe && (isAdmin || member.role !== "admin");
 
-  async function run(action: () => Promise<void>) {
+  async function run(action: () => Promise<void>, success: string) {
     setBusy(true);
-    setError(null);
-    try {
-      await action();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.notAuthorized"));
-    } finally {
-      setBusy(false);
-    }
+    await notify.run(action, { success, error: t("error.notAuthorized") });
+    setBusy(false);
   }
 
   return (
@@ -132,7 +122,7 @@ function MemberRow({
               className="input"
               value={member.role}
               disabled={busy}
-              onChange={(e) => run(() => changeMemberRole(member.id, e.target.value))}
+              onChange={(e) => run(() => changeMemberRole(member.id, e.target.value), t("roleChanged", { name: member.name }))}
               style={{ fontSize: 11, padding: "2px 6px", width: 110 }}
               aria-label={t("roleLabel")}
             >
@@ -143,8 +133,9 @@ function MemberRow({
             <button
               className="btn btn-ghost"
               disabled={busy}
-              onClick={() => {
-                if (window.confirm(t("removeConfirm", { name: member.name }))) void run(() => removeMember(member.id));
+              onClick={async () => {
+                const ok = await confirm({ title: t("removeTitle", { name: member.name }), body: t("removeConfirm", { name: member.name }), confirmLabel: t("remove"), danger: true });
+                if (ok) void run(() => removeMember(member.id), t("removed", { name: member.name }));
               }}
               style={{ fontSize: 11, color: "var(--color-accent-800)" }}
             >
@@ -155,7 +146,6 @@ function MemberRow({
           <span className="tag tag-outline">{t(`role.${member.role}`)}</span>
         )}
       </div>
-      {error && <p style={{ fontSize: 11, color: "var(--color-accent-800)", marginTop: 4 }}>{error}</p>}
     </div>
   );
 }
@@ -202,7 +192,7 @@ export function TeamClient({
             </button>
           </form>
           <p className="text-muted" style={{ fontSize: 12, marginTop: 6 }}>{t(`roleHint.${inviteRole}`)}</p>
-          {state?.error && <p style={{ fontSize: 13, color: "var(--color-accent-800)", marginTop: 6 }}>{state.error}</p>}
+          <FormError>{state?.error}</FormError>
         </div>
       )}
 

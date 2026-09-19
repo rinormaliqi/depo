@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { requestPasswordReset } from "./actions";
+import { FormError } from "@/components/form-error";
 
 export function ForgotPasswordForm() {
   const t = useTranslations("forgotPassword");
@@ -18,7 +19,7 @@ export function ForgotPasswordForm() {
         <label>{t("emailLabel")}</label>
         <input className="input" name="email" type="email" placeholder="you@company.com" required />
       </div>
-      {state?.error && <p style={{ fontSize: 13, color: "var(--color-accent-800)" }}>{state.error}</p>}
+      <FormError>{state?.error}</FormError>
       <button type="submit" className="btn btn-primary btn-block" disabled={isPending}>
         {isPending ? t("sending") : t("sendLink")}
       </button>

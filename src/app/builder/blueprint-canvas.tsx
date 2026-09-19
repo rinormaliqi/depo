@@ -9,6 +9,7 @@ import { LOCATION_TYPES, TEMPLATE_KEYS, type TemplateKey } from "@/lib/blueprint
 import { getBlueprint, type LocationRow } from "./actions";
 import * as rawActions from "./actions";
 import { unwrap } from "@/lib/action-result";
+import { useNotify } from "@/components/notifications";
 
 const addSector = unwrap(rawActions.addSector);
 const applyTemplate = unwrap(rawActions.applyTemplate);
@@ -191,7 +192,7 @@ export function BlueprintCanvas({
   const [zoom, setZoom] = useState(0.8);
   const [grid, setGrid] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const notify = useNotify();
   const [status, setStatus] = useState<string | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [floorOpen, setFloorOpen] = useState(false);
@@ -448,14 +449,13 @@ export function BlueprintCanvas({
     const entry = undoStack.current.pop();
     if (!entry) return;
     setBusy(true);
-    setError(null);
     try {
       await entry.undo();
       redoStack.current.push(entry);
       setStatus(t("status.undone"));
     } catch (e) {
       undoStack.current.push(entry);
-      setError(e instanceof Error ? e.message : t("error.couldntUndo"));
+      notify.error(e instanceof Error ? e.message : t("error.couldntUndo"));
     } finally {
       setHistoryVersion((v) => v + 1);
       setBusy(false);
@@ -466,14 +466,13 @@ export function BlueprintCanvas({
     const entry = redoStack.current.pop();
     if (!entry) return;
     setBusy(true);
-    setError(null);
     try {
       await entry.redo();
       undoStack.current.push(entry);
       setStatus(t("status.redone"));
     } catch (e) {
       redoStack.current.push(entry);
-      setError(e instanceof Error ? e.message : t("error.couldntRedo"));
+      notify.error(e instanceof Error ? e.message : t("error.couldntRedo"));
     } finally {
       setHistoryVersion((v) => v + 1);
       setBusy(false);
@@ -490,7 +489,6 @@ export function BlueprintCanvas({
     const clip = clipboardRef.current;
     if (!clip) return;
     setBusy(true);
-    setError(null);
     try {
       const created = await duplicateEntity(clip.liveId);
       await reload();
@@ -499,7 +497,7 @@ export function BlueprintCanvas({
       pushUndo(makeCreateUndoEntry(specOf(created), created.id));
       setStatus(t("status.pasted"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.couldntDuplicate"));
+      notify.error(e instanceof Error ? e.message : t("error.couldntDuplicate"));
     } finally {
       setBusy(false);
     }
@@ -507,7 +505,6 @@ export function BlueprintCanvas({
 
   async function handleAdd(kind: LocationKind) {
     setBusy(true);
-    setError(null);
     try {
       const pos = defaultPosition(locations.length);
       const created = await createEntity(facility.id, kind, pos.x, pos.y);
@@ -515,7 +512,7 @@ export function BlueprintCanvas({
       setSelectedId(created.id);
       pushUndo(makeCreateUndoEntry(specOf(created), created.id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.couldntAdd"));
+      notify.error(e instanceof Error ? e.message : t("error.couldntAdd"));
     } finally {
       setBusy(false);
     }
@@ -530,13 +527,12 @@ export function BlueprintCanvas({
       if (typeof v === "string" || typeof v === "number") prevPatch[key] = v;
     }
     setBusy(true);
-    setError(null);
     try {
       await updateEntity(id, patch);
       await reload();
       pushUndo({ undo: () => applyEntityPatch(id, prevPatch), redo: () => applyEntityPatch(id, patch) });
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.couldntSave"));
+      notify.error(e instanceof Error ? e.message : t("error.couldntSave"));
     } finally {
       setBusy(false);
     }
@@ -547,14 +543,13 @@ export function BlueprintCanvas({
     const spec = specOf(selected);
     const id = selected.id;
     setBusy(true);
-    setError(null);
     try {
       await deleteEntity(id);
       setSelectedId(null);
       await reload();
       pushUndo(makeDeleteUndoEntry(spec, id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.couldntDelete"));
+      notify.error(e instanceof Error ? e.message : t("error.couldntDelete"));
     } finally {
       setBusy(false);
     }
@@ -563,14 +558,13 @@ export function BlueprintCanvas({
   async function handleDuplicate() {
     if (!selected) return;
     setBusy(true);
-    setError(null);
     try {
       const copy = await duplicateEntity(selected.id);
       await reload();
       setSelectedId(copy.id);
       pushUndo(makeCreateUndoEntry(specOf(copy), copy.id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.couldntDuplicate"));
+      notify.error(e instanceof Error ? e.message : t("error.couldntDuplicate"));
     } finally {
       setBusy(false);
     }
@@ -578,7 +572,6 @@ export function BlueprintCanvas({
 
   async function handleFloorSave() {
     setBusy(true);
-    setError(null);
     try {
       await updateFacility(facility.id, {
         name: floorDraft.name,
@@ -593,7 +586,7 @@ export function BlueprintCanvas({
       }));
       setFloorOpen(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.couldntSaveFloor"));
+      notify.error(e instanceof Error ? e.message : t("error.couldntSaveFloor"));
     } finally {
       setBusy(false);
     }
@@ -609,7 +602,6 @@ export function BlueprintCanvas({
 
   async function runTemplate(key: TemplateKey, replace: boolean) {
     setBusy(true);
-    setError(null);
     try {
       await applyTemplate(facility.id, key, replace);
       await reload();
@@ -618,7 +610,7 @@ export function BlueprintCanvas({
       setConfirmTemplate(null);
       clearHistory();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.couldntApplyTemplate"));
+      notify.error(e instanceof Error ? e.message : t("error.couldntApplyTemplate"));
     } finally {
       setBusy(false);
     }
@@ -626,14 +618,13 @@ export function BlueprintCanvas({
 
   async function handleAddSector() {
     setBusy(true);
-    setError(null);
     try {
       const created = await addSector(facility.id);
       await reload();
       setSelectedId(created.id);
       clearHistory();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("error.couldntAdd"));
+      notify.error(e instanceof Error ? e.message : t("error.couldntAdd"));
     } finally {
       setBusy(false);
     }
@@ -721,7 +712,7 @@ export function BlueprintCanvas({
         .then(() => {
           pushUndo({ undo: () => applyEntityPatch(d.id, prevPatch), redo: () => applyEntityPatch(d.id, patch) });
         })
-        .catch((e) => setError(e instanceof Error ? e.message : t("error.couldntSave")))
+        .catch((e) => notify.error(e instanceof Error ? e.message : t("error.couldntSave")))
         .finally(() => setBusy(false));
     }
     window.addEventListener("mousemove", onMove);
@@ -925,8 +916,7 @@ export function BlueprintCanvas({
               </div>
             </>
           )}
-          {error && <span style={{ fontSize: 11, color: "var(--color-accent-800)", marginLeft: 8 }}>{error}</span>}
-          {!error && status && <span style={{ fontSize: 11, color: "var(--color-accent-700)", marginLeft: 8 }}>{status}</span>}
+          {status && <span style={{ fontSize: 11, color: "var(--color-accent-700)", marginLeft: 8 }}>{status}</span>}
         </div>
 
         <div ref={wrapRef} style={{ flex: 1, minHeight: 0, position: "relative", overflow: "auto" }} onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}>
@@ -1157,7 +1147,6 @@ export function BlueprintCanvas({
               </div>
             )}
 
-            {error && <p style={{ fontSize: 12, color: "var(--color-accent-800)" }}>{error}</p>}
 
             {!readOnly && (
               <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
@@ -1187,7 +1176,6 @@ export function BlueprintCanvas({
                 <span style={{ fontFamily: "var(--font-heading)", fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{c.n}</span>
               </div>
             ))}
-            {error && <p style={{ fontSize: 12, color: "var(--color-accent-800)" }}>{error}</p>}
           </div>
         )}
       </div>
@@ -1231,7 +1219,6 @@ export function BlueprintCanvas({
             <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
             <div className="dialog-title">{t("confirmReplaceTitle")}</div>
             <div className="dialog-body">{t("confirmReplaceBody")}</div>
-            {error && <p style={{ fontSize: 12, color: "var(--color-accent-800)" }}>{error}</p>}
             <div className="dialog-actions">
               <button className="btn btn-secondary" onClick={() => setConfirmTemplate(null)} style={{ flex: 1 }}>{t("cancel")}</button>
               <button className="btn btn-primary" onClick={() => runTemplate(confirmTemplate, true)} disabled={busy} style={{ flex: 1 }}>{t("confirmReplace")}</button>

@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { PublicLink } from "@/components/public-link";
 import { useActionState } from "react";
 import { signUp } from "./actions";
+import { FormError } from "@/components/form-error";
 
 export function SignupForm() {
   const t = useTranslations("auth");
@@ -27,7 +28,7 @@ export function SignupForm() {
         <label>{t("password")}</label>
         <input className="input" name="password" type="password" placeholder={t("signup.passwordHint")} required minLength={8} />
       </div>
-      {state?.error && <p style={{ fontSize: 13, color: "var(--color-accent-800)" }}>{state.error}</p>}
+      <FormError>{state?.error}</FormError>
       <button type="submit" className="btn btn-primary btn-block" disabled={isPending}>
         {isPending ? t("signup.creating") : t("signup.createAccount")}
       </button>

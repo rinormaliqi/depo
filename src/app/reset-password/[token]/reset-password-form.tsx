@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { resetPassword } from "./actions";
+import { FormError } from "@/components/form-error";
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const t = useTranslations("resetPassword");
@@ -15,7 +16,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <label>{t("newPassword")}</label>
         <input className="input" name="password" type="password" placeholder={t("passwordHint")} required minLength={8} />
       </div>
-      {state?.error && <p style={{ fontSize: 13, color: "var(--color-accent-800)" }}>{state.error}</p>}
+      <FormError>{state?.error}</FormError>
       <button type="submit" className="btn btn-primary btn-block" disabled={isPending}>
         {isPending ? t("resetting") : t("resetButton")}
       </button>

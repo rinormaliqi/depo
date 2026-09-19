@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { NotificationsProvider } from "@/components/notifications";
 import { siteMetadata } from "@/lib/seo";
 import "./globals.css";
 
@@ -24,13 +25,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
-  const messages = await getMessages();
+  const [locale, messages, tn, tc] = await Promise.all([getLocale(), getMessages(), getTranslations("notify"), getTranslations("common")]);
+  const labels = { confirm: tn("confirm"), cancel: tn("cancel"), close: tn("close"), errorGeneric: tc("errorGeneric") };
 
   return (
     <html lang={locale}>
       <body>
-        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>
+          <NotificationsProvider labels={labels}>{children}</NotificationsProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -41,6 +41,21 @@
   --color-accent-2-800: #314457;
   --color-accent-2-900: #1f2d3a;
 
+  /* Status ramps. Success is the depot green — a dark, slightly desaturated
+     green that reads as "stocked / done" next to the ink blue, and is the
+     second colour the landing page and the notifications share. */
+  --color-success-100: #e6f1ea;
+  --color-success-200: #c5e0cf;
+  --color-success-500: #2f7a4f;
+  --color-success-700: #1f5c3a;
+  --color-success-800: #17452c;
+  --color-warning-100: #fdf3e1;
+  --color-warning-500: #c98a1c;
+  --color-warning-700: #8a5a12;
+  --color-danger-100: #fbe9e7;
+  --color-danger-500: #b4443a;
+  --color-danger-700: #8a2f27;
+
   --font-heading: "Barlow Condensed", system-ui, sans-serif;
   --font-heading-weight: 600;
   --font-body: "Barlow", system-ui, sans-serif;
@@ -288,6 +303,8 @@ textarea.input { min-height: 90px; resize: vertical; }
 .btn { border: 1px solid var(--color-divider); }
 .btn-primary { border-color: var(--color-accent); }
 .btn-ghost { border-color: transparent; }
+.btn-danger { background: var(--color-danger-500); color: var(--color-bg); border-color: var(--color-danger-500); }
+.btn-danger:hover { background: var(--color-danger-700); }
 
 /* — locate pulse: a temporary attention-ping for "you searched, here it is"
      flows (a found bin on the blueprint canvas). Animates transform/filter
@@ -314,3 +331,57 @@ textarea.input { min-height: 90px; resize: vertical; }
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
+
+/* — notifications: one toaster for the whole app (src/components/notifications).
+     Corner-bracketed like every other surface; a coloured mark on the left
+     says which kind. Desktop: stacked top-right. Phone: full width at the
+     bottom, above the safe area, where a thumb can dismiss it. */
+.toaster {
+  position: fixed; top: 14px; right: 14px; z-index: 90;
+  display: flex; flex-direction: column; gap: 8px; width: min(380px, calc(100vw - 28px));
+  pointer-events: none;
+}
+.toast {
+  position: relative; pointer-events: auto;
+  display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px 11px 12px;
+  background: var(--color-surface); border: 1px solid var(--color-divider); box-shadow: var(--shadow-lg);
+  font-size: 13px; line-height: 1.45; color: var(--color-text);
+  animation: toast-in .18s ease-out;
+}
+.toast-mark {
+  flex: none; width: 20px; height: 20px; display: grid; place-items: center;
+  font-family: var(--font-heading); font-weight: 700; font-size: 12px; color: #fff;
+}
+.toast-success .toast-mark { background: var(--color-success-500); }
+.toast-error .toast-mark { background: var(--color-danger-500); }
+.toast-warning .toast-mark { background: var(--color-warning-500); }
+.toast-info .toast-mark { background: var(--color-accent); }
+.toast-success { border-left: 3px solid var(--color-success-500); }
+.toast-error { border-left: 3px solid var(--color-danger-500); }
+.toast-warning { border-left: 3px solid var(--color-warning-500); }
+.toast-info { border-left: 3px solid var(--color-accent); }
+.toast-text { flex: 1; min-width: 0; }
+.toast-title { font-family: var(--font-heading); font-weight: 600; font-size: 14px; letter-spacing: .02em; margin-bottom: 1px; }
+.toast-action {
+  margin-top: 6px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--color-accent); text-decoration: underline;
+}
+.toast-close {
+  flex: none; width: 24px; height: 24px; margin: -4px -4px -4px 0; border: 0; background: none; cursor: pointer;
+  font-size: 18px; line-height: 1; color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.toast-close:hover { color: var(--color-text); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 600px) {
+  .toaster {
+    top: auto; right: 12px; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: auto; flex-direction: column-reverse;
+  }
+  .toast { padding: 13px 12px; font-size: 14px; }
+  .toast-close { width: 32px; height: 32px; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+}
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+/* — inline form error (src/components/form-error.tsx) */
+.form-error { margin: 0; font-size: 13px; color: var(--color-danger-700); }

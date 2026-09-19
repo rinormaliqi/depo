@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import * as rawActions from "./actions";
 import { unwrap } from "@/lib/action-result";
+import { useNotify } from "@/components/notifications";
 
 const receiveStock = unwrap(rawActions.receiveStock);
 const pickStock = unwrap(rawActions.pickStock);
@@ -16,26 +17,24 @@ export function StockForm({ locationId, items }: { locationId: string; items: It
   const router = useRouter();
   const [itemId, setItemId] = useState(items[0]?.id ?? "");
   const [quantity, setQuantity] = useState("1");
-  const [error, setError] = useState<string | null>(null);
+  const notify = useNotify();
   const [isPending, setIsPending] = useState(false);
 
   async function handle(action: typeof receiveStock | typeof pickStock) {
-    setError(null);
     const qty = Number(quantity);
     if (!itemId || !Number.isInteger(qty) || qty <= 0) {
-      setError(t("bin.errorPickItem"));
+      notify.warning(t("bin.errorPickItem"));
       return;
     }
+    const item = items.find((i) => i.id === itemId);
     setIsPending(true);
-    try {
-      await action(locationId, itemId, qty);
-      setQuantity("1");
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.errorGeneric"));
-    } finally {
-      setIsPending(false);
-    }
+    const done = await notify.run(() => action(locationId, itemId, qty), {
+      success: t(action === receiveStock ? "bin.added" : "bin.removed", { qty, unit: item?.unitOfMeasure ?? "", name: item?.name ?? "" }),
+    });
+    setIsPending(false);
+    if (done === undefined) return;
+    setQuantity("1");
+    router.refresh();
   }
 
   return (
@@ -64,7 +63,6 @@ export function StockForm({ locationId, items }: { locationId: string; items: It
           {t("bin.remove")}
         </button>
       </div>
-      {error && <p style={{ fontSize: 13, color: "var(--color-accent-800)" }}>{error}</p>}
     </div>
   );
 }

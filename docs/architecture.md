@@ -665,6 +665,27 @@ independently of any zone is left where it is rather than attempting a full gene
 layout engine that reflows the whole floor. The new zone itself is created empty; a user fills
 it from the palette like any other zone.
 
+## Notifications — one channel for feedback
+
+`src/components/notifications/`: a `NotificationsProvider` mounted once in the root layout,
+`useNotify()` for toasts (`success/error/warning/info`, plus `notify.run(fn, { success })`, which
+awaits a server action and turns the `UserError` message that `unwrap()` rethrows — permission,
+plan limit, lockout, validation — into an error toast with no per-feature code) and
+`useConfirm()` for a promise-based dialog (`danger` variant; an `input` option that replaces
+`window.prompt`). The browser's own `alert/confirm/prompt` are banned — `src/tests/
+no-browser-dialogs.test.ts` greps `src/` and fails the suite if one comes back.
+
+Behaviour: success/info dismiss themselves, warnings a little later, errors stay until closed;
+hover pauses the timer; at most three stack; `role="alert"` for errors, `aria-live` otherwise.
+Desktop stacks top-right; under 600px the toaster is full-width at the bottom above the safe
+area. Styles live in `ds.css` next to the new status tokens (`--color-success-*` — the depot
+green the landing page shares — `--color-warning-*`, `--color-danger-*`, `.btn-danger`).
+
+Inline messages remain only for field-level validation, through one `<FormError>` component
+(`src/components/form-error.tsx`); outcomes — booked, saved, added, blocked — go through toasts.
+The camera dialog keeps its in-viewport status text because it explains the black rectangle
+the user is looking at.
+
 ## Landing page
 
 `/` (`src/app/page.tsx`) shows the product instead of describing it. The hero is the core loop

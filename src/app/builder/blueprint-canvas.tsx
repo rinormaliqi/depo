@@ -7,12 +7,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
 import { LOCATION_TYPES, TEMPLATE_KEYS, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
+import type { FacilityLevel } from "@/lib/levels";
+import { useConfirm } from "@/components/notifications";
 import * as rawActions from "./actions";
 import { unwrap } from "@/lib/action-result";
 import { useNotify } from "@/components/notifications";
 import { Gate } from "@/components/capabilities";
 
 const addSector = unwrap(rawActions.addSector);
+const addLevel = unwrap(rawActions.addLevel);
+const renameLevel = unwrap(rawActions.renameLevel);
+const removeTopLevel = unwrap(rawActions.removeTopLevel);
 const applyTemplate = unwrap(rawActions.applyTemplate);
 const createEntity = unwrap(rawActions.createEntity);
 const deleteEntity = unwrap(rawActions.deleteEntity);
@@ -171,12 +176,14 @@ export function BlueprintCanvas({
   facility: initialFacility,
   initialLocations,
   initialOccupiedBinIds,
+  initialLevels,
   initialHighlightBinId,
   readOnly = false,
 }: {
   facility: Facility;
   initialLocations: LocationRow[];
   initialOccupiedBinIds: string[];
+  initialLevels: FacilityLevel[];
   initialHighlightBinId?: string;
   // A worker's view: the server rejects every layout write for them anyway
   // (requirePermission("editLayout")), this just stops the UI offering
@@ -188,6 +195,9 @@ export function BlueprintCanvas({
   const [facility, setFacility] = useState(initialFacility);
   const [locations, setLocations] = useState(initialLocations);
   const [occupied, setOccupied] = useState(new Set(initialOccupiedBinIds));
+  const [levels, setLevels] = useState<FacilityLevel[]>(initialLevels);
+  const [levelsOpen, setLevelsOpen] = useState(false);
+  const confirm = useConfirm();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<number | "all">("all");
   const [zoom, setZoom] = useState(0.8);
@@ -228,7 +238,6 @@ export function BlueprintCanvas({
     () => locations.find((l) => l.id === selectedId) ?? null,
     [locations, selectedId],
   );
-  const maxLevels = useMemo(() => Math.max(1, ...locations.map((l) => l.levels)), [locations]);
 
   useEffect(() => {
     if (!selected) return;
@@ -379,6 +388,38 @@ export function BlueprintCanvas({
     const data = await getBlueprint(facility.id);
     setLocations(data.locations);
     setOccupied(new Set(data.occupiedBinIds));
+    setLevels(data.levels);
+  }
+
+  // ── Facility levels ────────────────────────────────────────────────────
+  const levelName = (lv: FacilityLevel) => lv.name || t("levels.defaultName", { n: lv.index });
+
+  async function handleAddLevel() {
+    const extend = await confirm({ title: t("levels.addTitle", { n: levels.length + 1 }), body: t("levels.addBody"), confirmLabel: t("levels.addExtend"), cancelLabel: t("levels.addOnly") });
+    // Cancel here means "add without extending" — the dialog offers two
+    // ways of adding, not add/abort; abort is the backdrop or Esc, which
+    // also resolves false, so treat both the same and add either way.
+    setBusy(true);
+    const done = await notify.run(() => addLevel(facility.id, extend === true), { success: t("levels.added", { n: levels.length + 1 }) });
+    if (done) { await reload(); clearHistory(); }
+    setBusy(false);
+  }
+
+  async function handleRenameLevel(lv: FacilityLevel) {
+    const name = await confirm({ title: t("levels.renameTitle", { n: lv.index }), input: { label: t("levels.renameLabel"), defaultValue: lv.name ?? "", placeholder: t("levels.defaultName", { n: lv.index }) }, confirmLabel: t("save") });
+    if (name === null) return;
+    const done = await notify.run(() => renameLevel(facility.id, lv.id, name || null));
+    if (done !== undefined) await reload();
+  }
+
+  async function handleRemoveTopLevel() {
+    const top = levels[levels.length - 1];
+    const ok = await confirm({ title: t("levels.removeTitle", { name: levelName(top) }), body: t("levels.removeBody"), confirmLabel: t("delete"), danger: true });
+    if (!ok) return;
+    setBusy(true);
+    const done = await notify.run(() => removeTopLevel(facility.id), { success: t("levels.removed", { name: levelName(top) }) });
+    if (done) { await reload(); clearHistory(); if (selectedLevel !== "all" && selectedLevel > levels.length - 1) setSelectedLevel("all"); }
+    setBusy(false);
   }
 
   // ── Undo/redo ──────────────────────────────────────────────────────────
@@ -890,7 +931,7 @@ export function BlueprintCanvas({
             </>
           )}
 
-          {maxLevels > 1 && (
+          {(levels.length > 1 || !readOnly) && (
             <>
               <div style={{ width: 1, height: 17, background: "var(--color-divider)" }} />
               <span style={{ fontFamily: "var(--font-heading)", fontSize: 10, letterSpacing: ".14em", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
@@ -904,17 +945,21 @@ export function BlueprintCanvas({
                 >
                   {t("allLevels")}
                 </button>
-                {Array.from({ length: maxLevels }, (_, i) => i + 1).map((lv) => (
+                {levels.map((lv) => (
                   <button
-                    key={lv}
+                    key={lv.id}
                     className="seg-opt"
-                    onClick={() => setSelectedLevel(lv)}
-                    style={{ background: selectedLevel === lv ? "var(--color-accent)" : undefined, color: selectedLevel === lv ? "var(--color-bg)" : undefined, fontSize: 11 }}
+                    onClick={() => setSelectedLevel(lv.index)}
+                    title={levelName(lv)}
+                    style={{ background: selectedLevel === lv.index ? "var(--color-accent)" : undefined, color: selectedLevel === lv.index ? "var(--color-bg)" : undefined, fontSize: 11 }}
                   >
-                    {lv}
+                    {lv.name ? `${lv.index} · ${lv.name}` : lv.index}
                   </button>
                 ))}
               </div>
+              {!readOnly && (
+                <button className="btn btn-secondary" onClick={() => setLevelsOpen(true)} disabled={busy} title={t("levels.manage")} style={{ minWidth: 26, padding: "1px 7px" }}>⚙</button>
+              )}
             </>
           )}
           {status && <span style={{ fontSize: 11, color: "var(--color-accent-700)", marginLeft: 8 }}>{status}</span>}
@@ -1128,7 +1173,7 @@ export function BlueprintCanvas({
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   <div className="field"><label>{t("bays")}</label><input className="input" type="number" step="1" min="1" max="48" value={draft.bays ?? ""} onChange={(e) => setDraft((d) => ({ ...d, bays: e.target.value }))} onBlur={() => commit({ bays: parseInt(draft.bays, 10) })} /></div>
-                  <div className="field"><label>{t("levels")}</label><input className="input" type="number" step="1" min="1" max="4" value={draft.levels ?? ""} onChange={(e) => setDraft((d) => ({ ...d, levels: e.target.value }))} onBlur={() => commit({ levels: parseInt(draft.levels, 10) })} /></div>
+                  <div className="field"><label>{t("levelsCount")}</label><input className="input" type="number" step="1" min="1" max={levels.length} value={draft.levels ?? ""} onChange={(e) => setDraft((d) => ({ ...d, levels: e.target.value }))} onBlur={() => commit({ levels: parseInt(draft.levels, 10) })} /></div>
                 </div>
                 <div style={{ marginTop: 9, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11 }}>
                   <span style={{ color: "color-mix(in srgb,var(--color-text) 60%,transparent)" }}>{t("occupied")}</span>
@@ -1199,6 +1244,37 @@ export function BlueprintCanvas({
             <div className="dialog-actions">
               <button className="btn btn-secondary" onClick={() => setFloorOpen(false)} style={{ flex: 1 }}>{t("cancel")}</button>
               <button className="btn btn-primary" onClick={handleFloorSave} disabled={busy} style={{ flex: 1 }}>{t("save")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {levelsOpen && (
+        <div className="dialog-backdrop" style={{ position: "fixed", zIndex: 60 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setLevelsOpen(false); }}>
+          <div className="dialog blueprint">
+            <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+            <div className="dialog-title">{t("levels.manage")}</div>
+            <div className="dialog-body">{t("levels.manageBody")}</div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {levels.map((lv) => (
+                <div key={lv.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 0", borderBottom: "1px solid var(--color-divider)", fontSize: 13 }}>
+                  <span>
+                    <span style={{ fontFamily: "var(--font-heading)", fontSize: 15, marginRight: 8 }}>{lv.index}</span>
+                    {levelName(lv)}
+                    <span className="text-muted"> · {t("levels.racksOn", { n: locations.filter((l) => !l.isBin && l.levels >= lv.index && LOCATION_TYPES[l.kind as LocationKind].spatial === "store").length })}</span>
+                  </span>
+                  <span style={{ display: "flex", gap: 4 }}>
+                    <button className="btn btn-ghost" onClick={() => handleRenameLevel(lv)} disabled={busy} style={{ fontSize: 11 }}>{t("levels.rename")}</button>
+                    {lv.index === levels.length && levels.length > 1 && (
+                      <button className="btn btn-ghost" onClick={handleRemoveTopLevel} disabled={busy} style={{ fontSize: 11, color: "var(--color-danger-700)" }}>{t("delete")}</button>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="dialog-actions">
+              <button className="btn btn-secondary" onClick={() => setLevelsOpen(false)} style={{ flex: 1 }}>{t("cancel")}</button>
+              <button className="btn btn-primary" onClick={handleAddLevel} disabled={busy} style={{ flex: 1 }}>{t("levels.add")}</button>
             </div>
           </div>
         </div>

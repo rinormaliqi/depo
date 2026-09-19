@@ -19,6 +19,7 @@ import {
   type TemplateKey,
 } from "@/lib/blueprint-types";
 import { assertCanAddBins } from "@/lib/plan-limits";
+import { addLevel as addLevelRow, ensureLevels, removeTopLevel as removeTopLevelRow, renameLevel as renameLevelRow, type FacilityLevel } from "@/lib/levels";
 import { requirePermission } from "@/lib/permissions";
 import { currentFacility, listFacilities, rememberFacility } from "@/lib/facilities";
 import { getCapabilitiesFor, requireCapability, requireRoom } from "@/lib/capabilities";
@@ -29,7 +30,6 @@ import { UserError } from "@/lib/user-error";
 export type LocationRow = typeof locations.$inferSelect;
 
 const MAX_BAYS = 48;
-const MAX_LEVELS = 4;
 
 async function requireOwnedFacility(facilityId: string) {
   const organizationId = await requireOrgId();
@@ -150,7 +150,8 @@ export async function getBlueprint(facilityId: string) {
         .where(and(inArray(stock.locationId, binIds), gt(stock.quantity, 0)))
     : [];
 
-  return { locations: rows, occupiedBinIds: occupied.map((o) => o.locationId) };
+  const levels = await ensureLevels(facilityId);
+  return { locations: rows, occupiedBinIds: occupied.map((o) => o.locationId), levels };
 }
 
 function gridBinRows(
@@ -497,7 +498,9 @@ async function updateEntityImpl(
 
   if ((patch.bays !== undefined || patch.levels !== undefined) && type.spatial === "store") {
     const newBays = Math.max(1, Math.min(MAX_BAYS, Math.round(patch.bays ?? location.bays)));
-    const newLevels = Math.max(1, Math.min(MAX_LEVELS, Math.round(patch.levels ?? location.levels)));
+    // A rack can span at most the levels its facility has.
+    const facilityLevelCount = (await ensureLevels(location.facilityId)).length;
+    const newLevels = Math.max(1, Math.min(facilityLevelCount, Math.round(patch.levels ?? location.levels)));
     const code = (values.code as string | undefined) ?? location.code ?? location.name;
 
     // The grid always stays dense (no gaps), so the net bin-count change is
@@ -643,4 +646,68 @@ export async function restoreEntity(
   spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number },
 ) {
   return attempt(() => restoreEntityImpl(facilityId, spec), "restoreEntity");
+}
+
+// ── Facility levels (src/lib/levels.ts) ─────────────────────────────────
+
+export async function getFacilityLevels(facilityId: string): Promise<FacilityLevel[]> {
+  await requireOwnedFacility(facilityId);
+  return ensureLevels(facilityId);
+}
+
+async function addLevelImpl(facilityId: string, extendRacks: boolean) {
+  await requirePermission("editLayout");
+  const facility = await requireOwnedFacility(facilityId);
+  const level = await addLevelRow(facilityId);
+  if (extendRacks) {
+    // Every rack that reached the previous top grows onto the new level:
+    // one new bin per bay, counted against the plan first.
+    const racks = await db
+      .select()
+      .from(locations)
+      .where(and(eq(locations.facilityId, facilityId), eq(locations.levels, level.index - 1)));
+    const storeRacks = racks.filter((r) => LOCATION_TYPES[r.kind as LocationKind].spatial === "store" && !r.isBin);
+    await assertCanAddBins(facility.organizationId, storeRacks.reduce((n, r) => n + r.bays, 0));
+    for (const rack of storeRacks) {
+      await reshapeGrid(rack.id, rack.code ?? rack.name, rack.levels, rack.bays, level.index);
+      await db.update(locations).set({ levels: level.index }).where(eq(locations.id, rack.id));
+    }
+  }
+  revalidatePath("/builder");
+  return level;
+}
+
+async function renameLevelImpl(facilityId: string, levelId: string, name: string | null) {
+  await requirePermission("editLayout");
+  await requireOwnedFacility(facilityId);
+  await renameLevelRow(facilityId, levelId, name);
+  revalidatePath("/builder");
+}
+
+async function removeTopLevelImpl(facilityId: string) {
+  await requirePermission("editLayout");
+  await requireOwnedFacility(facilityId);
+  const removed = await removeTopLevelRow(facilityId);
+  // Racks that spanned the removed level shrink by one (their top-level
+  // bins were verified empty by removeTopLevel).
+  const racks = await db
+    .select()
+    .from(locations)
+    .where(and(eq(locations.facilityId, facilityId), eq(locations.levels, removed.index)));
+  for (const rack of racks) {
+    await reshapeGrid(rack.id, rack.code ?? rack.name, rack.levels, rack.bays, removed.index - 1);
+    await db.update(locations).set({ levels: removed.index - 1 }).where(eq(locations.id, rack.id));
+  }
+  revalidatePath("/builder");
+  return removed;
+}
+
+export async function addLevel(facilityId: string, extendRacks: boolean) {
+  return attempt(() => addLevelImpl(facilityId, extendRacks), "addLevel");
+}
+export async function renameLevel(facilityId: string, levelId: string, name: string | null) {
+  return attempt(() => renameLevelImpl(facilityId, levelId, name), "renameLevel");
+}
+export async function removeTopLevel(facilityId: string) {
+  return attempt(() => removeTopLevelImpl(facilityId), "removeTopLevel");
 }

@@ -500,7 +500,27 @@
     "yFromWall": "Y from wall",
     "subdivision": "Subdivision",
     "bays": "Bays",
-    "levels": "Levels",
+    "levels": {
+      "defaultName": "Level {n}",
+      "manage": "Levels",
+      "manageBody": "Racks can span up to this many levels. Bin codes stay numeric (A-01-2-3 = level 2, bay 3), so renaming never changes a label.",
+      "racksOn": "{n, plural, =1 {1 rack} other {# racks}}",
+      "rename": "Rename",
+      "renameTitle": "Name level {n}",
+      "renameLabel": "Name (leave empty for the default)",
+      "add": "Add a level",
+      "addTitle": "Add level {n}",
+      "addBody": "Extend every rack that reaches the current top level onto the new one (one new bin per bay), or add the level empty and extend racks one by one?",
+      "addExtend": "Add and extend racks",
+      "addOnly": "Add empty",
+      "added": "Level {n} added",
+      "removeTitle": "Remove {name}?",
+      "removeBody": "Racks that reach it lose that level. Only possible when no bin on it holds stock.",
+      "removed": "{name} removed",
+      "errorMax": "A facility can have at most {max} levels",
+      "errorLast": "A facility needs at least one level",
+      "errorStock": "Level {level} still holds stock in {n, plural, =1 {1 bin} other {# bins}} ({codes}…) — move it first"
+    },
     "occupied": "Occupied",
     "viewStock": "View stock",
     "duplicate": "Duplicate",
@@ -539,7 +559,8 @@
     "emptyFloorBodyReadOnly": "Nothing has been mapped yet. A manager or admin sets up the floor plan.",
     "printLabel": "Print label",
     "printLabels": "Print bin labels",
-    "printAllLabels": "Print all bin labels"
+    "printAllLabels": "Print all bin labels",
+    "levelsCount": "Levels"
   },
   "bin": {
     "kicker": "Bin",

@@ -16,7 +16,7 @@ export async function login(_prevState: FormState, formData: FormData): Promise<
   }
 
   try {
-    await signIn("credentials", { email, password, redirectTo: "/builder" });
+    await signIn("credentials", { email, password, redirectTo: "/start" });
   } catch (error) {
     if (error instanceof AuthError) {
       return { error: t("errorInvalid") };

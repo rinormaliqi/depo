@@ -14,7 +14,7 @@ export const metadata = NOINDEX;
 export default async function WelcomePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
-  if (await hasMembership(session.user.id)) redirect("/builder");
+  if (await hasMembership(session.user.id)) redirect("/start");
   const t = await getTranslations("welcome");
 
   return (

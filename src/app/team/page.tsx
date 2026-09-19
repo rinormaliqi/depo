@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
+import { NotForRole } from "@/components/not-for-role";
+import { getCapabilities } from "@/lib/capabilities";
 import { AppHeader } from "@/components/app-header";
 import { getTeam } from "./actions";
 import { TeamClient } from "./team-client";
@@ -9,6 +11,8 @@ import { TeamClient } from "./team-client";
 export default async function TeamPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  const capsGate = await getCapabilities();
+  if (!capsGate?.can.manageTeam) return <NotForRole capability="manageTeam" />;
 
   const [facility, team, t] = await Promise.all([getMyFacility(), getTeam(), getTranslations()]);
 

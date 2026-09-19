@@ -603,7 +603,11 @@
     "editLayout": "Only managers and admins can change the layout",
     "manageItems": "Only managers and admins can add items",
     "manageTeam": "Only managers and admins can manage the team",
-    "manageBilling": "Only an admin can manage billing"
+    "manageBilling": "Only an admin can manage billing",
+    "printLabels": "Your role can't print labels",
+    "cameraScanning": "Your role can't use camera scanning",
+    "viewMetrics": "Your role can't view metrics",
+    "multiFacility": "Only managers and admins can add facilities"
   },
   "public": {
     "updated": "Last updated {date}",
@@ -741,5 +745,18 @@
     "confirm": "Confirm",
     "cancel": "Cancel",
     "close": "Close"
+  },
+  "capability": {
+    "plan": {
+      "printLabels": "Printable labels aren't included in your plan",
+      "cameraScanning": "Camera scanning isn't included in your plan",
+      "viewMetrics": "Metrics aren't included in your plan",
+      "multiFacility": "Your plan covers one facility — upgrade to add more",
+      "moveStock": "Not included in your plan",
+      "editLayout": "Not included in your plan",
+      "manageItems": "Not included in your plan",
+      "manageTeam": "Not included in your plan",
+      "manageBilling": "Not included in your plan"
+    }
   }
 }

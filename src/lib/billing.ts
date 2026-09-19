@@ -1,22 +1,14 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { facilities, locations, memberships, organizations, payments } from "@/db/schema";
+import { loadUsage } from "@/lib/capabilities";
+import { organizations, payments } from "@/db/schema";
 import { addMonths } from "@/lib/billing-plans";
 
 export * from "@/lib/billing-plans";
 
-export async function getOrgUsage(organizationId: string) {
-  const [memberRows, facilityRows, binRows] = await Promise.all([
-    db.select({ id: memberships.id }).from(memberships).where(eq(memberships.organizationId, organizationId)),
-    db.select({ id: facilities.id }).from(facilities).where(eq(facilities.organizationId, organizationId)),
-    db
-      .select({ id: locations.id })
-      .from(locations)
-      .innerJoin(facilities, eq(locations.facilityId, facilities.id))
-      .where(and(eq(facilities.organizationId, organizationId), eq(locations.isBin, true))),
-  ]);
-  return { users: memberRows.length, facilities: facilityRows.length, bins: binRows.length };
-}
+// One counter for the whole app (src/lib/capabilities.ts): what the
+// plan-limit checks compare against is what /billing shows.
+export const getOrgUsage = loadUsage;
 
 // Turns a paid payment into access. Idempotent on the payment row (a
 // Paysera callback can be delivered more than once) and the single place

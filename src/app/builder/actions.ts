@@ -19,9 +19,9 @@ import {
   type TemplateKey,
 } from "@/lib/blueprint-types";
 import { assertCanAddBins } from "@/lib/plan-limits";
-import { can, requirePermission } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { currentFacility, listFacilities, rememberFacility } from "@/lib/facilities";
-import { assertCanAddFacilities } from "@/lib/plan-limits";
+import { getCapabilitiesFor, requireCapability, requireRoom } from "@/lib/capabilities";
 import { getMyOrgId, getMySession, requireOrgId } from "@/lib/session";
 import { attempt } from "@/lib/action-result";
 import { UserError } from "@/lib/user-error";
@@ -77,7 +77,9 @@ export async function getMyFacilities() {
   const session = await getMySession();
   if (!session) return { facilities: [], canAdd: false };
   const rows = await listFacilities(session.organizationId);
-  return { facilities: rows.map((f) => ({ id: f.id, name: f.name })), canAdd: can(session.role, "editLayout") };
+  const caps = await getCapabilitiesFor(session.organizationId, session.role);
+  const room = caps.limits.facilities.max === null || caps.limits.facilities.used < caps.limits.facilities.max;
+  return { facilities: rows.map((f) => ({ id: f.id, name: f.name })), canAdd: caps.can.multiFacility && caps.can.editLayout && room };
 }
 
 export async function switchFacility(facilityId: string) {
@@ -95,7 +97,8 @@ async function createFacilityImpl(name: string) {
     const t = await getTranslations("builder.error");
     throw new UserError(t("nameRequired"));
   }
-  await assertCanAddFacilities(organizationId, 1);
+  await requireCapability("multiFacility");
+  await requireRoom(organizationId, "facilities", 1);
   const [facility] = await db.insert(facilities).values({ organizationId, name: trimmed }).returning();
   await rememberFacility(facility.id);
   revalidatePath("/", "layout");

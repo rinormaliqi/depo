@@ -6,7 +6,7 @@ import { getFacilityLocations, getMyFacility } from "@/app/builder/actions";
 import { db } from "@/db";
 import { facilities, locations } from "@/db/schema";
 import { locationLabel } from "@/lib/location-path";
-import { requireSession } from "@/lib/session";
+import { requireCapability } from "@/lib/capabilities";
 import { requireOwnedBin } from "@/lib/stock";
 import { UserError } from "@/lib/user-error";
 
@@ -25,7 +25,7 @@ export type LabelScope =
 export async function getLabelBins(
   scope: LabelScope,
 ): Promise<{ facilityId: string; facilityName: string; title: string; bins: LabelBin[] }> {
-  const { organizationId } = await requireSession();
+  const { organizationId } = await requireCapability("printLabels");
   const t = await getTranslations("labels");
 
   let facilityId: string;

@@ -9,6 +9,7 @@ import { facilities, items, locations, movements } from "@/db/schema";
 import { locationLabel } from "@/lib/location-path";
 import { requirePermission } from "@/lib/permissions";
 import { requireSession } from "@/lib/session";
+import { requireCapability } from "@/lib/capabilities";
 import { receiveStockAt } from "@/lib/stock";
 import { attempt } from "@/lib/action-result";
 import { UserError } from "@/lib/user-error";
@@ -93,7 +94,7 @@ export async function commitScan(itemId: string, quantity: number, code: string)
 const BIN_URL = /\/builder\/bin\/([0-9a-f-]{36})(?:[?#]|$)/i;
 
 async function resolveScanImpl(raw: string): Promise<{ code: string }> {
-  const { organizationId } = await requireSession();
+  const { organizationId } = await requireCapability("cameraScanning");
   const t = await getTranslations("scanner");
   const match = raw.trim().match(BIN_URL);
   if (!match) return { code: raw.trim().toUpperCase() };

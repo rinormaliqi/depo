@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
-import { getMyPermissions } from "@/lib/permissions";
+import { getCapabilities } from "@/lib/capabilities";
 import { getMySession } from "@/lib/session";
 import { getBlueprint, getMyFacility } from "./actions";
 import { BlueprintCanvas } from "./blueprint-canvas";
@@ -32,7 +32,7 @@ export default async function BuilderPage({
     );
   }
 
-  const [{ locations, occupiedBinIds }, permissions] = await Promise.all([getBlueprint(facility.id), getMyPermissions()]);
+  const [{ locations, occupiedBinIds }, caps] = await Promise.all([getBlueprint(facility.id), getCapabilities()]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
@@ -50,7 +50,7 @@ export default async function BuilderPage({
         initialLocations={locations}
         initialOccupiedBinIds={occupiedBinIds}
         initialHighlightBinId={bin}
-        readOnly={!permissions.editLayout}
+        readOnly={!caps?.can.editLayout}
       />
     </div>
   );

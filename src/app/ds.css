@@ -385,3 +385,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 
 /* — inline form error (src/components/form-error.tsx) */
 .form-error { margin: 0; font-size: 13px; color: var(--color-danger-700); }
+
+/* — a control kept visible but blocked by role/plan (<Gate mode="disable">):
+     tapping it explains why via a toast, so it must still look tappable-ish. */
+.is-blocked { opacity: .55; cursor: not-allowed; }

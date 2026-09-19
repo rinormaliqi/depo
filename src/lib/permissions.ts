@@ -1,7 +1,5 @@
-import { getTranslations } from "next-intl/server";
 import type { MembershipRole } from "@/db/schema";
-import { requireActiveOrg, requireSession } from "@/lib/session";
-import { UserError } from "@/lib/user-error";
+import { requireSession } from "@/lib/session";
 
 // What each role may do. Roles were stored on memberships from the start
 // but only the invite flow ever read them — a worker could redraw the
@@ -32,20 +30,17 @@ export function can(role: MembershipRole, permission: Permission): boolean {
   return (PERMISSIONS[permission] as readonly MembershipRole[]).includes(role);
 }
 
-// The write-path gate: org must be unlocked AND the caller's role must
-// carry the permission. Throws a translated message either way, so a
-// client can surface it as-is.
+// The write-path gate — delegates to the capability system (role × plan ×
+// lock state) so an action and the button that triggers it agree on the
+// answer and the reason. Kept under this name because every mutating
+// action already calls it.
 export async function requirePermission(permission: Permission) {
-  const session = await requireActiveOrg();
-  if (!can(session.role, permission)) {
-    const t = await getTranslations("permission");
-    throw new UserError(t(permission));
-  }
-  return session;
+  const { requireCapability } = await import("@/lib/capabilities");
+  return requireCapability(permission);
 }
 
-// Read-side variant for pages deciding what to render (e.g. hide the
-// builder's palette for a worker) — doesn't care whether the org is locked.
+// Read-side variant for pages deciding what to render — role only, no
+// plan or lock state. Prefer getCapabilities() for anything new.
 export async function getMyPermissions() {
   const session = await requireSession();
   const granted = {} as Record<Permission, boolean>;

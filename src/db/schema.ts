@@ -8,6 +8,7 @@ import {
   timestamp,
   uniqueIndex,
   index,
+  jsonb,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
@@ -20,6 +21,10 @@ export const plans = pgTable("plans", {
   maxFacilities: integer("max_facilities"),
   maxBins: integer("max_bins"),
   movementHistoryMonths: integer("movement_history_months"),
+  // Feature entitlements as data, like the limits: { cameraScanning: true, … }.
+  // Keys are the plan-gated capabilities in src/lib/capabilities.ts; a
+  // missing key means "not included". Seeded in src/db/seed.ts.
+  features: jsonb("features").$type<Record<string, boolean>>().notNull().default({}),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

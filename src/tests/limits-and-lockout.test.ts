@@ -7,6 +7,7 @@ import { invites, payments } from "@/db/schema";
 import { applyPaidPayment } from "@/lib/billing";
 import { limitsExceeded } from "@/lib/billing-plans";
 import { requirePermission } from "@/lib/permissions";
+import { getCapabilitiesFor, requireCapability } from "@/lib/capabilities";
 import { assertCanAddBins, assertCanAddFacilities, assertCanAddSeats } from "@/lib/plan-limits";
 import { getOrgLockReason } from "@/lib/session";
 import { addMember, createBin, createOrg, orgById, seedPlans } from "@/test-support/factories";
@@ -141,5 +142,26 @@ describe("applyPaidPayment", () => {
     assert.equal((await orgById(org.id)).paidUntil!.getTime(), once);
     const [row] = await db.select().from(payments).where(eq(payments.id, p.id));
     assert.equal(row.status, "paid");
+  });
+});
+
+describe("capabilities (server)", () => {
+  before(freshDatabase);
+
+  test("requireCapability gates features by plan and role, and usage feeds the limits", async () => {
+    const { org } = await createOrg({ planKey: "starter" });
+    const admin = await addMember(org.id, "admin");
+    const worker = await addMember(org.id, "worker");
+
+    actAs(admin);
+    await assert.doesNotReject(requireCapability("printLabels"));
+    await assert.rejects(requireCapability("multiFacility"), /capability\.plan\.multiFacility/, "Starter has one facility");
+    actAs(worker);
+    await assert.rejects(requireCapability("multiFacility"), /permission\.multiFacility/, "role is explained before plan");
+
+    const caps = await getCapabilitiesFor(org.id, "admin");
+    assert.deepEqual(caps.limits.users, { used: 2, max: 5 });
+    assert.deepEqual(caps.limits.facilities, { used: 1, max: 1 });
+    assert.equal(caps.plan.key, "starter");
   });
 });

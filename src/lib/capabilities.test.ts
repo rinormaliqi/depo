@@ -1,0 +1,58 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { CAPABILITIES, resolveCapabilities, type Capability, type PlanEntitlements } from "./capabilities";
+
+const starter: PlanEntitlements = { key: "starter", name: "Starter", features: { printLabels: true, cameraScanning: true, viewMetrics: true }, maxUsers: 5, maxFacilities: 1, maxBins: 500, movementHistoryMonths: 12 };
+const business: PlanEntitlements = { ...starter, key: "business", name: "Business", maxUsers: 20, maxFacilities: 3, maxBins: 5000, movementHistoryMonths: 24 };
+const bare: PlanEntitlements = { ...starter, key: "bare", name: "Bare", features: {} };
+const usage = { users: 1, facilities: 1, bins: 0 };
+
+function expectCan(caps: ReturnType<typeof resolveCapabilities>, allowed: Capability[]) {
+  for (const c of CAPABILITIES) assert.equal(caps.can[c], allowed.includes(c), `${caps.role}/${caps.plan.key}/${caps.locked}: ${c}`);
+}
+
+test("role decides actions; plan decides features; a worker never gets layout, team or billing", () => {
+  const worker = resolveCapabilities({ role: "worker", plan: business, locked: null, usage });
+  expectCan(worker, ["moveStock", "printLabels", "cameraScanning", "viewMetrics"]);
+  assert.deepEqual(worker.reason.editLayout, { kind: "role" });
+  assert.deepEqual(worker.reason.multiFacility, { kind: "role" });
+
+  const manager = resolveCapabilities({ role: "manager", plan: business, locked: null, usage });
+  expectCan(manager, ["moveStock", "editLayout", "manageItems", "manageTeam", "printLabels", "cameraScanning", "viewMetrics", "multiFacility"]);
+  assert.deepEqual(manager.reason.manageBilling, { kind: "role" });
+
+  const admin = resolveCapabilities({ role: "admin", plan: business, locked: null, usage });
+  expectCan(admin, [...CAPABILITIES]);
+});
+
+test("a plan without a feature switches it off for every role, with the plan as the reason", () => {
+  const admin = resolveCapabilities({ role: "admin", plan: bare, locked: null, usage });
+  assert.equal(admin.can.cameraScanning, false);
+  assert.deepEqual(admin.reason.cameraScanning, { kind: "plan" });
+  assert.equal(admin.can.editLayout, true, "actions are not plan features");
+  // multiFacility follows the facilities limit, not a flag.
+  assert.equal(resolveCapabilities({ role: "admin", plan: starter, locked: null, usage }).can.multiFacility, false);
+  assert.equal(resolveCapabilities({ role: "admin", plan: business, locked: null, usage }).can.multiFacility, true);
+  assert.equal(resolveCapabilities({ role: "admin", plan: { ...business, maxFacilities: null }, locked: null, usage }).can.multiFacility, true);
+});
+
+test("a locked org keeps read-side features but loses every action, naming the lock", () => {
+  for (const lock of ["unverified", "trialEnded", "expired", "pastDue", "canceled"] as const) {
+    const caps = resolveCapabilities({ role: "admin", plan: business, locked: lock, usage });
+    expectCan(caps, ["printLabels", "cameraScanning", "viewMetrics", "multiFacility"]);
+    assert.deepEqual(caps.reason.moveStock, { kind: "locked", lock });
+  }
+  // Role outranks lock in the explanation: a worker on a locked org is told
+  // about their role for layout, not about billing they can't fix.
+  const worker = resolveCapabilities({ role: "worker", plan: business, locked: "trialEnded", usage });
+  assert.deepEqual(worker.reason.editLayout, { kind: "role" });
+  assert.deepEqual(worker.reason.moveStock, { kind: "locked", lock: "trialEnded" });
+});
+
+test("limits carry usage and max, null max meaning unlimited", () => {
+  const caps = resolveCapabilities({ role: "admin", plan: { ...business, maxBins: null }, locked: null, usage: { users: 4, facilities: 2, bins: 900 } });
+  assert.deepEqual(caps.limits.users, { used: 4, max: 20 });
+  assert.deepEqual(caps.limits.facilities, { used: 2, max: 3 });
+  assert.deepEqual(caps.limits.bins, { used: 900, max: null });
+  assert.equal(caps.limits.historyMonths, 24);
+});

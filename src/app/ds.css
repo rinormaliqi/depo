@@ -49,6 +49,7 @@
   --color-success-500: #2f7a4f;
   --color-success-700: #1f5c3a;
   --color-success-800: #17452c;
+  --color-success-900: #0f2e1d;
   --color-warning-100: #fdf3e1;
   --color-warning-500: #c98a1c;
   --color-warning-700: #8a5a12;
@@ -305,6 +306,11 @@ textarea.input { min-height: 90px; resize: vertical; }
 .btn-ghost { border-color: transparent; }
 .btn-danger { background: var(--color-danger-500); color: var(--color-bg); border-color: var(--color-danger-500); }
 .btn-danger:hover { background: var(--color-danger-700); }
+/* On a dark ground (the landing's green bands): a light solid and a light outline. */
+.btn-light { background: var(--color-bg); color: var(--color-accent-900); border-color: var(--color-bg); }
+.btn-light:hover { background: #fff; }
+.btn-outline-light { background: transparent; color: var(--color-bg); border-color: color-mix(in srgb, var(--color-bg) 55%, transparent); }
+.btn-outline-light:hover { background: color-mix(in srgb, var(--color-bg) 12%, transparent); }
 
 /* — locate pulse: a temporary attention-ping for "you searched, here it is"
      flows (a found bin on the blueprint canvas). Animates transform/filter

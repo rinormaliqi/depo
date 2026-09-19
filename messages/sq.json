@@ -96,18 +96,65 @@
         "title": "Admin, menaxher, punëtor",
         "body": "Adminët vizatojnë dhe ftojnë; menaxherët aprovojnë dhe raportojnë; punëtorët skanojnë dhe kërkojnë. Një punëtor s’mund ta lëvizë raftin gabimisht."
       },
-      "person": {
-        "title": "E ndërton një njeri",
-        "body": "SmartDepo ndërtohet dhe mirëmbahet nga një person në Prishtinë. Kur shkruani, ai ju përgjigjet — dhe ai e bën rregullimin."
+      "setup": {
+        "title": "Vendoset brenda një pasditeje",
+        "body": "Nis nga një shabllon — një zonë me dy rafte, ose katër zona të muruara — riemërto ç'duhet, tërhiq pjesën tjetër në vend. Pa importues, pa konsulent."
       }
     },
     "pricingKicker": "Çmimet",
     "pricingTitle": "Tre plane, një çmim për kompani",
     "pricingLead": "Të përmasuara për një magazinë me 5 vetë, një depo me 15 vetë dhe operacione me disa objekte. Çdo plan fillon me produktin e plotë për 30 ditë.",
-    "pricingNote": "TVSH, prova dhe kthimi i parave:",
+    "pricingNote": "TVSH, prova dhe rimbursimi:",
     "pricingLink": "shih faqen e plotë të çmimeve",
     "finalTitle": "Hartoje depon këtë javë",
-    "finalBody": "Fillo provën, vizato depon nga një shabllon dhe printo etiketat e raftit të parë sot. Nëse nuk është dukshëm më shpejt se të pyesësh përreth, mos paguaj."
+    "finalBody": "Fillo provën, vizato depon nga një shabllon dhe printo etiketat e raftit të parë sot. Nëse nuk është dukshëm më shpejt se të pyesësh përreth, mos paguaj.",
+    "numbers": {
+      "lookup": {
+        "value": "2 sek",
+        "label": "nga pyetja te kutia"
+      },
+      "hardware": {
+        "value": "0",
+        "label": "pajisje për të blerë"
+      },
+      "label": {
+        "value": "70×40 mm",
+        "label": "etiketa, çdo printer"
+      },
+      "trial": {
+        "value": "30 ditë",
+        "label": "falas, pa kartelë"
+      }
+    },
+    "forKicker": "Për kë është",
+    "forTitle": "Kudo ku gjërat rrinë në rafte dhe dikush duhet t'i gjejë",
+    "for": {
+      "construction": {
+        "name": "Depo materialesh ndërtimi",
+        "what": "çimento, profile, izolim, fitinge — me paleta dhe me rafte"
+      },
+      "parts": {
+        "name": "Magazina pjesësh këmbimi",
+        "what": "mijëra artikuj të vegjël në kuti, të gjetur me SKU"
+      },
+      "metal": {
+        "name": "Oborre metali dhe profilesh",
+        "what": "gjatësi dhe tufa në vende të jashtme, të regjistruara me telefon"
+      },
+      "electrical": {
+        "name": "Shumicë elektrike dhe hidraulike",
+        "what": "bobina kabllosh, kuti fitingesh, hyrje-dalje e shpejtë"
+      },
+      "retail": {
+        "name": "Dyqane me magazinë prapa",
+        "what": "çka është në sallë dhe çka prapa, pa ecur"
+      },
+      "workshop": {
+        "name": "Punishte dhe servise",
+        "what": "vegla, materiale harxhuese dhe pjesë që 'ecin' — të regjistruara aty ku i takojnë"
+      }
+    },
+    "finalKicker": "Fillo sot"
   },
   "auth": {
     "email": "Email",

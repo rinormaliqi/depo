@@ -684,7 +684,24 @@
       "regNo": "Nr. i regjistrimit",
       "address": "Adresa",
       "email": "Email",
-      "hours": "Mbështetja është e disponueshme e hënë–e premte, 09:00–17:00."
+      "hours": "Mbështetja është e disponueshme e hënë–e premte, 09:00–17:00.",
+      "form": {
+        "name": "Emri yt",
+        "company": "Kompania (opsionale)",
+        "email": "Email",
+        "message": "Mesazhi",
+        "messagePlaceholder": "Çka ruani, afërsisht sa kuti, dhe çka do të dini?",
+        "send": "Dërgo mesazhin",
+        "sending": "Po dërgohet…",
+        "sentTitle": "Mesazhi u dërgua",
+        "sent": "Faleminderit — të përgjigjet një person në email, zakonisht brenda ditës së punës.",
+        "errorRequired": "Emri, email-i dhe mesazhi janë të detyrueshëm",
+        "errorEmail": "Ai email s'duket i saktë",
+        "errorLong": "Mbaje mesazhin nën {max} karaktere",
+        "errorRate": "Shumë mesazhe brenda një ore — provo më vonë ose na shkruaj direkt",
+        "errorSend": "Mesazhi u ruajt, por s'u dërgua dot me email tani — do ta shohim gjithsesi; ose na shkruaj direkt"
+      },
+      "detailsTitle": "Mënyra të tjera kontakti"
     },
     "pricing": {
       "title": "Çmimet",

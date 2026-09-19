@@ -19,7 +19,7 @@ import { companyInfo } from "@/lib/company";
 // testable. Replies go to the support address either way.
 const RESEND_API_URL = "https://api.resend.com/emails";
 
-type Mail = { to: string; subject: string; text: string };
+type Mail = { to: string; subject: string; text: string; replyTo?: string };
 
 function smtpConfig() {
   const host = process.env.SMTP_HOST?.trim();
@@ -35,9 +35,11 @@ function fromAddress() {
   return process.env.EMAIL_FROM || (user ? `SmartDepo <${user}>` : "SmartDepo <onboarding@resend.dev>");
 }
 
-export async function sendEmail({ to, subject, text }: Mail) {
+export async function sendEmail({ to, subject, text, replyTo: replyToOverride }: Mail) {
   const from = fromAddress();
-  const replyTo = companyInfo().supportEmail || undefined;
+  // Replies go to support — except mail we send *to* support on someone
+  // else's behalf (the contact form), where the sender is the reply-to.
+  const replyTo = replyToOverride || companyInfo().supportEmail || undefined;
   const smtp = smtpConfig();
 
   if (smtp) {

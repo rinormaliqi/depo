@@ -684,7 +684,24 @@
       "regNo": "Registration no.",
       "address": "Address",
       "email": "Email",
-      "hours": "Support is available Monday–Friday, 09:00–17:00 (CET)."
+      "hours": "Support is available Monday–Friday, 09:00–17:00 (CET).",
+      "form": {
+        "name": "Your name",
+        "company": "Company (optional)",
+        "email": "Email",
+        "message": "Message",
+        "messagePlaceholder": "What are you storing, roughly how many bins, and what would you like to know?",
+        "send": "Send message",
+        "sending": "Sending…",
+        "sentTitle": "Message sent",
+        "sent": "Thanks — a person will reply to your email, usually within the working day.",
+        "errorRequired": "Name, email and message are required",
+        "errorEmail": "That email address doesn't look right",
+        "errorLong": "Keep the message under {max} characters",
+        "errorRate": "That's a lot of messages in one hour — please try again later or email us directly",
+        "errorSend": "The message was saved but couldn't be emailed right now — we'll still see it; or write to us directly"
+      },
+      "detailsTitle": "Other ways to reach us"
     },
     "pricing": {
       "title": "Pricing",

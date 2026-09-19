@@ -1,12 +1,14 @@
 import { getTranslations } from "next-intl/server";
+import { auth } from "@/auth";
 import { PublicPage } from "@/components/public-page";
 import { companyInfo } from "@/lib/company";
 import { pageMetadata } from "@/lib/seo";
+import { ContactForm } from "./contact-form";
 
 
 export const generateMetadata = () => pageMetadata("contact", "/contact");
 export default async function ContactPage() {
-  const t = await getTranslations("public.contact");
+  const [t, session] = await Promise.all([getTranslations("public.contact"), auth()]);
   const company = companyInfo();
   const rows: [string, React.ReactNode][] = [
     [t("company"), company.legalName],
@@ -17,6 +19,8 @@ export default async function ContactPage() {
   return (
     <PublicPage title={t("title")}>
       <p style={{ fontSize: 14, lineHeight: 1.65, marginTop: 0 }}>{t("intro")}</p>
+      <ContactForm defaults={session?.user ? { name: session.user.name ?? "", email: session.user.email ?? "" } : undefined} />
+      <h2 style={{ fontFamily: "var(--font-heading)", fontSize: 16, fontWeight: 600, margin: "32px 0 0" }}>{t("detailsTitle")}</h2>
       <dl style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "8px 18px", fontSize: 14, margin: "20px 0" }}>
         {rows.map(([k, v]) => (
           <div key={k} style={{ display: "contents" }}>

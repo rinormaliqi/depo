@@ -308,3 +308,14 @@ input[type="number"] {
 .canvas-wrap.canvas-mode-navigate * { cursor: inherit !important; }
 .canvas-wrap.canvas-mode-inspect { cursor: default; }
 .canvas-wrap.canvas-mode-edit { cursor: default; }
+
+/* ── Map-only blueprint (workers, and every role under 768px) ─────────── */
+.map-sheet {
+  position: absolute; left: 10px; right: 10px; bottom: calc(10px + var(--bottom-nav, 0px)); z-index: 40;
+  padding: 12px 12px 12px; background: #fff; box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-divider);
+}
+@media (max-width: 767px) {
+  .map-sheet { left: 8px; right: 8px; bottom: calc(8px + var(--bottom-nav, 0px) + env(safe-area-inset-bottom, 0px)); }
+  .map-sheet .btn { min-height: 44px; }
+}

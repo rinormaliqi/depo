@@ -510,7 +510,7 @@
       "renameLabel": "Emri (lëre bosh për të parazgjedhurin)",
       "add": "Shto nivel",
       "addTitle": "Shto nivelin {n}",
-      "addBody": "T'i zgjerojmë të gjitha raftet që arrijnë nivelin e sotëm më të lartë edhe në të riun (një kuti e re për vend), apo ta shtojmë bosh dhe t'i zgjerosh raftet një nga një?",
+      "addBody": "Raftet do të mund të shtrihen edhe një nivel më lart. Kodet e kutive mbeten numerike; etiketat ekzistuese s'ndryshojnë.",
       "addExtend": "Shto dhe zgjero raftet",
       "addOnly": "Shto bosh",
       "added": "Niveli {n} u shtua",
@@ -519,7 +519,9 @@
       "removed": "{name} u hoq",
       "errorMax": "Një objekt mund të ketë më së shumti {max} nivele",
       "errorLast": "Objekti duhet të ketë të paktën një nivel",
-      "errorStock": "Niveli {level} ka ende stok në {n, plural, =1 {1 kuti} other {# kuti}} ({codes}…) — lëvize së pari"
+      "errorStock": "Niveli {level} ka ende stok në {n, plural, =1 {1 kuti} other {# kuti}} ({codes}…) — lëvize së pari",
+      "extendTitle": "T'i zgjerojmë {racks, plural, =1 {1 raft} other {# rafte}} në nivelin {n}?",
+      "extendBody": "Çdo raft që arrin nivelin e sotëm më të lartë merr një kuti të re për vend në nivelin e ri. Ose shtoje nivelin bosh dhe zgjeroji raftet një nga një."
     },
     "occupied": "Të zëna",
     "viewStock": "Shiko stokun",

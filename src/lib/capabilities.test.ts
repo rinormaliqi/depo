@@ -13,7 +13,8 @@ function expectCan(caps: ReturnType<typeof resolveCapabilities>, allowed: Capabi
 
 test("role decides actions; plan decides features; a worker never gets layout, team or billing", () => {
   const worker = resolveCapabilities({ role: "worker", plan: business, locked: null, usage });
-  expectCan(worker, ["moveStock", "printLabels", "cameraScanning", "viewMetrics"]);
+  expectCan(worker, ["moveStock", "printLabels", "cameraScanning"]);
+  assert.deepEqual(worker.reason.viewMetrics, { kind: "role" });
   assert.deepEqual(worker.reason.editLayout, { kind: "role" });
   assert.deepEqual(worker.reason.multiFacility, { kind: "role" });
 

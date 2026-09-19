@@ -29,6 +29,7 @@ input[type="number"] {
 
 .app-header { position: relative; }
 .app-header-toggle { display: none; }
+.app-nav-bottom { display: none; }
 
 .stock-layout { display: grid; grid-template-columns: minmax(0, 280px) 1fr; }
 .stock-search-pane { border-right: 1px solid var(--color-divider); padding: 13px; }
@@ -57,8 +58,28 @@ input[type="number"] {
   .app-header .app-header-divider { display: none; }
   .app-header .app-header-facility { flex: 1 1 0; min-width: 0; }
   .app-header .app-header-toggle { display: inline-flex; flex: none; min-width: 44px; }
-  .app-header .app-header-tabs { order: 10; flex: 1 1 100%; display: flex; }
-  .app-header .app-header-tabs .seg-opt { flex: 1; justify-content: center; padding: 10px 4px; font-size: 12px; }
+  /* The primary tabs move to a fixed bottom bar; the header keeps one row. */
+  .app-header .app-header-tabs { display: none; }
+  .app-header .app-header-floor { display: none; }
+  /* The plan pill moves into the ⋯ menu so the facility name keeps its row. */
+  .app-header .app-header-pill { display: none; order: 12; flex: 1 1 100%; justify-content: center; }
+  .app-header.is-open .app-header-pill { display: inline-flex; }
+  .app-header .app-header-facility .facility-select { max-width: 100%; }
+  .app-nav-bottom {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    display: flex; background: #fff; border-top: 1px solid var(--color-divider);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 14px color-mix(in srgb, #2b2b2d 10%, transparent);
+  }
+  .app-nav-bottom-item {
+    flex: 1; display: flex; align-items: center; justify-content: center; min-height: 54px;
+    font-family: var(--font-heading); font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-text) 60%, transparent); text-decoration: none;
+    border-top: 3px solid transparent;
+  }
+  .app-nav-bottom-item.is-active { color: var(--color-accent-800); border-top-color: var(--color-accent); }
+  /* Room for the bar on the pages that scroll inside a 100vh column. */
+  .bin-page, .scan-page, .stock-zones-pane, .labels-page, .team-page, .items-page, .billing-page, .metrics-page { padding-bottom: calc(24px + 54px + env(safe-area-inset-bottom, 0px)) !important; }
   /* !important: the markup sets display:flex inline for the desktop row. */
   .app-header .app-header-secondary { order: 11; flex: 1 1 100%; display: none !important; margin-left: 0 !important; }
   .app-header.is-open .app-header-secondary { display: flex !important; }

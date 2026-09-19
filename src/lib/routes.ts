@@ -25,7 +25,7 @@ export const publicPrefixes = [
 // directory under src/app with a page is either public or listed here,
 // so a new route can't ship unprotected by forgetting this list.
 export const protectedPrefixes = [
-  "/billing", "/builder", "/internal", "/items", "/labels", "/metrics", "/scanner", "/stock", "/team", "/verify-email", "/welcome",
+  "/billing", "/builder", "/internal", "/items", "/labels", "/metrics", "/scanner", "/stock", "/team", "/verify-email", "/welcome", "/start",
 ];
 
 export function routeAccess(pathname: string): "public" | "protected" | "unknown" {

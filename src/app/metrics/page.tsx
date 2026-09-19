@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
 import { getMetrics } from "./actions";
 import { getCapabilities } from "@/lib/capabilities";
+import { NotForRole } from "@/components/not-for-role";
 
 function reasonChip(reason: string) {
   const base: React.CSSProperties = {
@@ -39,13 +40,7 @@ export default async function MetricsPage() {
   }
 
   const caps = await getCapabilities();
-  if (!caps?.can.viewMetrics) {
-    return (
-      <main style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
-        <p className="text-muted">{t("capability.plan.viewMetrics")}</p>
-      </main>
-    );
-  }
+  if (!caps?.can.viewMetrics) return <NotForRole capability="viewMetrics" />;
   const data = await getMetrics();
   const kpis = data?.kpis;
   const zoneRows = data?.zoneRows ?? [];

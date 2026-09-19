@@ -29,7 +29,9 @@
     "blueprint": "Skema",
     "stock": "Stoku",
     "metrics": "Metrika",
-    "scanner": "Skaneri"
+    "scanner": "Skaneri",
+    "find": "Gjej",
+    "labels": "Etiketat"
   },
   "home": {
     "kicker": "Për depo, oborre dhe magazina",
@@ -822,5 +824,10 @@
       "manageTeam": "S'përfshihet në planin tënd",
       "manageBilling": "S'përfshihet në planin tënd"
     }
+  },
+  "notForRole": {
+    "kicker": "Jo për rolin tënd",
+    "title": "Kjo faqe s'është pjesë e punës tënde këtu",
+    "back": "Kthehu te puna ime"
   }
 }

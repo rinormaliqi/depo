@@ -58,7 +58,7 @@ export async function acceptInviteAsExistingUser(_prevState: FormState, formData
   await markEmailVerified(user.id);
 
   try {
-    await signIn("credentials", { email: user.email, password, redirectTo: "/builder" });
+    await signIn("credentials", { email: user.email, password, redirectTo: "/start" });
   } catch (error) {
     if (error instanceof AuthError) return { error: t("signInFailed") };
     throw error;
@@ -91,7 +91,7 @@ export async function acceptInviteAsNewUser(_prevState: FormState, formData: For
   await db.update(invites).set({ acceptedAt: new Date() }).where(eq(invites.id, invite.id));
 
   try {
-    await signIn("credentials", { email: invite.email, password, redirectTo: "/builder" });
+    await signIn("credentials", { email: invite.email, password, redirectTo: "/start" });
   } catch (error) {
     if (error instanceof AuthError) return { error: t("signInFailed") };
     throw error;

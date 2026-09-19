@@ -29,7 +29,9 @@
     "blueprint": "Blueprint",
     "stock": "Stock",
     "metrics": "Metrics",
-    "scanner": "Scanner"
+    "scanner": "Scanner",
+    "find": "Find",
+    "labels": "Labels"
   },
   "home": {
     "kicker": "For depots, yards and stockrooms",
@@ -822,5 +824,10 @@
       "manageTeam": "Not included in your plan",
       "manageBilling": "Not included in your plan"
     }
+  },
+  "notForRole": {
+    "kicker": "Not for your role",
+    "title": "This page isn't part of your work here",
+    "back": "Back to my work"
   }
 }

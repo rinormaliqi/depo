@@ -36,7 +36,7 @@ export default async function InvitePage({
   let mismatchEmail: string | null = null;
   if (session?.user?.id && invite) {
     const result = await acceptInviteViaSession(token, session.user.id);
-    if (result === "joined" || result === "already-member") redirect("/builder");
+    if (result === "joined" || result === "already-member") redirect("/start");
     if (result === "mismatch") mismatchEmail = session.user.email ?? "";
   }
 

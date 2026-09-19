@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
+import { NotForRole } from "@/components/not-for-role";
+import { getCapabilities } from "@/lib/capabilities";
 import { AppHeader } from "@/components/app-header";
 import { companyInfo } from "@/lib/company";
 import { formatDate } from "@/lib/format-date";
@@ -39,6 +41,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ canceled?: string }> }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  const capsGate = await getCapabilities();
+  if (!capsGate?.can.manageBilling) return <NotForRole capability="manageBilling" />;
 
   const [facility, billing, t, { canceled }] = await Promise.all([getMyFacility(), getMyBilling(), getTranslations(), searchParams]);
   const tb = await getTranslations("billing");

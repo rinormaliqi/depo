@@ -15,7 +15,7 @@ export async function createCompany(_prev: FormState, formData: FormData): Promi
   if (!session?.user?.id) redirect("/login");
   const t = await getTranslations("welcome");
 
-  if (await hasMembership(session.user.id)) redirect("/builder");
+  if (await hasMembership(session.user.id)) redirect("/start");
 
   const companyName = formData.get("companyName")?.toString().trim();
   if (!companyName) return { error: t("errorRequired") };
@@ -25,5 +25,5 @@ export async function createCompany(_prev: FormState, formData: FormData): Promi
   } catch {
     return { error: t("errorGeneric") };
   }
-  redirect("/builder");
+  redirect("/start");
 }

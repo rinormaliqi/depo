@@ -421,6 +421,22 @@ confirmed every write path above is blocked with the correct translated message 
 own distinct message; confirmed zero partial writes against Postgres directly, not just the
 UI; then restored the org and confirmed normal writes resume immediately.
 
+## Role-specific navigation
+
+`src/lib/navigation.ts` decides what the app shows from capabilities (not the role name, so a
+plan that drops a feature drops its tab): workers get **Find** (`/stock`), **Scan**, **Labels**
+and the **map** (read-only blueprint) and no management links at all — no items, team, billing,
+plan pill or floor dimensions; managers get Blueprint / Stock / Metrics / Scanner plus Items and
+Team; admins add Billing. `AppHeader` reads `useCapabilities()` and renders exactly that. On
+phones the primary tabs live in a fixed **bottom bar** under the thumb (`.app-nav-bottom`), the
+header keeps a single row (wordmark, facility switcher, ⋯ menu — the plan pill moves into the
+menu), and the toaster sits above the bar (`--bottom-nav`).
+
+`/start` is where every sign-in lands (login, invites, Google via `/welcome`): it routes by role
+— workers to `/stock`, others to `/builder`, no organization yet to `/welcome`. A page a role
+can't use (`/team`, `/billing`, `/items`, `/metrics`) renders `<NotForRole>` — the normal header,
+one calm line with the capability's reason, and a way back — rather than an error.
+
 ## Phone layout for the worker surfaces
 
 `docs/concept.md` promised "mobile-first" and there wasn't a single media query. The four

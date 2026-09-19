@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getBillingSummary } from "@/app/billing/actions";
+import { useCapabilities } from "@/components/capabilities";
+import { homeFor, primaryNav, secondaryNav } from "@/lib/navigation";
 import { logout } from "@/lib/actions/auth";
 import { FacilitySwitcher } from "./facility-switcher";
 import { LocaleSwitcher } from "./locale-switcher";
@@ -50,20 +52,31 @@ export function AppHeader({
   const [query, setQuery] = useState("");
   const [billing, setBilling] = useState<BillingSummary | null>(null);
   const [open, setOpen] = useState(false);
+  const caps = useCapabilities();
+  // Navigation follows capabilities (src/lib/navigation.ts): a worker gets
+  // find / scan / labels / map and no management links at all.
+  const isWorker = caps?.role === "worker";
+  const showBilling = caps?.can.manageBilling ?? false;
+  const tabs = (caps ? primaryNav(caps) : []).map((n) => ({ href: n.href, label: t(`nav.${n.key}`) }));
+  const secondary = caps ? secondaryNav(caps) : [];
+  const home = homeFor(caps?.role ?? "worker");
 
   // A self-contained fetch rather than a prop every page would need to pass
   // — AppHeader is rendered from ~7 different page types, and this way none
-  // of them need to know billing status exists.
+  // of them need to know billing status exists. Only the account owner
+  // sees the plan/trial pill; a worker can't act on it.
+  // Lets fixed things above the bottom bar (the toaster) make room for it.
   useEffect(() => {
-    getBillingSummary().then(setBilling).catch(() => {});
+    document.documentElement.style.setProperty("--bottom-nav", "54px");
+    return () => {
+      document.documentElement.style.removeProperty("--bottom-nav");
+    };
   }, []);
 
-  const tabs = [
-    { href: "/builder", label: t("nav.blueprint") },
-    { href: "/stock", label: t("nav.stock") },
-    { href: "/metrics", label: t("nav.metrics") },
-    { href: "/scanner", label: t("nav.scanner") },
-  ];
+  useEffect(() => {
+    if (!showBilling) return;
+    getBillingSummary().then(setBilling).catch(() => {});
+  }, [showBilling]);
 
   return (
     <div
@@ -81,7 +94,7 @@ export function AppHeader({
       }}
     >
       <Link
-        href="/builder"
+        href={home}
         style={{
           fontFamily: "var(--font-heading)",
           fontWeight: 700,
@@ -108,15 +121,18 @@ export function AppHeader({
         >
           {facilityId ? <FacilitySwitcher currentId={facilityId} currentName={facilityName} /> : facilityName}
         </div>
-        <div
-          style={{
-            fontSize: 10,
-            letterSpacing: ".1em",
-            color: "color-mix(in srgb, var(--color-text) 50%, transparent)",
-          }}
-        >
-          {floorText}
-        </div>
+        {!isWorker && (
+          <div
+            className="app-header-floor"
+            style={{
+              fontSize: 10,
+              letterSpacing: ".1em",
+              color: "color-mix(in srgb, var(--color-text) 50%, transparent)",
+            }}
+          >
+            {floorText}
+          </div>
+        )}
       </div>
 
       {billing && (() => {
@@ -125,7 +141,7 @@ export function AppHeader({
         return (
           <Link
             href={pill.href ?? "/billing"}
-            className={pill.urgent ? "tag tag-outline" : "tag tag-accent"}
+            className={pill.urgent ? "tag tag-outline app-header-pill" : "tag tag-accent app-header-pill"}
             style={{ whiteSpace: "nowrap", textDecoration: "none" }}
           >
             {pill.text}
@@ -180,15 +196,11 @@ export function AppHeader({
           }}
           style={{ flex: "1 1 160px", minWidth: 120, maxWidth: 250 }}
         />
-        <Link href="/items" className="btn btn-secondary">
-          {t("common.items")}
-        </Link>
-        <Link href="/team" className="btn btn-secondary">
-          {t("common.team")}
-        </Link>
-        <Link href="/billing" className="btn btn-secondary">
-          {t("common.billing")}
-        </Link>
+        {secondary.map((n) => (
+          <Link key={n.href} href={n.href} className="btn btn-secondary">
+            {t(`common.${n.key}`)}
+          </Link>
+        ))}
         <LocaleSwitcher />
         <span
           className="app-header-email"
@@ -204,6 +216,19 @@ export function AppHeader({
           {t("common.signOut")}
         </button>
       </div>
+
+      {/* Phones: the primary tabs live in a bottom bar under the thumb
+          (CSS shows it under 768px and hides the in-header tabs). */}
+      <nav className="app-nav-bottom" aria-label={t("common.menu")}>
+        {tabs.map((tab) => {
+          const active = pathname === tab.href || pathname.startsWith(tab.href + "/");
+          return (
+            <Link key={tab.href} href={tab.href} className={active ? "app-nav-bottom-item is-active" : "app-nav-bottom-item"}>
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

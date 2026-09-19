@@ -69,7 +69,8 @@ export default async function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PublicHeader />
 
-      <section className="lp-hero">
+      <section className="lp-hero-band">
+      <div className="lp-hero">
         <div className="lp-hero-copy">
           <div className="lp-kicker">{t("kicker")}</div>
           <h1 className="lp-h1">
@@ -79,22 +80,31 @@ export default async function Home() {
           <p className="lp-lead">{t("lead")}</p>
           {session?.user ? (
             <div className="lp-cta">
-              <Link href="/builder" className="btn btn-primary">{t("openBlueprint")}</Link>
+              <Link href="/builder" className="btn btn-light">{t("openBlueprint")}</Link>
               <form action={async () => { "use server"; await logout(); }}>
-                <button type="submit" className="btn btn-ghost" style={{ fontSize: 12 }}>
+                <button type="submit" className="btn btn-outline-light" style={{ fontSize: 12 }}>
                   {t("signOutWithEmail", { email: session.user.email ?? "" })}
                 </button>
               </form>
             </div>
           ) : (
             <div className="lp-cta">
-              <PublicLink href="/signup" className="btn btn-primary">{t("ctaTrial")}</PublicLink>
-              <PublicLink href="/login" className="btn btn-secondary">{t("logIn")}</PublicLink>
-              <span className="lp-cta-note text-muted">{t("ctaNote")}</span>
+              <PublicLink href="/signup" className="btn btn-light">{t("ctaTrial")}</PublicLink>
+              <PublicLink href="/login" className="btn btn-outline-light">{t("logIn")}</PublicLink>
+              <span className="lp-cta-note">{t("ctaNote")}</span>
             </div>
           )}
+          <dl className="lp-numbers">
+            {(["lookup", "hardware", "label", "trial"] as const).map((k) => (
+              <div key={k}>
+                <dt>{t(`numbers.${k}.value`)}</dt>
+                <dd>{t(`numbers.${k}.label`)}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
         <DemoBlueprint />
+      </div>
       </section>
 
       <section className="lp-section">
@@ -127,13 +137,28 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="lp-section lp-for-section">
+        <div className="lp-section-head">
+          <div className="lp-kicker">{t("forKicker")}</div>
+          <h2 className="lp-h2">{t("forTitle")}</h2>
+        </div>
+        <ul className="lp-for">
+          {(["construction", "parts", "metal", "electrical", "retail", "workshop"] as const).map((k) => (
+            <li key={k}>
+              <span className="lp-for-name">{t(`for.${k}.name`)}</span>
+              <span className="lp-for-what">{t(`for.${k}.what`)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section className="lp-section lp-facts-section">
         <div className="lp-section-head">
           <div className="lp-kicker">{t("factsKicker")}</div>
           <h2 className="lp-h2">{t("factsTitle")}</h2>
         </div>
         <dl className="lp-facts">
-          {(["phone", "hardware", "lang", "prepaid", "roles", "person"] as const).map((k) => (
+          {(["phone", "hardware", "lang", "prepaid", "roles", "setup"] as const).map((k) => (
             <div key={k} className="lp-fact">
               <dt>{t(`facts.${k}.title`)}</dt>
               <dd>{t(`facts.${k}.body`)}</dd>
@@ -155,12 +180,15 @@ export default async function Home() {
         </p>
       </section>
 
-      <section className="lp-section lp-final">
-        <h2 className="lp-h2">{t("finalTitle")}</h2>
-        <p className="lp-section-lead">{t("finalBody")}</p>
-        <div className="lp-cta" style={{ justifyContent: "center" }}>
-          <PublicLink href="/signup" className="btn btn-primary">{t("ctaTrial")}</PublicLink>
-          <PublicLink href="/contact" className="btn btn-secondary">{t("ctaContact")}</PublicLink>
+      <section className="lp-final-band">
+        <div className="lp-section lp-final">
+          <div className="lp-kicker lp-kicker-light">{t("finalKicker")}</div>
+          <h2 className="lp-h2">{t("finalTitle")}</h2>
+          <p className="lp-section-lead">{t("finalBody")}</p>
+          <div className="lp-cta" style={{ justifyContent: "center" }}>
+            <PublicLink href="/signup" className="btn btn-light">{t("ctaTrial")}</PublicLink>
+            <PublicLink href="/contact" className="btn btn-outline-light">{t("ctaContact")}</PublicLink>
+          </div>
         </div>
       </section>
 

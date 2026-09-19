@@ -691,7 +691,12 @@ the user is looking at.
 
 ## Landing page
 
-`/` (`src/app/page.tsx`) shows the product instead of describing it. The hero is the core loop
+`/` (`src/app/page.tsx`) shows the product instead of describing it. Two grounds carry the
+page: the app's off-white, and the depot green (`--color-success-*`, the same ramp the success
+toasts use) for the hero band and the closing band — the blueprint demo sits on green like a
+drawing on a site table, and green is what "stocked" and "found" mean in every figure. The hero
+also carries four true numbers (2 s lookup, 0 devices, 70×40 mm labels, 30-day trial); a "who
+it's for" strip names six concrete depot types instead of logos or testimonials. The hero is the core loop
 running live — `src/app/landing/demo-blueprint.tsx`, a hand-drawn demo depot (three racks,
 a pallet row, a dock, drawn with the builder's own kind styles) and a search box over a
 five-item catalog; a match lights the bin with the same `locate-ping` the real search uses.

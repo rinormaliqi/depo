@@ -96,9 +96,9 @@
         "title": "Admin, manager, worker",
         "body": "Admins draw and invite; managers approve and report; workers scan and search. A worker can’t accidentally move a rack."
       },
-      "person": {
-        "title": "One person builds it",
-        "body": "SmartDepo is built and run by one person in Prishtina. When you write in, that’s who answers — and who ships the fix."
+      "setup": {
+        "title": "Set up in an afternoon",
+        "body": "Start from a template — one zone with two racks, or four walled zones — rename what needs renaming, drag the rest into place. No importer, no consultant."
       }
     },
     "pricingKicker": "Pricing",
@@ -107,7 +107,54 @@
     "pricingNote": "VAT, trial and refund details:",
     "pricingLink": "see the full pricing page",
     "finalTitle": "Map your depot this week",
-    "finalBody": "Start the trial, draw the floor from a template, and print the first rack’s labels today. If it isn’t obviously faster than asking around, don’t pay."
+    "finalBody": "Start the trial, draw the floor from a template, and print the first rack’s labels today. If it isn’t obviously faster than asking around, don’t pay.",
+    "numbers": {
+      "lookup": {
+        "value": "2 s",
+        "label": "from question to bin"
+      },
+      "hardware": {
+        "value": "0",
+        "label": "devices to buy"
+      },
+      "label": {
+        "value": "70×40 mm",
+        "label": "labels, any printer"
+      },
+      "trial": {
+        "value": "30 days",
+        "label": "free, no card"
+      }
+    },
+    "forKicker": "Who it's for",
+    "forTitle": "Anywhere things sit on shelves and someone has to find them",
+    "for": {
+      "construction": {
+        "name": "Building-materials depots",
+        "what": "cement, profiles, insulation, fittings — by pallet and by rack"
+      },
+      "parts": {
+        "name": "Spare-parts stockrooms",
+        "what": "thousands of small items in bins, found by SKU"
+      },
+      "metal": {
+        "name": "Metal and profile yards",
+        "what": "lengths and bundles in outdoor bays, booked on a phone"
+      },
+      "electrical": {
+        "name": "Electrical and plumbing wholesale",
+        "what": "cable drums, boxes of fittings, fast in-and-out"
+      },
+      "retail": {
+        "name": "Shops with a back store",
+        "what": "what's on the floor vs what's in the back, without walking"
+      },
+      "workshop": {
+        "name": "Workshops and service garages",
+        "what": "tools, consumables and parts that walk off — booked back where they belong"
+      }
+    },
+    "finalKicker": "Start today"
   },
   "auth": {
     "email": "Email",

@@ -68,7 +68,9 @@ export function AppHeader({
   // Lets fixed things above the bottom bar (the toaster) make room for it.
   useEffect(() => {
     document.documentElement.style.setProperty("--bottom-nav", "54px");
-    return () => document.documentElement.style.removeProperty("--bottom-nav");
+    return () => {
+      document.documentElement.style.removeProperty("--bottom-nav");
+    };
   }, []);
 
   useEffect(() => {

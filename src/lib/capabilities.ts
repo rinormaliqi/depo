@@ -33,7 +33,9 @@ export const CAPABILITIES = [...(Object.keys(PERMISSIONS) as Permission[]), ...F
 const FEATURE_ROLES: Record<Feature, readonly MembershipRole[]> = {
   printLabels: ["admin", "manager", "worker"],
   cameraScanning: ["admin", "manager", "worker"],
-  viewMetrics: ["admin", "manager", "worker"],
+  // Reporting is the manager's job; a worker's nav never shows it and the
+  // URL shouldn't either.
+  viewMetrics: ["admin", "manager"],
   multiFacility: ["admin", "manager"],
 };
 

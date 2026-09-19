@@ -8,7 +8,7 @@ const can = (over: Record<string, boolean>) => ({
 });
 
 test("workers see find / scan / labels / map and nothing to manage", () => {
-  const caps = { role: "worker" as const, can: can({ editLayout: false, manageItems: false, manageTeam: false, manageBilling: false, multiFacility: false }) };
+  const caps = { role: "worker" as const, can: can({ editLayout: false, manageItems: false, manageTeam: false, manageBilling: false, multiFacility: false, viewMetrics: false }) };
   assert.deepEqual(primaryNav(caps).map((n) => n.key), ["find", "scanner", "labels", "blueprint"]);
   assert.deepEqual(secondaryNav(caps), []);
   assert.equal(homeFor("worker"), "/stock");

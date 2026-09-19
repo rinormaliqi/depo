@@ -88,7 +88,8 @@ Role decides *actions*, plan decides *features* and *limits* (`src/lib/capabilit
 | Move stock (scan, bin page) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Edit layout, manage items, manage team | – | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Billing | – | – | ✓ | ✓ | ✓ | ✓ |
-| Print labels, camera scanning, metrics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Print labels, camera scanning | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Metrics | – | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Add facilities | – | ✓ | ✓ | – (1) | ✓ (3) | ✓ |
 | Users / bins / history | | | | 5 / 500 / 12 mo | 20 / 5,000 / 24 mo | unlimited |
 

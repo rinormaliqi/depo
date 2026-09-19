@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
 import { LOCATION_TYPES, TEMPLATE_KEYS, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
@@ -38,6 +38,13 @@ function clampWidth(v: number, [min, max]: [number, number]) {
   return Math.min(max, Math.max(min, v));
 }
 type Facility = { id: string; name: string; widthM: number; heightM: number };
+// What the mouse does on the canvas (src/app/builder/canvas-modes):
+// navigate = drag pans, wheel zooms; edit = select / move / resize;
+// inspect = click selects to read, nothing moves. A drag threshold in
+// edit mode means a click never nudges an object; Esc drops a drag.
+export type CanvasMode = "navigate" | "edit" | "inspect";
+const MODE_STORAGE_KEY = "smartdepo.canvas.mode";
+const DRAG_THRESHOLD_PX = 4;
 type Box = { xM: number; yM: number; widthM: number; heightM: number };
 
 type Drag =
@@ -215,6 +222,11 @@ export function BlueprintCanvas({
     heightM: String(facility.heightM),
   });
   const [localOverride, setLocalOverride] = useState<Record<string, Box>>({});
+  const [mode, setModeState] = useState<CanvasMode>(readOnly ? "inspect" : "edit");
+  const [spacePan, setSpacePan] = useState(false);
+  const panRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  const [panning, setPanning] = useState(false);
+  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
   const [pulseBinId, setPulseBinId] = useState<string | null>(null);
   // The value itself drives no rendering directly — bumping it just forces a
   // re-render so the undo/redo buttons re-read the (ref-backed) stacks.
@@ -226,6 +238,8 @@ export function BlueprintCanvas({
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
+  // Set at mousedown; the drag only becomes "live" past DRAG_THRESHOLD_PX.
+  const dragArmRef = useRef<{ clientX: number; clientY: number; live: boolean } | null>(null);
   const boxRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingHighlightRef = useRef<string | null>(initialHighlightBinId ?? null);
   const clipboardRef = useRef<{ liveId: string } | null>(null);
@@ -390,6 +404,96 @@ export function BlueprintCanvas({
     setOccupied(new Set(data.occupiedBinIds));
     setLevels(data.levels);
   }
+
+  // ── Mouse modes ────────────────────────────────────────────────────────
+  const setMode = (m: CanvasMode) => {
+    if (readOnly && m === "edit") return;
+    setModeState(m);
+    try { localStorage.setItem(MODE_STORAGE_KEY, m); } catch {}
+  };
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(MODE_STORAGE_KEY) as CanvasMode | null;
+      if (saved === "navigate" || saved === "inspect" || (saved === "edit" && !readOnly)) setModeState(saved);
+    } catch {}
+  }, [readOnly]);
+  const panActive = mode === "navigate" || spacePan;
+
+  // Zoom around a point of the wrapper (the cursor, or its centre), keeping
+  // that point of the floor under the cursor.
+  const zoomAt = useCallback((next: number, clientX?: number, clientY?: number) => {
+    const wrap = wrapRef.current;
+    const target = Math.max(0.2, Math.min(3, Math.round(next * 20) / 20));
+    if (!wrap) { setZoom(target); return; }
+    const r = wrap.getBoundingClientRect();
+    const px = (clientX ?? r.left + r.width / 2) - r.left;
+    const py = (clientY ?? r.top + r.height / 2) - r.top;
+    const floorX = (wrap.scrollLeft + px) / zoom;
+    const floorY = (wrap.scrollTop + py) / zoom;
+    setZoom(target);
+    requestAnimationFrame(() => {
+      wrap.scrollLeft = floorX * target - px;
+      wrap.scrollTop = floorY * target - py;
+    });
+  }, [zoom]);
+
+  function startPan(ev: React.MouseEvent) {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    ev.preventDefault();
+    panRef.current = { x: ev.clientX, y: ev.clientY, left: wrap.scrollLeft, top: wrap.scrollTop };
+    setPanning(true);
+  }
+
+  useEffect(() => {
+    function onMove(ev: MouseEvent) {
+      const p = panRef.current;
+      const wrap = wrapRef.current;
+      if (!p || !wrap) return;
+      wrap.scrollLeft = p.left - (ev.clientX - p.x);
+      wrap.scrollTop = p.top - (ev.clientY - p.y);
+    }
+    function onUp() {
+      if (panRef.current) { panRef.current = null; setPanning(false); }
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, []);
+
+  // Wheel: ctrl/⌘ (and any wheel in navigate mode) zooms toward the cursor;
+  // otherwise the wrapper scrolls as usual. Native listener so it can be
+  // non-passive and stop the browser's page zoom.
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const onWheel = (ev: WheelEvent) => {
+      if (!(ev.ctrlKey || ev.metaKey || mode === "navigate")) return;
+      ev.preventDefault();
+      const factor = Math.exp(-ev.deltaY * 0.0015);
+      zoomAt(zoom * factor, ev.clientX, ev.clientY);
+    };
+    wrap.addEventListener("wheel", onWheel, { passive: false });
+    return () => wrap.removeEventListener("wheel", onWheel);
+  }, [mode, zoom, zoomAt]);
+
+  // Touch: one finger pans in navigate mode (the browser scrolls the wrapper
+  // itself), two fingers pinch-zoom in any mode.
+  function onTouchStart(ev: React.TouchEvent) {
+    if (ev.touches.length === 2) {
+      const [a, b] = [ev.touches[0], ev.touches[1]];
+      pinchRef.current = { dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), zoom };
+    }
+  }
+  function onTouchMove(ev: React.TouchEvent) {
+    const pinch = pinchRef.current;
+    if (!pinch || ev.touches.length !== 2) return;
+    ev.preventDefault();
+    const [a, b] = [ev.touches[0], ev.touches[1]];
+    const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    zoomAt(pinch.zoom * (dist / pinch.dist), (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+  }
+  function onTouchEnd() { pinchRef.current = null; }
 
   // ── Facility levels ────────────────────────────────────────────────────
   const levelName = (lv: FacilityLevel) => lv.name || t("levels.defaultName", { n: lv.index });
@@ -710,10 +814,12 @@ export function BlueprintCanvas({
   }
 
   function startDrag(kind: Drag["kind"], ev: React.MouseEvent, entity: LocationRow) {
+    if (panActive) return; // the wrapper's handler pans
     ev.stopPropagation();
     ev.preventDefault();
     setSelectedId(entity.id);
-    if (readOnly) return;
+    if (readOnly || mode !== "edit") return;
+    dragArmRef.current = { clientX: ev.clientX, clientY: ev.clientY, live: false };
     dragRef.current = {
       kind,
       id: entity.id,
@@ -722,16 +828,33 @@ export function BlueprintCanvas({
     } as Drag;
   }
 
+  function cancelDrag() {
+    const d = dragRef.current;
+    if (!d) return;
+    dragRef.current = null;
+    dragArmRef.current = null;
+    setLocalOverride((o) => { const next = { ...o }; delete next[d.id]; return next; });
+  }
+
   useEffect(() => {
     function onMove(ev: MouseEvent) {
       const d = dragRef.current;
-      if (!d) return;
+      const arm = dragArmRef.current;
+      if (!d || !arm) return;
+      // A click is not a drag: nothing moves until the pointer has travelled.
+      if (!arm.live) {
+        if (Math.hypot(ev.clientX - arm.clientX, ev.clientY - arm.clientY) < DRAG_THRESHOLD_PX) return;
+        arm.live = true;
+      }
       setLocalOverride((o) => ({ ...o, [d.id]: computeDragBox(d, ev) }));
     }
     function onUp(ev: MouseEvent) {
       const d = dragRef.current;
+      const arm = dragArmRef.current;
       if (!d) return;
       dragRef.current = null;
+      dragArmRef.current = null;
+      if (!arm?.live) return; // a click: selected, nothing to save
       const box = computeDragBox(d, ev);
       setLocalOverride((o) => {
         const next = { ...o };
@@ -774,10 +897,17 @@ export function BlueprintCanvas({
     }
     function onKeyDown(ev: KeyboardEvent) {
       if (isEditableTarget(ev.target)) return;
-      if (floorOpen || templatesOpen || confirmTemplate) return;
-      if (readOnly) return;
+      if (floorOpen || templatesOpen || confirmTemplate || levelsOpen) return;
       const meta = ev.metaKey || ev.ctrlKey;
       const key = ev.key.toLowerCase();
+      if (!meta) {
+        if (key === "h") { setMode("navigate"); return; }
+        if (key === "v" && !readOnly) { setMode("edit"); return; }
+        if (key === "i") { setMode("inspect"); return; }
+        if (key === " ") { ev.preventDefault(); setSpacePan(true); return; }
+        if (key === "escape") { cancelDrag(); return; }
+      }
+      if (readOnly) return;
       if (meta && key === "z") {
         ev.preventDefault();
         if (ev.shiftKey) void handleRedo();
@@ -805,8 +935,12 @@ export function BlueprintCanvas({
         void handleDelete();
       }
     }
+    function onKeyUp(ev: KeyboardEvent) {
+      if (ev.key === " ") setSpacePan(false);
+    }
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); };
   });
 
   const topLevel = locations.filter((l) => {
@@ -917,9 +1051,25 @@ export function BlueprintCanvas({
 
       <div style={{ minWidth: 0, display: "flex", flexDirection: "column", background: "var(--color-bg)" }}>
         <div style={{ flex: "none", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 7, padding: "7px 11px", background: "#fff", borderBottom: "1px solid var(--color-divider)" }}>
-          <button className="btn btn-secondary" onClick={() => setZoom((z) => Math.max(0.2, Math.round((z - 0.1) * 10) / 10))} style={{ minWidth: 26, padding: "1px 7px" }}>−</button>
-          <span style={{ fontSize: 11, fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
-          <button className="btn btn-secondary" onClick={() => setZoom((z) => Math.min(2, Math.round((z + 0.1) * 10) / 10))} style={{ minWidth: 26, padding: "1px 7px" }}>+</button>
+          <div className="seg" role="radiogroup" aria-label={t("mode.label")}>
+            {(["navigate", ...(readOnly ? [] : ["edit" as const]), "inspect"] as CanvasMode[]).map((m) => (
+              <button
+                key={m}
+                className="seg-opt"
+                role="radio"
+                aria-checked={mode === m}
+                onClick={() => setMode(m)}
+                title={t(`mode.${m}Hint`)}
+                style={{ background: mode === m ? "var(--color-accent)" : undefined, color: mode === m ? "var(--color-bg)" : undefined, fontSize: 11, letterSpacing: ".08em" }}
+              >
+                {t(`mode.${m}`)}
+              </button>
+            ))}
+          </div>
+          <div style={{ width: 1, height: 17, background: "var(--color-divider)" }} />
+          <button className="btn btn-secondary" onClick={() => zoomAt(zoom - 0.1)} style={{ minWidth: 26, padding: "1px 7px" }}>−</button>
+          <button className="btn btn-ghost" onClick={() => zoomAt(1)} title={t("zoom100")} style={{ fontSize: 11, fontVariantNumeric: "tabular-nums", minWidth: 40, padding: "1px 4px" }}>{Math.round(zoom * 100)}%</button>
+          <button className="btn btn-secondary" onClick={() => zoomAt(zoom + 0.1)} style={{ minWidth: 26, padding: "1px 7px" }}>+</button>
           <button className="btn btn-secondary" onClick={fit} style={{ padding: "1px 8px", fontSize: 11, letterSpacing: ".08em" }}>{t("zoomFit")}</button>
           <button className="btn btn-ghost" onClick={() => setGrid((g) => !g)} style={{ fontSize: 11, letterSpacing: ".08em" }}>{grid ? t("gridOn") : t("gridOff")}</button>
 
@@ -965,7 +1115,18 @@ export function BlueprintCanvas({
           {status && <span style={{ fontSize: 11, color: "var(--color-accent-700)", marginLeft: 8 }}>{status}</span>}
         </div>
 
-        <div ref={wrapRef} style={{ flex: 1, minHeight: 0, position: "relative", overflow: "auto" }} onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}>
+        <div
+          ref={wrapRef}
+          className={`canvas-wrap canvas-mode-${panActive ? "navigate" : mode}${panning ? " is-panning" : ""}`}
+          style={{ flex: 1, minHeight: 0, position: "relative", overflow: "auto" }}
+          onMouseDown={(e) => {
+            if (panActive) { startPan(e); return; }
+            if (e.target === e.currentTarget) setSelectedId(null);
+          }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           <div style={{ display: "inline-block", padding: "30px 22px 22px 34px", position: "relative" }}>
             <div
               ref={canvasRef}
@@ -977,7 +1138,7 @@ export function BlueprintCanvas({
                   : undefined,
                 backgroundSize: grid ? `${z}px ${z}px,${z}px ${z}px` : undefined,
               }}
-              onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}
+              onMouseDown={(e) => { if (!panActive && e.target === e.currentTarget) setSelectedId(null); }}
             >
               {topLevel.length === 0 && (
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center", padding: 20 }}>
@@ -1108,6 +1269,7 @@ export function BlueprintCanvas({
                     {isSel && (
                       <div
                         onMouseDown={(ev) => startDrag("resize", ev, e)}
+                        hidden={mode !== "edit"}
                         style={{ position: "absolute", right: -5, bottom: -5, width: 10, height: 10, background: "var(--color-accent)", cursor: "nwse-resize", zIndex: 9 }}
                       />
                     )}
@@ -1130,7 +1292,7 @@ export function BlueprintCanvas({
           // A disabled <fieldset> greys out every input inside in one go —
           // the inspector's fields still show the selected entity's numbers,
           // they just can't be edited.
-          <fieldset disabled={readOnly} style={{ display: "flex", flexDirection: "column", gap: 11, border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+          <fieldset disabled={readOnly || mode !== "edit"} style={{ display: "flex", flexDirection: "column", gap: 11, border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
               <div>
                 <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--color-accent)" }}>

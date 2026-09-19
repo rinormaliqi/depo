@@ -560,7 +560,17 @@
     "printLabel": "Printo etiketën",
     "printLabels": "Printo etiketat e kutive",
     "printAllLabels": "Printo të gjitha etiketat",
-    "levelsCount": "Nivele"
+    "levelsCount": "Nivele",
+    "mode": {
+      "label": "Modi i miut",
+      "navigate": "Navigo",
+      "navigateHint": "Tërhiq për të lëvizur, rrota për zoom (H, ose mbaj Space)",
+      "edit": "Edito",
+      "editHint": "Zgjidh, lëviz dhe ripërmaso objektet (V)",
+      "inspect": "Inspekto",
+      "inspectHint": "Kliko një objekt për t'i parë detajet — asgjë s'lëviz (I)"
+    },
+    "zoom100": "Zoom 100%"
   },
   "bin": {
     "kicker": "Kuti",

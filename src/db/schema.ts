@@ -327,3 +327,22 @@ export const movements = pgTable(
   },
   (table) => [index("movements_org_idx").on(table.organizationId)],
 );
+
+// Messages from the public contact form. Kept as rows as well as sent as
+// email: the row is the log if the mail fails, and the per-IP count in the
+// last hour is the rate limit — no external anti-spam service.
+export const contactMessages = pgTable(
+  "contact_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    company: text("company"),
+    email: text("email").notNull(),
+    message: text("message").notNull(),
+    ip: text("ip"),
+    userId: uuid("user_id").references(() => users.id),
+    sentAt: timestamp("sent_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("contact_messages_ip_idx").on(table.ip, table.createdAt)],
+);

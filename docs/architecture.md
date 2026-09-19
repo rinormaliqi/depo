@@ -689,6 +689,17 @@ Inline messages remain only for field-level validation, through one `<FormError>
 The camera dialog keeps its in-viewport status text because it explains the black rectangle
 the user is looking at.
 
+## Contact form
+
+`/contact` has a form (`src/app/contact/contact-form.tsx` → `sendContactMessage` in `actions.ts`).
+Each message is stored in `contact_messages` (migration 0007) and emailed to the support address
+through `sendEmail()` with the sender as `reply-to`, so answering is a plain reply; `sent_at` marks
+delivery, and a send failure keeps the row (the message isn't lost, it's just not in the inbox yet)
+and tells the user so. Anti-spam is deliberately boring and external-service-free: a honeypot
+field, a minimum fill time of two seconds, and a per-IP cap of five messages an hour counted from
+the same table — bots are accepted silently and dropped, never shown an error to learn from.
+Signed-in users get name and email prefilled. Feedback goes through the notification system.
+
 ## Landing page
 
 `/` (`src/app/page.tsx`) shows the product instead of describing it. Two grounds carry the

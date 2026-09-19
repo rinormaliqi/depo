@@ -269,3 +269,14 @@ input[type="number"] {
   .public-header nav { gap: 8px; }
   .public-header-pricing { display: none; }
 }
+
+/* ── Contact form (src/app/contact) ─────────────────────────────────── */
+.contact-form { display: flex; flex-direction: column; gap: 12px; margin: 22px 0 0; }
+.contact-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.contact-form textarea.input { resize: vertical; min-height: 120px; line-height: 1.5; }
+.contact-form .btn { align-self: flex-start; }
+.contact-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+@media (max-width: 600px) {
+  .contact-form-row { grid-template-columns: 1fr; }
+  .contact-form .btn { align-self: stretch; }
+}

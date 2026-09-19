@@ -564,6 +564,12 @@ objects never react; **Edit** (`V`) — the existing select / move / resize / ad
 Workers (read-only) get Navigate and Inspect. The wrapper's class (`canvas-mode-*`,
 `is-panning`) sets the cursor so the mouse always says what a drag will do.
 
+**Map-only** (`mapOnly = readOnly || viewport < 768px`): the canvas alone — no palette, no
+inspector, no undo/grid/levels controls — fitted to the floor on open, Inspect by default so a
+tap opens a compact sheet (kind, code, cells, occupancy, "view stock" for a bin, print labels)
+above the bottom nav. Editing stays desktop-only (docs/concept.md), so a manager on a phone
+sees the same map; a remembered "edit" mode is treated as Inspect there.
+
 Two guard rails in Edit: a drag is armed on mousedown but only becomes live after 4px of
 travel, so a click never nudges an object (and a plain click saves nothing); `Esc` drops a
 live drag and restores the box. Zoom is `zoomAt(level, clientX, clientY)` — it keeps the floor

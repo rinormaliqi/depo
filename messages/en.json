@@ -510,7 +510,7 @@
       "renameLabel": "Name (leave empty for the default)",
       "add": "Add a level",
       "addTitle": "Add level {n}",
-      "addBody": "Extend every rack that reaches the current top level onto the new one (one new bin per bay), or add the level empty and extend racks one by one?",
+      "addBody": "Racks will be able to span one more level. Bin codes stay numeric; nothing changes on existing labels.",
       "addExtend": "Add and extend racks",
       "addOnly": "Add empty",
       "added": "Level {n} added",
@@ -519,7 +519,9 @@
       "removed": "{name} removed",
       "errorMax": "A facility can have at most {max} levels",
       "errorLast": "A facility needs at least one level",
-      "errorStock": "Level {level} still holds stock in {n, plural, =1 {1 bin} other {# bins}} ({codes}…) — move it first"
+      "errorStock": "Level {level} still holds stock in {n, plural, =1 {1 bin} other {# bins}} ({codes}…) — move it first",
+      "extendTitle": "Extend {racks, plural, =1 {1 rack} other {# racks}} onto level {n}?",
+      "extendBody": "Every rack that reaches the current top level gets one new bin per bay on the new level. Or add the level empty and extend racks one by one."
     },
     "occupied": "Occupied",
     "viewStock": "View stock",

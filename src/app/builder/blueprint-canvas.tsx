@@ -223,6 +223,19 @@ export function BlueprintCanvas({
   });
   const [localOverride, setLocalOverride] = useState<Record<string, Box>>({});
   const [mode, setModeState] = useState<CanvasMode>(readOnly ? "inspect" : "edit");
+  // Map-only: what a worker sees, and what everyone sees on a phone —
+  // the canvas with Navigate/Inspect, a compact sheet for the tapped
+  // object, none of the builder's panels. Editing stays desktop-only
+  // (docs/concept.md), so a manager on a phone gets the map too.
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const apply = () => setNarrow(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  const mapOnly = readOnly || narrow;
   const [spacePan, setSpacePan] = useState(false);
   const panRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   const [panning, setPanning] = useState(false);
@@ -407,7 +420,7 @@ export function BlueprintCanvas({
 
   // ── Mouse modes ────────────────────────────────────────────────────────
   const setMode = (m: CanvasMode) => {
-    if (readOnly && m === "edit") return;
+    if ((readOnly || narrow) && m === "edit") return;
     setModeState(m);
     try { localStorage.setItem(MODE_STORAGE_KEY, m); } catch {}
   };
@@ -418,6 +431,15 @@ export function BlueprintCanvas({
     } catch {}
   }, [readOnly]);
   const panActive = mode === "navigate" || spacePan;
+  // A phone can't edit: whatever was remembered, the map is inspect-or-pan.
+  const effectiveMode: CanvasMode = mapOnly && mode === "edit" ? "inspect" : mode;
+  // Map-only opens fitted to the floor once the wrapper has a size.
+  useEffect(() => {
+    if (!mapOnly) return;
+    const id = requestAnimationFrame(() => fit());
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapOnly, facility.id]);
 
   // Zoom around a point of the wrapper (the cursor, or its centre), keeping
   // that point of the floor under the cursor.
@@ -468,14 +490,14 @@ export function BlueprintCanvas({
     const wrap = wrapRef.current;
     if (!wrap) return;
     const onWheel = (ev: WheelEvent) => {
-      if (!(ev.ctrlKey || ev.metaKey || mode === "navigate")) return;
+      if (!(ev.ctrlKey || ev.metaKey || effectiveMode === "navigate")) return;
       ev.preventDefault();
       const factor = Math.exp(-ev.deltaY * 0.0015);
       zoomAt(zoom * factor, ev.clientX, ev.clientY);
     };
     wrap.addEventListener("wheel", onWheel, { passive: false });
     return () => wrap.removeEventListener("wheel", onWheel);
-  }, [mode, zoom, zoomAt]);
+  }, [effectiveMode, zoom, zoomAt]);
 
   // Touch: one finger pans in navigate mode (the browser scrolls the wrapper
   // itself), two fingers pinch-zoom in any mode.
@@ -499,12 +521,18 @@ export function BlueprintCanvas({
   const levelName = (lv: FacilityLevel) => lv.name || t("levels.defaultName", { n: lv.index });
 
   async function handleAddLevel() {
-    const extend = await confirm({ title: t("levels.addTitle", { n: levels.length + 1 }), body: t("levels.addBody"), confirmLabel: t("levels.addExtend"), cancelLabel: t("levels.addOnly") });
-    // Cancel here means "add without extending" — the dialog offers two
-    // ways of adding, not add/abort; abort is the backdrop or Esc, which
-    // also resolves false, so treat both the same and add either way.
+    const n = levels.length + 1;
+    const ok = await confirm({ title: t("levels.addTitle", { n }), body: t("levels.addBody"), confirmLabel: t("levels.add") });
+    if (!ok) return;
+    // Extending is a second, separate question, so Esc or the backdrop on
+    // either dialog means "do nothing" — never "add anyway".
+    const racksAtTop = locations.filter((l) => !l.isBin && l.levels === levels.length && LOCATION_TYPES[l.kind as LocationKind].spatial === "store").length;
+    let extend = false;
+    if (racksAtTop > 0) {
+      extend = await confirm({ title: t("levels.extendTitle", { n, racks: racksAtTop }), body: t("levels.extendBody"), confirmLabel: t("levels.addExtend"), cancelLabel: t("levels.addOnly") });
+    }
     setBusy(true);
-    const done = await notify.run(() => addLevel(facility.id, extend === true), { success: t("levels.added", { n: levels.length + 1 }) });
+    const done = await notify.run(() => addLevel(facility.id, extend), { success: t("levels.added", { n }) });
     if (done) { await reload(); clearHistory(); }
     setBusy(false);
   }
@@ -818,7 +846,7 @@ export function BlueprintCanvas({
     ev.stopPropagation();
     ev.preventDefault();
     setSelectedId(entity.id);
-    if (readOnly || mode !== "edit") return;
+    if (readOnly || effectiveMode !== "edit") return;
     dragArmRef.current = { clientX: ev.clientX, clientY: ev.clientY, live: false };
     dragRef.current = {
       kind,
@@ -972,7 +1000,8 @@ export function BlueprintCanvas({
   );
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: `${leftWidth}px 6px minmax(360px,1fr) 6px ${rightWidth}px` }}>
+    <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: mapOnly ? "minmax(0,1fr)" : `${leftWidth}px 6px minmax(360px,1fr) 6px ${rightWidth}px` }}>
+      {!mapOnly && (
       <div style={{ background: "#fff", overflow: "auto", padding: 13 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
@@ -1042,25 +1071,28 @@ export function BlueprintCanvas({
           )}
         </div>
       </div>
+      )}
 
+      {!mapOnly && (
       <div
         className={resizingSide === "left" ? "resize-handle dragging" : "resize-handle"}
         onMouseDown={(ev) => startSidebarResize("left", ev)}
         title={t("resizePanel")}
       />
+      )}
 
-      <div style={{ minWidth: 0, display: "flex", flexDirection: "column", background: "var(--color-bg)" }}>
+      <div style={{ minWidth: 0, display: "flex", flexDirection: "column", background: "var(--color-bg)", position: "relative" }}>
         <div style={{ flex: "none", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 7, padding: "7px 11px", background: "#fff", borderBottom: "1px solid var(--color-divider)" }}>
           <div className="seg" role="radiogroup" aria-label={t("mode.label")}>
-            {(["navigate", ...(readOnly ? [] : ["edit" as const]), "inspect"] as CanvasMode[]).map((m) => (
+            {(["navigate", ...(mapOnly ? [] : ["edit" as const]), "inspect"] as CanvasMode[]).map((m) => (
               <button
                 key={m}
                 className="seg-opt"
                 role="radio"
-                aria-checked={mode === m}
+                aria-checked={effectiveMode === m}
                 onClick={() => setMode(m)}
                 title={t(`mode.${m}Hint`)}
-                style={{ background: mode === m ? "var(--color-accent)" : undefined, color: mode === m ? "var(--color-bg)" : undefined, fontSize: 11, letterSpacing: ".08em" }}
+                style={{ background: effectiveMode === m ? "var(--color-accent)" : undefined, color: effectiveMode === m ? "var(--color-bg)" : undefined, fontSize: 11, letterSpacing: ".08em" }}
               >
                 {t(`mode.${m}`)}
               </button>
@@ -1071,10 +1103,10 @@ export function BlueprintCanvas({
           <button className="btn btn-ghost" onClick={() => zoomAt(1)} title={t("zoom100")} style={{ fontSize: 11, fontVariantNumeric: "tabular-nums", minWidth: 40, padding: "1px 4px" }}>{Math.round(zoom * 100)}%</button>
           <button className="btn btn-secondary" onClick={() => zoomAt(zoom + 0.1)} style={{ minWidth: 26, padding: "1px 7px" }}>+</button>
           <button className="btn btn-secondary" onClick={fit} style={{ padding: "1px 8px", fontSize: 11, letterSpacing: ".08em" }}>{t("zoomFit")}</button>
-          <button className="btn btn-ghost" onClick={() => setGrid((g) => !g)} style={{ fontSize: 11, letterSpacing: ".08em" }}>{grid ? t("gridOn") : t("gridOff")}</button>
+          {!mapOnly && <button className="btn btn-ghost" onClick={() => setGrid((g) => !g)} style={{ fontSize: 11, letterSpacing: ".08em" }}>{grid ? t("gridOn") : t("gridOff")}</button>}
 
           <div style={{ width: 1, height: 17, background: "var(--color-divider)" }} />
-          {!readOnly && (
+          {!mapOnly && (
             <>
               <button className="btn btn-secondary" onClick={handleUndo} disabled={busy || undoStack.current.length === 0} title={t("undo")} style={{ minWidth: 26, padding: "1px 7px" }}>↺</button>
               <button className="btn btn-secondary" onClick={handleRedo} disabled={busy || redoStack.current.length === 0} title={t("redo")} style={{ minWidth: 26, padding: "1px 7px" }}>↻</button>
@@ -1107,7 +1139,7 @@ export function BlueprintCanvas({
                   </button>
                 ))}
               </div>
-              {!readOnly && (
+              {!mapOnly && (
                 <button className="btn btn-secondary" onClick={() => setLevelsOpen(true)} disabled={busy} title={t("levels.manage")} style={{ minWidth: 26, padding: "1px 7px" }}>⚙</button>
               )}
             </>
@@ -1117,7 +1149,7 @@ export function BlueprintCanvas({
 
         <div
           ref={wrapRef}
-          className={`canvas-wrap canvas-mode-${panActive ? "navigate" : mode}${panning ? " is-panning" : ""}`}
+          className={`canvas-wrap canvas-mode-${panActive ? "navigate" : effectiveMode}${panning ? " is-panning" : ""}`}
           style={{ flex: 1, minHeight: 0, position: "relative", overflow: "auto" }}
           onMouseDown={(e) => {
             if (panActive) { startPan(e); return; }
@@ -1146,7 +1178,7 @@ export function BlueprintCanvas({
                   <div style={{ fontSize: 13, maxWidth: 320, color: "color-mix(in srgb,var(--color-text) 60%,transparent)", pointerEvents: "none" }}>
                     {readOnly ? t("emptyFloorBodyReadOnly") : t("emptyFloorBody")}
                   </div>
-                  {!readOnly && (
+                  {!mapOnly && (
                     <>
                       <div style={{ fontSize: 11, color: "color-mix(in srgb,var(--color-text) 55%,transparent)", marginTop: 6, pointerEvents: "none" }}>
                         {t("templatePrompt")}
@@ -1269,7 +1301,7 @@ export function BlueprintCanvas({
                     {isSel && (
                       <div
                         onMouseDown={(ev) => startDrag("resize", ev, e)}
-                        hidden={mode !== "edit"}
+                        hidden={effectiveMode !== "edit"}
                         style={{ position: "absolute", right: -5, bottom: -5, width: 10, height: 10, background: "var(--color-accent)", cursor: "nwse-resize", zIndex: 9 }}
                       />
                     )}
@@ -1279,20 +1311,53 @@ export function BlueprintCanvas({
             </div>
           </div>
         </div>
+        {mapOnly && selected && (
+          // The phone's inspector: what the tapped object is and where to go
+          // from it, without the desktop panel.
+          <div className="map-sheet blueprint">
+            <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--color-accent)" }}>{t(`kind.${selected.kind}`)}</div>
+                <div style={{ fontFamily: "var(--font-heading)", fontSize: 22, lineHeight: 1.05 }}>{selected.code}</div>
+                <div className="text-muted" style={{ fontSize: 12, marginTop: 2 }}>
+                  {selected.name}
+                  {LOCATION_TYPES[selected.kind as LocationKind].spatial === "store" && selected.bays * selected.levels > 1 && (
+                    <> · {t("cellCount", { n: selected.bays * selected.levels })} · {Math.round(occupancyOf(selected, locations, occupied) * 100)}% {t("occupied").toLowerCase()}</>
+                  )}
+                </div>
+              </div>
+              <button type="button" className="btn btn-ghost" onClick={() => setSelectedId(null)} aria-label={t("cancel")} style={{ fontSize: 18, lineHeight: 1, padding: "2px 8px" }}>×</button>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              {selected.isBin && (
+                <Link href={`/builder/bin/${selected.id}`} className="btn btn-primary" style={{ flex: 1 }}>{t("viewStock")}</Link>
+              )}
+              <Gate capability="printLabels" mode="disable">
+                <Link href={selected.isBin ? `/labels?bin=${selected.id}` : `/labels?parent=${selected.id}`} className="btn btn-secondary" style={{ flex: 1 }}>
+                  {selected.isBin ? t("printLabel") : t("printLabels")}
+                </Link>
+              </Gate>
+            </div>
+          </div>
+        )}
       </div>
 
+      {!mapOnly && (
       <div
         className={resizingSide === "right" ? "resize-handle dragging" : "resize-handle"}
         onMouseDown={(ev) => startSidebarResize("right", ev)}
         title={t("resizePanel")}
       />
+      )}
 
+      {!mapOnly && (
       <div style={{ background: "#fff", overflow: "auto", padding: 14 }}>
         {selected ? (
           // A disabled <fieldset> greys out every input inside in one go —
           // the inspector's fields still show the selected entity's numbers,
           // they just can't be edited.
-          <fieldset disabled={readOnly || mode !== "edit"} style={{ display: "flex", flexDirection: "column", gap: 11, border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+          <fieldset disabled={readOnly || effectiveMode !== "edit"} style={{ display: "flex", flexDirection: "column", gap: 11, border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
               <div>
                 <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--color-accent)" }}>
@@ -1391,6 +1456,7 @@ export function BlueprintCanvas({
           </div>
         )}
       </div>
+      )}
 
       {floorOpen && (
         <div className="dialog-backdrop" style={{ position: "fixed", zIndex: 60 }}>

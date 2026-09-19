@@ -603,7 +603,11 @@
     "editLayout": "Vetëm menaxherët dhe administratorët mund të ndryshojnë planimetrinë",
     "manageItems": "Vetëm menaxherët dhe administratorët mund të shtojnë artikuj",
     "manageTeam": "Vetëm menaxherët dhe administratorët mund të menaxhojnë ekipin",
-    "manageBilling": "Vetëm një administrator mund të menaxhojë faturimin"
+    "manageBilling": "Vetëm një administrator mund të menaxhojë faturimin",
+    "printLabels": "Roli yt s'mund të printojë etiketa",
+    "cameraScanning": "Roli yt s'mund të përdorë skanimin me kamerë",
+    "viewMetrics": "Roli yt s'mund të shohë metrikat",
+    "multiFacility": "Vetëm menaxherët dhe adminët mund të shtojnë objekte"
   },
   "public": {
     "updated": "Përditësuar më {date}",
@@ -741,5 +745,18 @@
     "confirm": "Konfirmo",
     "cancel": "Anulo",
     "close": "Mbyll"
+  },
+  "capability": {
+    "plan": {
+      "printLabels": "Etiketat për printim s'përfshihen në planin tënd",
+      "cameraScanning": "Skanimi me kamerë s'përfshihet në planin tënd",
+      "viewMetrics": "Metrikat s'përfshihen në planin tënd",
+      "multiFacility": "Plani yt mbulon një objekt — kalo në plan më të lartë për më shumë",
+      "moveStock": "S'përfshihet në planin tënd",
+      "editLayout": "S'përfshihet në planin tënd",
+      "manageItems": "S'përfshihet në planin tënd",
+      "manageTeam": "S'përfshihet në planin tënd",
+      "manageBilling": "S'përfshihet në planin tënd"
+    }
   }
 }

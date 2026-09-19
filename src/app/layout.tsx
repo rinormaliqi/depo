@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { CapabilitiesProvider } from "@/components/capabilities";
 import { NotificationsProvider } from "@/components/notifications";
+import { capabilitiesForClient } from "@/lib/capabilities-client-payload";
 import { siteMetadata } from "@/lib/seo";
 import "./globals.css";
 
@@ -25,14 +27,22 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [locale, messages, tn, tc] = await Promise.all([getLocale(), getMessages(), getTranslations("notify"), getTranslations("common")]);
+  const [locale, messages, tn, tc, capabilities] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    getTranslations("notify"),
+    getTranslations("common"),
+    capabilitiesForClient(),
+  ]);
   const labels = { confirm: tn("confirm"), cancel: tn("cancel"), close: tn("close"), errorGeneric: tc("errorGeneric") };
 
   return (
     <html lang={locale}>
       <body>
         <NextIntlClientProvider messages={messages}>
-          <NotificationsProvider labels={labels}>{children}</NotificationsProvider>
+          <NotificationsProvider labels={labels}>
+            <CapabilitiesProvider value={capabilities}>{children}</CapabilitiesProvider>
+          </NotificationsProvider>
         </NextIntlClientProvider>
       </body>
     </html>

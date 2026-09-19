@@ -11,6 +11,7 @@ const planRows: (typeof plans.$inferInsert)[] = [
     maxFacilities: 1,
     maxBins: 500,
     movementHistoryMonths: 12,
+    features: { printLabels: true, cameraScanning: true, viewMetrics: true },
   },
   {
     key: "business",
@@ -20,6 +21,7 @@ const planRows: (typeof plans.$inferInsert)[] = [
     maxFacilities: 3,
     maxBins: 5000,
     movementHistoryMonths: 24,
+    features: { printLabels: true, cameraScanning: true, viewMetrics: true },
   },
   {
     key: "enterprise",
@@ -29,6 +31,7 @@ const planRows: (typeof plans.$inferInsert)[] = [
     maxFacilities: null,
     maxBins: null,
     movementHistoryMonths: null,
+    features: { printLabels: true, cameraScanning: true, viewMetrics: true },
   },
 ];
 

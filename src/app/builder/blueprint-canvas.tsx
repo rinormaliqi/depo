@@ -10,6 +10,7 @@ import { getBlueprint, type LocationRow } from "./actions";
 import * as rawActions from "./actions";
 import { unwrap } from "@/lib/action-result";
 import { useNotify } from "@/components/notifications";
+import { Gate } from "@/components/capabilities";
 
 const addSector = unwrap(rawActions.addSector);
 const applyTemplate = unwrap(rawActions.applyTemplate);
@@ -1141,9 +1142,11 @@ export function BlueprintCanvas({
                     {t("viewStock")}
                   </Link>
                 )}
-                <Link href={selected.isBin ? `/labels?bin=${selected.id}` : `/labels?parent=${selected.id}`} className="btn btn-secondary btn-block" style={{ marginTop: 9 }}>
-                  {selected.isBin ? t("printLabel") : t("printLabels")}
-                </Link>
+                <Gate capability="printLabels" mode="disable">
+                  <Link href={selected.isBin ? `/labels?bin=${selected.id}` : `/labels?parent=${selected.id}`} className="btn btn-secondary btn-block" style={{ marginTop: 9 }}>
+                    {selected.isBin ? t("printLabel") : t("printLabels")}
+                  </Link>
+                </Gate>
               </div>
             )}
 
@@ -1163,9 +1166,11 @@ export function BlueprintCanvas({
             <div style={{ fontSize: 13, lineHeight: 1.5, color: "color-mix(in srgb,var(--color-text) 72%,transparent)" }}>
               {t("nothingSelectedBody")}
             </div>
-            <Link href="/labels" className="btn btn-secondary btn-block">
-              {t("printAllLabels")}
-            </Link>
+            <Gate capability="printLabels" mode="disable">
+              <Link href="/labels" className="btn btn-secondary btn-block">
+                {t("printAllLabels")}
+              </Link>
+            </Gate>
             <div style={{ height: 1, background: "var(--color-divider)" }} />
             <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
               {t("composition")}

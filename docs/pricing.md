@@ -78,3 +78,20 @@ Limits are data (`plans.max_users`, `max_facilities`, `max_bins`), not hardcoded
 an action that would exceed it (e.g. adding a bin past `max_bins`). No separate schema needed
 for that check. See `docs/architecture.md`'s "Plan-limit enforcement" section for where each
 check is actually wired in (`max_facilities` is checked in `createFacility`).
+
+## Capabilities per plan and role
+
+Role decides *actions*, plan decides *features* and *limits* (`src/lib/capabilities.ts`).
+
+| Capability | Worker | Manager | Admin | Starter | Business | Enterprise |
+|---|---|---|---|---|---|---|
+| Move stock (scan, bin page) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Edit layout, manage items, manage team | – | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Billing | – | – | ✓ | ✓ | ✓ | ✓ |
+| Print labels, camera scanning, metrics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Add facilities | – | ✓ | ✓ | – (1) | ✓ (3) | ✓ |
+| Users / bins / history | | | | 5 / 500 / 12 mo | 20 / 5,000 / 24 mo | unlimited |
+
+A locked org (unverified, trial ended, expired, past due, canceled) keeps the read-side features
+and loses every action until it verifies or pays. Features are data (`plans.features`), so
+removing one from Starter is a seed change, not a code change.

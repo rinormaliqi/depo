@@ -337,42 +337,45 @@ runs unchanged. `src/db/index.ts` gained `closeDb()` purely so the runner's even
 exit. `.github/workflows/ci.yml` runs lint, type-check and the suite with a Postgres service on
 every PR.
 
-## Plan-limit enforcement
+## Capabilities — role × plan × org state, resolved once
 
-`plans.max_users`/`max_facilities`/`max_bins` existed as data from the start, but nothing ever
-compared live counts against them — every organization had effectively unlimited usage
-regardless of tier, which is both lost revenue and a broken promise (the pricing page says
-"Starter: 500 bins"). `src/lib/plan-limits.ts` holds three checks (`assertCanAddBins`,
-`assertCanAddSeats`, `assertCanAddFacilities`), each "current usage + what's about to be added
-> limit", called *before* the mutating write rather than cleaning up after a partial one. A
-`null` limit column means unlimited (Enterprise) and short-circuits the check entirely.
+`src/lib/capabilities.ts` is the one answer to "can this user do X here?". It combines three
+inputs and says *why* when the answer is no, so a blocked button and a blocked action show the
+same toast:
 
-Wired in at every place that changes a count, not inside the shared low-level helpers those
-call — `createEntityAt()` itself stays untouched; the check lives in each public action
-(`createEntity`, `duplicateEntity`, `restoreEntity`) that knows exactly how many bins *it* is
-about to add:
-- **Bins** — `createEntity`/`duplicateEntity`/`restoreEntity` each check their own single
-  entity's `bays × levels` before creating it. `applyTemplate` sums every spec's bin count
-  and checks once upfront instead of per-entity mid-loop — discovering a plan doesn't have
-  room for a template partway through inserting a dozen racks would be a bad place to fail.
-  Growing an existing entity's bays/levels (`updateEntity`) checks the net cell-count delta
-  (`newBays×newLevels − oldBays×oldLevels`) before calling `reshapeGrid` — the grid always
-  stays dense, so that delta is exactly how many new bins the resize would create regardless
-  of which specific cells end up added or removed to get there. Shrinking never needs this
-  check (only the existing stock-safety guard applies).
-- **Seats** — `createInvite` checks before creating a *new* pending invite, counting both
-  existing memberships and other still-pending, unexpired invites as seats already spoken for
-  (an org can't invite far more people than its plan allows and only find out once some of
-  them try to accept). Refreshing an already-pending invite (role change, resend) doesn't
-  recheck — it's already counted, and re-checking there would sometimes wrongly block a
-  resend once an org is sitting right at its limit.
-- **Facilities** — `assertCanAddFacilities` in `createFacility` (`src/app/builder/actions.ts`),
-  before a second (or third…) facility is inserted.
+- **Role permissions** — `src/lib/permissions.ts` keeps the table of who may do what
+  (`moveStock`, `editLayout`, `manageItems`, `manageTeam`, `manageBilling`). These are *actions*
+  and are also off while the org is locked (unverified / trial ended / expired / past due /
+  canceled — `getOrgLockReason()` in `session.ts`).
+- **Plan entitlements** — `plans.features` (jsonb, seeded per plan: `printLabels`,
+  `cameraScanning`, `viewMetrics`) plus the limits (`max_users`, `max_facilities`, `max_bins`,
+  `movement_history_months`). `multiFacility` is implied by `max_facilities > 1` rather than a
+  flag. A feature a plan doesn't include is off for every role; reading stays allowed on a
+  locked org. Today every plan includes every feature — the mechanism exists so the price list
+  can differentiate without a code change.
+- **Usage** — `loadUsage()` (members + pending invites, facilities, bins) — the same counter
+  `/billing` displays and the limit checks compare against.
 
-Every check throws a translated `planLimit.*` error pointing at Billing; verified live by
-temporarily lowering a plan's limits below the test org's actual usage and confirming both a
-new-entity create and a bays/levels grow are rejected with no partial write, then confirming
-normal operation resumes once limits are restored.
+`resolveCapabilities()` is pure (`capabilities.test.ts` is table-driven over role × plan × lock).
+Server actions call `requireCapability(cap)` (throws the translated `UserError`) and
+`requireRoom(orgId, limit, additional)` before adding something — "usage + what's about to be
+added must fit", one query, so a template with more bins than the plan allows is refused up
+front. `requirePermission()` and the `assertCanAdd*` helpers are kept as thin wrappers so the
+existing actions didn't have to change.
+
+UI: the root layout resolves the signed-in user's capabilities once per request
+(`capabilitiesForClient()`, with the translated reason per blocked capability) into
+`<CapabilitiesProvider>`; components use `useCapabilities()` / `useCan()` or wrap a control in
+`<Gate capability mode="hide"|"disable">` — hide for things a role should never see, disable (dim +
+explain-on-tap toast) for things an upgrade or verification would unlock. Server components read
+`getCapabilities()` directly (builder read-only, items form, bin page's label link, metrics).
+
+Where the checks sit today: bins in `createEntity` / `applyTemplate` / `updateEntity` (bays ×
+levels delta) / `duplicateEntity` / `restoreEntity`; seats in `createInvite`; facilities in
+`createFacility` (plus `multiFacility`); `printLabels` in `getLabelBins`; `cameraScanning` in
+`resolveScan`; `viewMetrics` on `/metrics`. Every check throws a translated `planLimit.*`,
+`permission.*`, `capability.plan.*` or `orgLocked.*` message that the notification system shows
+as-is.
 
 ## Trial-expiry lockout
 

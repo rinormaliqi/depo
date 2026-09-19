@@ -6,9 +6,9 @@ import { facilities, items, locations, memberships, organizations, plans, users,
 
 export async function seedPlans() {
   const rows = [
-    { key: "starter", name: "Starter", priceCents: 4900, maxUsers: 5, maxFacilities: 1, maxBins: 500, movementHistoryMonths: 12 },
-    { key: "business", name: "Business", priceCents: 11900, maxUsers: 20, maxFacilities: 3, maxBins: 5000, movementHistoryMonths: 24 },
-    { key: "enterprise", name: "Enterprise", priceCents: 24900, maxUsers: null, maxFacilities: null, maxBins: null, movementHistoryMonths: null },
+    { key: "starter", name: "Starter", priceCents: 4900, maxUsers: 5, maxFacilities: 1, maxBins: 500, movementHistoryMonths: 12, features: { printLabels: true, cameraScanning: true, viewMetrics: true } },
+    { key: "business", name: "Business", priceCents: 11900, maxUsers: 20, maxFacilities: 3, maxBins: 5000, movementHistoryMonths: 24, features: { printLabels: true, cameraScanning: true, viewMetrics: true } },
+    { key: "enterprise", name: "Enterprise", priceCents: 24900, maxUsers: null, maxFacilities: null, maxBins: null, movementHistoryMonths: null, features: { printLabels: true, cameraScanning: true, viewMetrics: true } },
   ];
   for (const plan of rows) await db.insert(plans).values(plan).onConflictDoNothing({ target: plans.key });
   const all = await db.select().from(plans);

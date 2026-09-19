@@ -5,6 +5,7 @@ import { getFacilityLocations, getMyFacility } from "@/app/builder/actions";
 import { getMyItems } from "@/app/items/actions";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
+import { getCapabilities } from "@/lib/capabilities";
 import { locationLabel } from "@/lib/location-path";
 import { getBinInfo, getBinStock } from "./actions";
 import { StockForm } from "./stock-form";
@@ -23,11 +24,12 @@ export default async function BinPage({
   // against the facility the bin actually belongs to — a link from a
   // search or QR label can open a bin in another site.
   const facility = await getMyFacility();
-  const [stockRows, myItems, allLocations, t] = await Promise.all([
+  const [stockRows, myItems, allLocations, t, caps] = await Promise.all([
     getBinStock(locationId),
     getMyItems(),
     getFacilityLocations(bin.facilityId),
     getTranslations(),
+    getCapabilities(),
   ]);
   const byId = new Map(allLocations.map((l) => [l.id, l]));
   const path = locationLabel(locationId, byId);
@@ -52,11 +54,13 @@ export default async function BinPage({
           <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--color-accent)" }}>{t("bin.kicker")}</div>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 28, letterSpacing: ".03em", marginBottom: 4 }}>{bin.code}</div>
           <div style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)", marginBottom: 6 }}>{path}</div>
-          <div style={{ marginBottom: 20 }}>
-            <Link href={`/labels?bin=${locationId}`} style={{ fontSize: 12 }} className="underline">
-              {t("bin.printLabel")}
-            </Link>
-          </div>
+          {caps?.can.printLabels && (
+            <div style={{ marginBottom: 20 }}>
+              <Link href={`/labels?bin=${locationId}`} style={{ fontSize: 12 }} className="underline">
+                {t("bin.printLabel")}
+              </Link>
+            </div>
+          )}
 
           <div style={{ display: "flex", flexDirection: "column" }}>
             {stockRows.map((row) => (

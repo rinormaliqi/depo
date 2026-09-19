@@ -7,6 +7,7 @@ import * as rawActions from "./actions";
 import { unwrap } from "@/lib/action-result";
 import { CameraScanner } from "./camera-scanner";
 import { useNotify } from "@/components/notifications";
+import { Gate } from "@/components/capabilities";
 
 const commitScan = unwrap(rawActions.commitScan);
 const resolveScan = unwrap(rawActions.resolveScan);
@@ -97,9 +98,11 @@ export function ScanForm({ items }: { items: Item[] }) {
         <div style={{ fontSize: 10, color: "color-mix(in srgb, var(--color-text) 50%, transparent)", marginTop: -4 }}>
           {t("locationHint")}
         </div>
-        <button type="button" className="btn btn-secondary btn-block" onClick={() => setCameraOpen(true)} disabled={busy}>
-          {t("scanWithCamera")}
-        </button>
+        <Gate capability="cameraScanning" mode="disable">
+          <button type="button" className="btn btn-secondary btn-block" onClick={() => setCameraOpen(true)} disabled={busy}>
+            {t("scanWithCamera")}
+          </button>
+        </Gate>
         <button className="btn btn-primary btn-block" onClick={handleCommit} disabled={busy} style={{ minHeight: 46 }}>
           {t("commit")}
         </button>

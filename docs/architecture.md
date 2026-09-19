@@ -351,8 +351,12 @@ same toast:
   `cameraScanning`, `viewMetrics`) plus the limits (`max_users`, `max_facilities`, `max_bins`,
   `movement_history_months`). `multiFacility` is implied by `max_facilities > 1` rather than a
   flag. A feature a plan doesn't include is off for every role; reading stays allowed on a
-  locked org. Today every plan includes every feature — the mechanism exists so the price list
-  can differentiate without a code change.
+  locked org. An **empty** feature map means "not configured → everything included" (how every
+  plan shipped before the column existed); a non-empty map is authoritative. That default is
+  what keeps a missed backfill from switching the product off (#68: production applied
+  migration 0006 from a preview build before its backfill was appended). Today every plan
+  includes every feature — the mechanism exists so the price list can differentiate without a
+  code change.
 - **Usage** — `loadUsage()` (members + pending invites, facilities, bins) — the same counter
   `/billing` displays and the limit checks compare against.
 
@@ -978,7 +982,10 @@ change to build on Vercel at all, and both are improvements regardless of host:
   spreads the same config and adds the provider for pages and server actions.
 
 `vercel.json` runs `pnpm db:migrate` as part of the build command — the Vercel equivalent of
-Render's pre-deploy step; a failing migration fails the build.
+Render's pre-deploy step; a failing migration fails the build. **Only when `VERCEL_ENV` is
+`production`**: preview builds of a PR branch share the production `DATABASE_URL`, and one of
+them once applied a half-written migration to the live database (#68). Never rewrite a
+migration file after it has been pushed; add a new one.
 
 **Where things stand (2026-09-18).** Production is `https://depo-zeta.vercel.app` — Vercel
 Hobby, Neon free Postgres, `fra1`, deploying from `main` on every merge. Env vars, migrations,

@@ -83,10 +83,19 @@ export function resolveCapabilities(input: {
     }
   }
 
+  // An empty feature map is a plan row nobody has configured yet (the
+  // column's default) — that means "everything included", the way every
+  // plan shipped before features existed. A non-empty map is authoritative:
+  // a missing key there means "not included". This is what keeps a missed
+  // backfill from switching the product off for every customer.
+  const configured = Object.keys(plan.features ?? {}).length > 0;
   for (const feature of FEATURES) {
     // multiFacility is implied by the facilities limit rather than a flag:
     // a plan that allows more than one facility has the feature.
-    const included = feature === "multiFacility" ? plan.maxFacilities === null || plan.maxFacilities > 1 : plan.features[feature] === true;
+    const included =
+      feature === "multiFacility"
+        ? plan.maxFacilities === null || plan.maxFacilities > 1
+        : !configured || plan.features[feature] === true;
     if (!FEATURE_ROLES[feature].includes(role)) {
       can[feature] = false;
       reason[feature] = { kind: "role" };

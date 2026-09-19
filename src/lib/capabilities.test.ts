@@ -4,7 +4,7 @@ import { CAPABILITIES, resolveCapabilities, type Capability, type PlanEntitlemen
 
 const starter: PlanEntitlements = { key: "starter", name: "Starter", features: { printLabels: true, cameraScanning: true, viewMetrics: true }, maxUsers: 5, maxFacilities: 1, maxBins: 500, movementHistoryMonths: 12 };
 const business: PlanEntitlements = { ...starter, key: "business", name: "Business", maxUsers: 20, maxFacilities: 3, maxBins: 5000, movementHistoryMonths: 24 };
-const bare: PlanEntitlements = { ...starter, key: "bare", name: "Bare", features: {} };
+const bare: PlanEntitlements = { ...starter, key: "bare", name: "Bare", features: { printLabels: false } };
 const usage = { users: 1, facilities: 1, bins: 0 };
 
 function expectCan(caps: ReturnType<typeof resolveCapabilities>, allowed: Capability[]) {
@@ -23,6 +23,15 @@ test("role decides actions; plan decides features; a worker never gets layout, t
 
   const admin = resolveCapabilities({ role: "admin", plan: business, locked: null, usage });
   expectCan(admin, [...CAPABILITIES]);
+});
+
+test("an unconfigured (empty) feature map includes everything; a configured map is authoritative", () => {
+  const legacy = resolveCapabilities({ role: "admin", plan: { ...starter, features: {} }, locked: null, usage });
+  assert.equal(legacy.can.cameraScanning, true);
+  assert.equal(legacy.can.printLabels, true);
+  const configured = resolveCapabilities({ role: "admin", plan: { ...starter, features: { printLabels: true } }, locked: null, usage });
+  assert.equal(configured.can.printLabels, true);
+  assert.equal(configured.can.cameraScanning, false, "a missing key in a configured map is not included");
 });
 
 test("a plan without a feature switches it off for every role, with the plan as the reason", () => {

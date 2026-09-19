@@ -692,9 +692,10 @@ the user is looking at.
 ## Landing page
 
 `/` (`src/app/page.tsx`) shows the product instead of describing it. Two grounds carry the
-page: the app's off-white, and the depot green (`--color-success-*`, the same ramp the success
-toasts use) for the hero band and the closing band — the blueprint demo sits on green like a
-drawing on a site table, and green is what "stocked" and "found" mean in every figure. The hero
+page: the app's off-white, and the ink blue (`--color-accent-900`) for the hero band and the
+closing band — the blueprint demo sits on it like a drawing on a drafting table. One accent
+throughout; the green ramp is reserved for success toasts (a green variant was tried and
+rejected, 2026-09-19). The hero
 also carries four true numbers (2 s lookup, 0 devices, 70×40 mm labels, 30-day trial); a "who
 it's for" strip names six concrete depot types instead of logos or testimonials. The hero is the core loop
 running live — `src/app/landing/demo-blueprint.tsx`, a hand-drawn demo depot (three racks,

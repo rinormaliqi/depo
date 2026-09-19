@@ -307,7 +307,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 .btn-danger { background: var(--color-danger-500); color: var(--color-bg); border-color: var(--color-danger-500); }
 .btn-danger:hover { background: var(--color-danger-700); }
 /* On a dark ground (the landing's green bands): a light solid and a light outline. */
-.btn-light { background: var(--color-bg); color: var(--color-success-900); border-color: var(--color-bg); }
+.btn-light { background: var(--color-bg); color: var(--color-accent-900); border-color: var(--color-bg); }
 .btn-light:hover { background: #fff; }
 .btn-outline-light { background: transparent; color: var(--color-bg); border-color: color-mix(in srgb, var(--color-bg) 55%, transparent); }
 .btn-outline-light:hover { background: color-mix(in srgb, var(--color-bg) 12%, transparent); }

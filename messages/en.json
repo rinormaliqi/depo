@@ -560,7 +560,17 @@
     "printLabel": "Print label",
     "printLabels": "Print bin labels",
     "printAllLabels": "Print all bin labels",
-    "levelsCount": "Levels"
+    "levelsCount": "Levels",
+    "mode": {
+      "label": "Mouse mode",
+      "navigate": "Navigate",
+      "navigateHint": "Drag to pan, wheel to zoom (H, or hold Space)",
+      "edit": "Edit",
+      "editHint": "Select, move and resize objects (V)",
+      "inspect": "Inspect",
+      "inspectHint": "Click an object to read its details — nothing moves (I)"
+    },
+    "zoom100": "Zoom to 100%"
   },
   "bin": {
     "kicker": "Bin",

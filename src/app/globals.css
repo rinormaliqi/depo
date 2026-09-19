@@ -301,3 +301,10 @@ input[type="number"] {
   .contact-form-row { grid-template-columns: 1fr; }
   .contact-form .btn { align-self: stretch; }
 }
+
+/* ── Blueprint mouse modes (#60): the cursor always says what a drag does. */
+.canvas-wrap.canvas-mode-navigate { cursor: grab; }
+.canvas-wrap.canvas-mode-navigate.is-panning { cursor: grabbing; }
+.canvas-wrap.canvas-mode-navigate * { cursor: inherit !important; }
+.canvas-wrap.canvas-mode-inspect { cursor: default; }
+.canvas-wrap.canvas-mode-edit { cursor: default; }

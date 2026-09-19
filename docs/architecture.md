@@ -550,6 +550,23 @@ to add it empty. Bin codes stay numeric (`A-01-2-3`), so renaming a level never 
 printed label. Builder: the level selector lists the facility's levels (with names) and a ⚙
 opens the manage dialog for `editLayout` roles. Tests: `src/tests/facility-levels.test.ts`.
 
+## Blueprint mouse modes
+
+The canvas has three modes (`CanvasMode` in `blueprint-canvas.tsx`), shown as a segmented
+control in the toolbar and remembered in `localStorage`: **Navigate** (`H`, or hold `Space` in
+any mode) — dragging pans the wrapper's scroll position, the wheel zooms toward the cursor,
+objects never react; **Edit** (`V`) — the existing select / move / resize / add / delete; **Inspect**
+(`I`) — a click selects and the inspector opens read-only (`fieldset disabled`), nothing moves.
+Workers (read-only) get Navigate and Inspect. The wrapper's class (`canvas-mode-*`,
+`is-panning`) sets the cursor so the mouse always says what a drag will do.
+
+Two guard rails in Edit: a drag is armed on mousedown but only becomes live after 4px of
+travel, so a click never nudges an object (and a plain click saves nothing); `Esc` drops a
+live drag and restores the box. Zoom is `zoomAt(level, clientX, clientY)` — it keeps the floor
+point under the cursor fixed by adjusting the wrapper's scroll after the re-render — used by
+the ± buttons (centre), the "100%" button, ctrl/⌘+wheel in any mode, plain wheel in Navigate,
+and two-finger pinch on touch. One finger pans in Navigate because the wrapper simply scrolls.
+
 ## Visual builder — the Depot Blueprint import
 
 Superseded the original "boxes nested inside boxes" drill-down builder: a Claude Design

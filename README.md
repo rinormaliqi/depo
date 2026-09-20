@@ -36,5 +36,5 @@ Open http://localhost:3000.
 - `pnpm db:generate` — generate a SQL migration from schema changes
 - `pnpm db:migrate` — apply migrations (production: `vercel.json` runs it in the build; `render.yaml` as the pre-deploy command)
 - `pnpm db:seed` — seed the `plans` table with the pricing tiers
-- `pnpm db:seed:dev` — local-only test dataset: 12 users across 6 companies (one per plan/lock state), each with a laid-out facility, items, stock and movement history; rebuilt from scratch on every run, all accounts `<name>@seed.smartdepo.test` / `Test1234!` (printed at the end)
+- `pnpm db:seed:dev` — local-only test dataset: 12 users across 6 companies (one per plan/lock state), each with a laid-out facility, items, stock and movement history; rebuilt from scratch on every run, refuses any non-localhost `DATABASE_URL`, all accounts `<name>@seed.smartdepo.test` / `Test1234!` (printed at the end)
 - `pnpm db:studio` — browse the database

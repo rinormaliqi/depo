@@ -329,6 +329,22 @@ async function fillFacility(
 
 // ── Main ────────────────────────────────────────────────────────────────
 
+// Refuses anything that isn't the local Docker Postgres — so a stray
+// `pnpm db:seed:dev` with a production .env in the shell cannot put
+// twelve Test1234! accounts on the real database. Neon, Render, any
+// hosted URL: the hostname is never localhost.
+const dbHost = (() => {
+  try {
+    return new URL(process.env.DATABASE_URL ?? "").hostname;
+  } catch {
+    return "";
+  }
+})();
+if (!["localhost", "127.0.0.1", "::1", "postgres"].includes(dbHost)) {
+  console.error(`seed-dev refuses to run against "${dbHost || "(unset)"}" — local databases only.`);
+  process.exit(1);
+}
+
 const planRows = await db.select().from(plans);
 const planByKey = Object.fromEntries(planRows.map((p) => [p.key, p]));
 for (const key of ["starter", "business", "enterprise"]) {

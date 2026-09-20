@@ -10,6 +10,8 @@ import { plans, users } from "@/db/schema";
 import { isDisposableEmail, normalizeEmail } from "@/lib/email-normalize";
 import { sendVerificationEmail } from "@/lib/email-verification";
 import { createOrganizationForFounder } from "@/lib/onboarding";
+import { LIMITS, assertNotLimited, clientIp, record } from "@/lib/rate-limit";
+import { UserError } from "@/lib/user-error";
 
 type FormState = { error?: string } | undefined;
 
@@ -31,6 +33,14 @@ export async function signUp(_prevState: FormState, formData: FormData): Promise
     return { error: t("errorDisposableEmail") };
   }
 
+  const ipKey = `signup:ip:${await clientIp()}`;
+  try {
+    await assertNotLimited(ipKey, LIMITS.signup);
+  } catch (e) {
+    if (e instanceof UserError) return { error: e.message };
+    throw e;
+  }
+
   // Compared on the alias-collapsed form, so `me+2@gmail.com` can't sign up
   // for a second trial next to `me@gmail.com` (see src/lib/email-normalize.ts).
   const normalizedEmail = normalizeEmail(email);
@@ -46,6 +56,7 @@ export async function signUp(_prevState: FormState, formData: FormData): Promise
     return { error: t("errorPlansNotSeeded") };
   }
 
+  await record(ipKey);
   const passwordHash = await hash(password, 12);
   const [user] = await db.insert(users).values({ email, normalizedEmail, passwordHash, name }).returning();
 

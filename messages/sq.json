@@ -169,7 +169,9 @@
       "signUpLink": "Regjistrohu",
       "forgotPassword": "Harruat fjalëkalimin?",
       "errorRequired": "Emaili dhe fjalëkalimi janë të detyrueshëm",
-      "errorInvalid": "Email ose fjalëkalim i pasaktë"
+      "errorInvalid": "Email ose fjalëkalim i pasaktë",
+      "errorGoogleOnly": "Kjo llogari kyçet me Google — përdor \"Vazhdo me Google\" më lart, ose vendos fjalëkalim përmes \"Harruat fjalëkalimin\".",
+      "afterFailure": "Fjalëkalim i gabuar?"
     },
     "signup": {
       "title": "Filloni provën tuaj",
@@ -898,5 +900,49 @@
       "manager": "Menaxher",
       "worker": "Punëtor"
     }
+  },
+  "authError": {
+    "kicker": "Problem me kyçjen",
+    "backToLogin": "Kthehu te kyçja",
+    "contact": "Na shkruaj",
+    "GoogleUnverified": {
+      "title": "Google s'e ka verifikuar atë adresë",
+      "body": "Email-i i llogarisë sate Google nuk është i shënuar si i verifikuar nga Google, prandaj s'mund ta marrim si provë të inbox-it. Verifikoje te llogaria Google, ose regjistrohu me fjalëkalim."
+    },
+    "GoogleNoEmail": {
+      "title": "Google s'e dha email-in",
+      "body": "Na duhet një adresë email-i për ta krijuar ose gjetur llogarinë. Provo sërish dhe lejo qasjen në email, ose regjistrohu me fjalëkalim."
+    },
+    "AccessDenied": {
+      "title": "Kyçja u refuzua",
+      "body": "Kjo llogari s'mund të kyçet tani. Nëse mendon se është gabim, na shkruaj."
+    },
+    "OAuthCallbackError": {
+      "title": "Kyçja me Google s'u përfundua",
+      "body": "Diçka shkoi keq mes Google dhe SmartDepo — zakonisht një dritare e mbyllur ose sesion i skaduar. Provo sërish."
+    },
+    "OAuthAccountNotLinked": {
+      "title": "Ky email ka tashmë llogari",
+      "body": "Kyçu me fjalëkalimin, ose përdor \"Harruat fjalëkalimin\" për të vendosur një."
+    },
+    "Configuration": {
+      "title": "Kyçja s'është konfiguruar",
+      "body": "Kjo mënyrë kyçjeje s'është vendosur ende në këtë instalim. Përdor email dhe fjalëkalim, ose na shkruaj."
+    },
+    "Verification": {
+      "title": "Ai link s'është më i vlefshëm",
+      "body": "Linqet e kyçjes skadojnë dhe punojnë vetëm një herë. Fillo sërish nga faqja e kyçjes."
+    },
+    "CredentialsSignin": {
+      "title": "Email ose fjalëkalim i gabuar",
+      "body": "Kontrolloji të dyja dhe provo sërish, ose rivendos fjalëkalimin."
+    },
+    "Default": {
+      "title": "Kyçja s'funksionoi",
+      "body": "Ndodhi diçka e papritur. Provo sërish; nëse vazhdon, na shkruaj."
+    }
+  },
+  "rateLimit": {
+    "tooMany": "Shumë përpjekje — provo sërish pas {minutes} minutash"
   }
 }

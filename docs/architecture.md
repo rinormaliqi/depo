@@ -164,6 +164,25 @@ middleware's public-prefix list, same as reset links: the click can come from a 
 with no session. `appBaseUrl()` (`src/lib/app-url.ts`) is the request-host-derived base every
 emailed link now uses, pulled out of the reset flow so this one didn't copy it.
 
+## Sign-in hardening
+
+`src/lib/rate-limit.ts` is the one limiter: a sliding window over rows in `rate_limit_events`
+(migration 0010), Postgres-backed because production is serverless functions with no shared
+memory. `LIMITS` names every window; callers decide what counts. Login records only
+*failures* (per address and per IP, checked before `signIn` so a blocked address isn't even
+tried), so nobody locks themselves out by signing in a lot; password reset records every
+request and, over the limit, still shows "sent" while sending nothing (no enumeration, no
+mail flood); signup is per IP; verification resend has an hourly cap on top of its 60-second
+floor; the contact form uses the same helper. The message is one translated line everywhere.
+
+`authorize()` throws a `CredentialsSignin` subclass with `code = "google_only"` for an account
+with no password hash, and the login action turns that into "this account signs in with
+Google" instead of "wrong password". `pages.error` is `/auth-error`: every Auth.js failure
+(OAuth callback, configuration, access denied, expired link) renders our page with a plain
+sentence per code; the Google `signIn` callback returns `/auth-error?error=GoogleUnverified` /
+`GoogleNoEmail` rather than `false`, so a refusal explains itself. After a failed login the
+form points at "Forgot password". Tests: `src/tests/rate-limit.test.ts`.
+
 ## Sign in with Google
 
 Optional, on only when `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are set (`isGoogleSignInEnabled()`

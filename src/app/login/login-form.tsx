@@ -28,6 +28,12 @@ export function LoginForm() {
         <input className="input" name="password" type="password" placeholder="••••••••" required />
       </div>
       <FormError>{state?.error}</FormError>
+      {state?.error && !state.googleOnly && (
+        <p className="text-muted" style={{ fontSize: 12, margin: 0 }}>
+          {t("login.afterFailure")}{" "}
+          <PublicLink href="/forgot-password" style={{ color: "var(--color-accent)" }}>{t("login.forgotPassword")}</PublicLink>
+        </p>
+      )}
       <button type="submit" className="btn btn-primary btn-block" disabled={isPending}>
         {isPending ? t("login.signingIn") : t("login.signIn")}
       </button>

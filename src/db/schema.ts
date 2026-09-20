@@ -364,3 +364,17 @@ export const facilityLevels = pgTable(
   },
   (table) => [uniqueIndex("facility_levels_facility_index_idx").on(table.facilityId, table.index)],
 );
+
+// One row per counted attempt (a failed login, a reset request, a
+// signup…) keyed by what's being limited — "login:email:x", "signup:ip:y".
+// Postgres-backed like the contact-form cap so every serverless instance
+// sees the same count; src/lib/rate-limit.ts counts a window and prunes.
+export const rateLimitEvents = pgTable(
+  "rate_limit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    key: text("key").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("rate_limit_events_key_idx").on(table.key, table.createdAt)],
+);

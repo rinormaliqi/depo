@@ -8,7 +8,9 @@ import type { NextAuthConfig } from "next-auth";
 export const authConfig = {
   session: { strategy: "jwt" },
   trustHost: true,
-  pages: { signIn: "/login" },
+  // Every Auth.js failure (OAuth callback, configuration, access denied)
+  // renders our own page instead of the unstyled default.
+  pages: { signIn: "/login", error: "/auth-error" },
   providers: [],
   callbacks: {
     async jwt({ token, user }) {

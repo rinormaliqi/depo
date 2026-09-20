@@ -169,7 +169,9 @@
       "signUpLink": "Sign up",
       "forgotPassword": "Forgot password?",
       "errorRequired": "Email and password are required",
-      "errorInvalid": "Invalid email or password"
+      "errorInvalid": "Invalid email or password",
+      "errorGoogleOnly": "This account signs in with Google — use \"Continue with Google\" above, or set a password via \"Forgot password\".",
+      "afterFailure": "Wrong password?"
     },
     "signup": {
       "title": "Start your trial",
@@ -898,5 +900,49 @@
       "manager": "Manager",
       "worker": "Worker"
     }
+  },
+  "authError": {
+    "kicker": "Sign-in problem",
+    "backToLogin": "Back to log in",
+    "contact": "Contact us",
+    "GoogleUnverified": {
+      "title": "Google hasn't verified that address",
+      "body": "Your Google account's email isn't marked as verified by Google, so we can't take it as proof of the inbox. Verify it in your Google account, or sign up with a password instead."
+    },
+    "GoogleNoEmail": {
+      "title": "Google didn't share an email",
+      "body": "We need an email address to create or find your account. Try again and allow the email permission, or sign up with a password."
+    },
+    "AccessDenied": {
+      "title": "Sign-in was refused",
+      "body": "This account can't sign in right now. If you think that's wrong, write to us."
+    },
+    "OAuthCallbackError": {
+      "title": "Google sign-in didn't complete",
+      "body": "Something went wrong between Google and SmartDepo — usually a closed window or a timed-out session. Try again."
+    },
+    "OAuthAccountNotLinked": {
+      "title": "This email already has an account",
+      "body": "Sign in with your password, or use \"Forgot password\" to set one."
+    },
+    "Configuration": {
+      "title": "Sign-in isn't configured",
+      "body": "This sign-in method isn't set up on this deployment yet. Use email and password, or write to us."
+    },
+    "Verification": {
+      "title": "That link is no longer valid",
+      "body": "Sign-in links expire and work only once. Start again from the login page."
+    },
+    "CredentialsSignin": {
+      "title": "Wrong email or password",
+      "body": "Check both and try again, or reset your password."
+    },
+    "Default": {
+      "title": "Sign-in didn't work",
+      "body": "Something unexpected happened. Try again; if it keeps happening, write to us."
+    }
+  },
+  "rateLimit": {
+    "tooMany": "Too many attempts — try again in {minutes} minutes"
   }
 }

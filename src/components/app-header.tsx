@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getBillingSummary } from "@/app/billing/actions";
 import { useCapabilities } from "@/components/capabilities";
+import { LockBanner } from "@/components/lock-banner";
 import { homeFor, primaryNav, secondaryNav } from "@/lib/navigation";
 import { logout } from "@/lib/actions/auth";
 import { FacilitySwitcher } from "./facility-switcher";
@@ -216,6 +217,8 @@ export function AppHeader({
           {t("common.signOut")}
         </button>
       </div>
+
+      <LockBanner />
 
       {/* Phones: the primary tabs live in a bottom bar under the thumb
           (CSS shows it under 768px and hides the in-header tabs). */}

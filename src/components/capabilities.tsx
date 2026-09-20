@@ -16,7 +16,7 @@ import { useNotify } from "@/components/notifications";
 //                        could get by upgrading or verifying, where hiding
 //                        would just be confusing.
 
-export type ClientCapabilities = Capabilities & { messages: Partial<Record<Capability, string>> };
+export type ClientCapabilities = Capabilities & { messages: Partial<Record<Capability, string>>; admins: { name: string; email: string }[] };
 
 const Ctx = createContext<ClientCapabilities | null>(null);
 

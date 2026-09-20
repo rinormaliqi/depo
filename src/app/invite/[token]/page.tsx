@@ -8,6 +8,8 @@ import { invites, organizations, users } from "@/db/schema";
 import { AuthShell } from "@/components/auth-shell";
 import { normalizeEmail } from "@/lib/email-normalize";
 import { acceptInviteViaSession } from "@/lib/onboarding";
+import { getOrgLockReason } from "@/lib/session";
+import { memberships } from "@/db/schema";
 import { AcceptInviteForm } from "./accept-invite-form";
 import { NOINDEX } from "@/lib/seo";
 
@@ -28,6 +30,16 @@ export default async function InvitePage({
 
   const organization = invite ? (await db.select().from(organizations).where(eq(organizations.id, invite.organizationId)))[0] : null;
   const existingUser = invite ? (await db.select().from(users).where(eq(users.normalizedEmail, normalizeEmail(invite.email))))[0] : null;
+  // A locked company can't take new members (acceptance is refused with
+  // the reason) — say so up front, and name who can fix it.
+  const lockReason = invite ? await getOrgLockReason(invite.organizationId) : null;
+  const lockAdmins = lockReason && invite
+    ? await db
+        .select({ name: users.name, email: users.email })
+        .from(memberships)
+        .innerJoin(users, eq(memberships.userId, users.id))
+        .where(and(eq(memberships.organizationId, invite.organizationId), eq(memberships.role, "admin")))
+    : [];
 
   // Already signed in — straight after "Continue with Google" from this
   // page, or an existing user who was logged in when they opened the
@@ -62,6 +74,14 @@ export default async function InvitePage({
                 {t("joinAs", { role: t(`role.${invite.role}`), email: invite.email })}
               </p>
             </div>
+            {lockReason && (
+              <p style={{ fontSize: 13, lineHeight: 1.5, padding: "8px 10px", marginBottom: 14, background: "var(--color-warning-100)", border: "1px solid color-mix(in srgb, var(--color-warning-500) 40%, transparent)" }}>
+                {t("lockedBody", { org: organization.name })}{" "}
+                {lockAdmins.map((a, i) => (
+                  <span key={a.email}>{i > 0 && ", "}<a href={`mailto:${a.email}`} style={{ color: "inherit", textDecoration: "underline" }}>{a.name}</a></span>
+                ))}
+              </p>
+            )}
             {mismatchEmail !== null ? (
               <p style={{ fontSize: 13, textAlign: "center", color: "var(--color-accent-800)" }}>
                 {t("signedInAsOther", { current: mismatchEmail, invited: invite.email })}

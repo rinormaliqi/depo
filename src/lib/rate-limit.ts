@@ -23,6 +23,7 @@ export const LIMITS = {
   forgotPassword: { max: 5, windowSeconds: 60 * 60 },
   signup: { max: 5, windowSeconds: 60 * 60 },
   verificationResend: { max: 6, windowSeconds: 60 * 60 },
+  emailChange: { max: 1, windowSeconds: 10 * 60 },
   contact: { max: 5, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, Limit>;
 

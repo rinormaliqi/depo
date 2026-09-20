@@ -682,6 +682,38 @@
     "email": {
       "subject": "Verifiko email-in tënd në SmartDepo",
       "body": "Mirë se erdhe në SmartDepo. Konfirmo që kjo është adresa jote e email-it për të filluar provën 30-ditore:\n\n{url}\n\nLidhja funksionon vetëm një herë dhe skadon pas 24 orësh. Nëse nuk je regjistruar ti, injoroje këtë email."
+    },
+    "spamHint": "Dërguar nga {sender} — nëse s'vjen brenda një minute, shiko te Spam ose Promotions.",
+    "resendIn": "Ridërgo pas {s}s",
+    "contactUs": "Na shkruaj",
+    "loginToResend": "Kyçu për një link të ri",
+    "dead": {
+      "expired": {
+        "title": "Ky link ka skaduar",
+        "body": "Linqet e verifikimit zgjasin 24 orë. Merr një të ri dhe klikoje menjëherë."
+      },
+      "used": {
+        "title": "Ky link është përdorur tashmë",
+        "body": "Email-i yt është i verifikuar — thjesht kyçu."
+      },
+      "unknown": {
+        "title": "Ky link s'është i vlefshëm",
+        "body": "S'përputhet me asnjë verifikim që kemi dërguar. Kyçu dhe kërko një të ri."
+      }
+    },
+    "change": {
+      "prompt": "Adresë e gabuar?",
+      "open": "Ndryshoje",
+      "label": "Adresa e saktë e email-it",
+      "cancel": "Anulo",
+      "save": "Ruaj dhe ridërgo",
+      "saving": "Po ruhet…",
+      "changed": "Adresa u ndryshua — një link i ri po shkon te {email}.",
+      "errorEmail": "Ai email s'duket i saktë",
+      "errorDisposable": "Adresat e përkohshme s'mund të përdoren",
+      "errorTaken": "Ajo adresë ka tashmë llogari — kyçu me të",
+      "errorNotSignedIn": "Kyçu së pari",
+      "errorAlreadyVerified": "Kjo llogari është tashmë e verifikuar"
     }
   },
   "permission": {
@@ -740,7 +772,10 @@
         "errorRate": "Shumë mesazhe brenda një ore — provo më vonë ose na shkruaj direkt",
         "errorSend": "Mesazhi u ruajt, por s'u dërgua dot me email tani — do ta shohim gjithsesi; ose na shkruaj direkt"
       },
-      "detailsTitle": "Mënyra të tjera kontakti"
+      "detailsTitle": "Mënyra të tjera kontakti",
+      "topics": {
+        "verification": "U regjistrova si {email}, por email-i i verifikimit s'ka ardhur."
+      }
     },
     "pricing": {
       "title": "Çmimet",

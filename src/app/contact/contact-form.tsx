@@ -9,7 +9,7 @@ import { sendContactMessage } from "./actions";
 // The public contact form. Success and non-field errors go through the
 // notification system; the honeypot and the fill-time stamp are the only
 // anti-spam, on purpose — see actions.ts.
-export function ContactForm({ defaults }: { defaults?: { name?: string; email?: string } }) {
+export function ContactForm({ defaults }: { defaults?: { name?: string; email?: string; message?: string } }) {
   const t = useTranslations("public.contact.form");
   const notify = useNotify();
   const [state, formAction, isPending] = useActionState(sendContactMessage, undefined);
@@ -46,7 +46,7 @@ export function ContactForm({ defaults }: { defaults?: { name?: string; email?: 
       </div>
       <div className="field">
         <label htmlFor="contact-message">{t("message")}</label>
-        <textarea id="contact-message" className="input" name="message" rows={6} required placeholder={t("messagePlaceholder")} />
+        <textarea id="contact-message" className="input" name="message" rows={6} required placeholder={t("messagePlaceholder")} defaultValue={defaults?.message} />
       </div>
       <FormError>{state?.error}</FormError>
       <button type="submit" className="btn btn-primary" disabled={isPending}>

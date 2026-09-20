@@ -164,6 +164,19 @@ middleware's public-prefix list, same as reset links: the click can come from a 
 with no session. `appBaseUrl()` (`src/lib/app-url.ts`) is the request-host-derived base every
 emailed link now uses, pulled out of the reset flow so this one didn't copy it.
 
+## Verification recovery
+
+Everything that can go wrong with the verification mail has a way out on `/verify-email`:
+resend (the 60-second floor shown as a countdown, an hourly cap behind it), **"Wrong address?
+Change it"** — `changeUnverifiedEmail()` moves an *unverified* user to the corrected address
+under signup's uniqueness and disposable-domain rules, kills the old tokens (a link to the
+wrong inbox must never verify the new address) and sends a fresh one, one change per ten
+minutes — a spam-folder hint naming the sender, and a contact link that pre-fills the
+situation (`/contact?topic=verification`). `consumeVerificationToken()` now says *why* a link
+is dead (`expired` / `used` / `unknown`), and the token page offers the matching next step: a
+resend button right there for the signed-in owner of an expired link, "you're already
+verified, log in" for a used one.
+
 ## Sign-in hardening
 
 `src/lib/rate-limit.ts` is the one limiter: a sliding window over rows in `rate_limit_events`

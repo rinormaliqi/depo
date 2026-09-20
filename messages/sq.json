@@ -273,7 +273,8 @@
       "memberNotFound": "Ai anëtar nuk ekziston më",
       "lastAdmin": "Një organizatë duhet të ketë të paktën një administrator",
       "onlyAdminCanChangeAdmin": "Vetëm një administrator mund të ndryshojë ose heqë një administrator tjetër",
-      "cannotRemoveSelf": "Nuk mund ta heqësh veten — pyet një administrator tjetër"
+      "cannotRemoveSelf": "Nuk mund ta heqësh veten — pyet një administrator tjetër",
+      "transferToSelf": "Je tashmë admini"
     },
     "expired": "Skadoi më {date}",
     "remove": "Hiq",
@@ -291,7 +292,17 @@
     "removed": "{name} u hoq",
     "roleChanged": "Roli i {name} u ndryshua",
     "resent": "Ftesa u ridërgua te {email}",
-    "revoked": "Ftesa për {email} u anulua"
+    "revoked": "Ftesa për {email} u anulua",
+    "makeOwner": "Bëje pronar",
+    "transferTitle": "Ta bëjmë {name} pronar?",
+    "transferBody": "{name} bëhet admin me qasje të plotë, përfshirë faturimin. Ti mbetesh menaxher. Ai/ajo mund të të bëjë sërish admin.",
+    "transferConfirm": "Dorëzo",
+    "transferred": "{name} është tani admin; ti je menaxher",
+    "leave": "Largohu nga kjo organizatë",
+    "leaveTitle": "Të largohesh nga organizata?",
+    "leaveBody": "E humb qasjen te depoja e saj menjëherë. Lëvizjet e stokut që ke regjistruar mbeten në historikun e saj. Një admin mund të të ftojë sërish.",
+    "left": "U largove nga organizata",
+    "leaveLastAdmin": "Je admini i vetëm, prandaj s'mund të largohesh — bëje dikë tjetër pronar së pari."
   },
   "invite": {
     "title": "Bashkohu me {org}",
@@ -322,7 +333,29 @@
     "acceptWithGoogle": "Prano me Google",
     "signedInAsOther": "Je kyçur si {current}, por kjo ftesë është për {invited}. Dil dhe hape linkun sërish, ose kërko një ftesë për {current}.",
     "lockedBody": "{org} s'ka plan aktiv për momentin, prandaj anëtarë të rinj s'mund të bashkohen ende. Mund ta rregullojë:",
-    "alsoMemberOf": "Je tashmë anëtar i {orgs}. Pranimi shton {org} krahas — mund të kalosh mes kompanive nga menyja kurdo."
+    "alsoMemberOf": "Je tashmë anëtar i {orgs}. Pranimi shton {org} krahas — mund të kalosh mes kompanive nga menyja kurdo.",
+    "dead": {
+      "expired": {
+        "title": "Kjo ftesë ka skaduar",
+        "body": "{inviter} të ftoi te {org}, por linqet e ftesës zgjasin 7 ditë. Kërko një të re me butonin më poshtë — i shkon një email me një klik."
+      },
+      "used": {
+        "title": "Kjo ftesë është përdorur tashmë",
+        "body": "Ftesa për {org} është pranuar. Nëse ishe ti, thjesht kyçu."
+      },
+      "unknown": {
+        "title": "Ftesa nuk u gjet",
+        "body": "Ky link s'përputhet me asnjë ftesë. Kërkoji personit që të ftoi të dërgojë një të re."
+      }
+    },
+    "renew": "Kërkoji {inviter} një ftesë të re",
+    "renewing": "Po dërgohet…",
+    "renewSent": "U krye — {inviter} u njoftua të të dërgojë një ftesë të re.",
+    "renewEmail": {
+      "subject": "{email} ka nevojë për një ftesë të re në SmartDepo",
+      "body": "Përshëndetje {inviter},\n\nftesa që i dërgove {email} për {org} ka skaduar dhe do një të re. Hap faqen Ekipi dhe përdor Ridërgo:\n\n{url}\n\n— SmartDepo"
+    },
+    "goToLogin": "Kyçu"
   },
   "billing": {
     "title": "Faturimi",

@@ -273,7 +273,8 @@
       "memberNotFound": "That member no longer exists",
       "lastAdmin": "An organization needs at least one admin",
       "onlyAdminCanChangeAdmin": "Only an admin can change or remove another admin",
-      "cannotRemoveSelf": "You can't remove yourself — ask another admin"
+      "cannotRemoveSelf": "You can't remove yourself — ask another admin",
+      "transferToSelf": "You're already the admin"
     },
     "expired": "Expired {date}",
     "remove": "Remove",
@@ -291,7 +292,17 @@
     "removed": "{name} was removed",
     "roleChanged": "{name}'s role was updated",
     "resent": "Invite resent to {email}",
-    "revoked": "Invite for {email} revoked"
+    "revoked": "Invite for {email} revoked",
+    "makeOwner": "Make owner",
+    "transferTitle": "Make {name} the owner?",
+    "transferBody": "{name} becomes an admin with full access, including billing. You stay on as a manager. You can be made admin again by them.",
+    "transferConfirm": "Hand over",
+    "transferred": "{name} is now an admin; you're a manager",
+    "leave": "Leave this organization",
+    "leaveTitle": "Leave the organization?",
+    "leaveBody": "You'll lose access to its depot immediately. Stock movements you logged stay in its history. An admin can invite you back.",
+    "left": "You left the organization",
+    "leaveLastAdmin": "You're the only admin, so you can't leave — make someone else the owner first."
   },
   "invite": {
     "title": "Join {org}",
@@ -322,7 +333,29 @@
     "acceptWithGoogle": "Accept with Google",
     "signedInAsOther": "You're signed in as {current}, but this invite is for {invited}. Sign out and open the link again, or ask for an invite to {current}.",
     "lockedBody": "{org} doesn't have an active plan right now, so new members can't join yet. It can be fixed by:",
-    "alsoMemberOf": "You're already a member of {orgs}. Accepting adds {org} alongside — you can switch between companies from the menu any time."
+    "alsoMemberOf": "You're already a member of {orgs}. Accepting adds {org} alongside — you can switch between companies from the menu any time.",
+    "dead": {
+      "expired": {
+        "title": "This invite has expired",
+        "body": "{inviter} invited you to {org}, but invite links last 7 days. Ask for a new one with the button below — they'll get an email with one click."
+      },
+      "used": {
+        "title": "This invite was already used",
+        "body": "The invitation to {org} has been accepted. If that was you, just log in."
+      },
+      "unknown": {
+        "title": "Invite not found",
+        "body": "This link doesn't match any invitation. Ask whoever invited you to send a new one."
+      }
+    },
+    "renew": "Ask {inviter} for a new invite",
+    "renewing": "Sending…",
+    "renewSent": "Done — {inviter} has been asked to send you a new invite.",
+    "renewEmail": {
+      "subject": "{email} needs a new SmartDepo invite",
+      "body": "Hi {inviter},\n\nthe invite you sent to {email} for {org} has expired and they'd like a new one. Open the Team page and use Resend:\n\n{url}\n\n— SmartDepo"
+    },
+    "goToLogin": "Log in"
   },
   "billing": {
     "title": "Billing",

@@ -6,7 +6,10 @@ import { AuthError } from "next-auth";
 import { getTranslations } from "next-intl/server";
 import { signIn } from "@/auth";
 import { db } from "@/db";
-import { invites, memberships, users } from "@/db/schema";
+import { invites, memberships, organizations, users } from "@/db/schema";
+import { appBaseUrl } from "@/lib/app-url";
+import { sendEmail } from "@/lib/email";
+import { LIMITS, isLimited, record } from "@/lib/rate-limit";
 import { normalizeEmail } from "@/lib/email-normalize";
 import { markEmailVerified } from "@/lib/email-verification";
 import { getOrgLockReason } from "@/lib/session";
@@ -100,4 +103,28 @@ export async function acceptInviteAsNewUser(_prevState: FormState, formData: For
     if (error instanceof AuthError) return { error: t("signInFailed") };
     throw error;
   }
+}
+
+// A dead link (expired or already used) can ask the inviter for a fresh
+// one with a click — public, so it works for someone who never got an
+// account; rate-limited per token so a link in a spam folder can't be
+// used to nag the inviter.
+export async function requestNewInvite(token: string): Promise<{ ok: true } | { error: string }> {
+  const t = await getTranslations("invite");
+  const [invite] = await db.select().from(invites).where(eq(invites.token, token));
+  if (!invite) return { error: t("error.invalid") };
+  const key = `invite-renew:${invite.id}`;
+  if (await isLimited(key, LIMITS.inviteRenew)) return { ok: true }; // already asked; don't nag twice
+  await record(key);
+
+  const [inviter] = await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, invite.invitedBy));
+  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, invite.organizationId));
+  if (!inviter) return { ok: true };
+  const te = await getTranslations("invite.renewEmail");
+  await sendEmail({
+    to: inviter.email,
+    subject: te("subject", { email: invite.email }),
+    text: te("body", { inviter: inviter.name, email: invite.email, org: org?.name ?? "", url: `${await appBaseUrl()}/team` }),
+  });
+  return { ok: true };
 }

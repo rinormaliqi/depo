@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useActionState, useState } from "react";
 import { formatDate } from "@/lib/format-date";
 import { createInvite, getTeam } from "./actions";
@@ -13,6 +14,8 @@ const revokeInvite = unwrap(rawActions.revokeInvite);
 const resendInvite = unwrap(rawActions.resendInvite);
 const changeMemberRole = unwrap(rawActions.changeMemberRole);
 const removeMember = unwrap(rawActions.removeMember);
+const leaveOrganization = unwrap(rawActions.leaveOrganization);
+const transferOwnership = unwrap(rawActions.transferOwnership);
 
 type TeamData = Awaited<ReturnType<typeof getTeam>>;
 type Member = TeamData["members"][number];
@@ -130,6 +133,19 @@ function MemberRow({
                 <option key={r} value={r}>{t(`role.${r}`)}</option>
               ))}
             </select>
+            {isAdmin && member.role !== "admin" && (
+              <button
+                className="btn btn-ghost"
+                disabled={busy}
+                onClick={async () => {
+                  const ok = await confirm({ title: t("transferTitle", { name: member.name }), body: t("transferBody", { name: member.name }), confirmLabel: t("transferConfirm") });
+                  if (ok) void run(() => transferOwnership(member.id), t("transferred", { name: member.name }));
+                }}
+                style={{ fontSize: 11 }}
+              >
+                {t("makeOwner")}
+              </button>
+            )}
             <button
               className="btn btn-ghost"
               disabled={busy}
@@ -166,6 +182,20 @@ export function TeamClient({
   const t = useTranslations("team");
   const [state, formAction, isPending] = useActionState(createInvite, undefined);
   const [inviteRole, setInviteRole] = useState<(typeof ROLES)[number]>("worker");
+  const notify = useNotify();
+  const confirm = useConfirm();
+  const router = useRouter();
+  const me = members.find((m) => m.userId === myUserId);
+  const otherAdmins = members.filter((m) => m.role === "admin" && m.userId !== myUserId).length;
+  // The only admin can't leave — they hand over first ("Make owner").
+  const canLeave = !!me && (me.role !== "admin" || otherAdmins > 0);
+
+  async function handleLeave() {
+    const ok = await confirm({ title: t("leaveTitle"), body: t("leaveBody"), confirmLabel: t("leave"), danger: true });
+    if (!ok) return;
+    const done = await notify.run(() => leaveOrganization(), { success: t("left") });
+    if (done !== undefined) router.push("/start");
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -220,6 +250,16 @@ export function TeamClient({
           ))}
         </div>
       )}
+
+      <div style={{ borderTop: "1px solid var(--color-divider)", paddingTop: 14 }}>
+        {canLeave ? (
+          <button className="btn btn-ghost" onClick={handleLeave} style={{ fontSize: 12, color: "var(--color-danger-700)", padding: 0 }}>
+            {t("leave")}
+          </button>
+        ) : (
+          <p className="text-muted" style={{ fontSize: 12, margin: 0 }}>{t("leaveLastAdmin")}</p>
+        )}
+      </div>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { appBaseUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email";
 import { normalizeEmail } from "@/lib/email-normalize";
 import { requirePermission } from "@/lib/permissions";
+import { listMyOrganizations, rememberOrganization } from "@/lib/organizations";
 import { assertCanAddSeats } from "@/lib/plan-limits";
 import { requireSession } from "@/lib/session";
 import { attempt } from "@/lib/action-result";
@@ -229,4 +230,51 @@ export async function changeMemberRole(membershipId: string, role: string) {
 
 export async function removeMember(membershipId: string) {
   return attempt(() => removeMemberImpl(membershipId), "removeMember");
+}
+
+// ── Leaving and handing over ─────────────────────────────────────────────
+
+// Any member can walk away from a company — except the only admin, who
+// has to hand over first (transferOwnership) so no organization is ever
+// left without someone who can pay for it or fix it.
+async function leaveOrganizationImpl() {
+  const t = await getTranslations("team.error");
+  const session = await requireSession();
+  const [membership] = await db
+    .select()
+    .from(memberships)
+    .where(and(eq(memberships.userId, session.userId), eq(memberships.organizationId, session.organizationId)));
+  if (!membership) throw new UserError(t("notAuthorized"));
+  if (membership.role === "admin") await assertNotLastAdmin(membership);
+  await db.delete(memberships).where(eq(memberships.id, membership.id));
+  // Land in another company, or in /welcome if there is none.
+  const remaining = await listMyOrganizations(session.userId);
+  if (remaining[0]) await rememberOrganization(remaining[0].id);
+  revalidatePath("/", "layout");
+}
+
+// Admin hands the company to another member: they become admin and the
+// caller steps down to manager, in one transaction, so there is never a
+// moment with zero admins — and never a way to leave the org headless.
+async function transferOwnershipImpl(membershipId: string) {
+  const t = await getTranslations("team.error");
+  const session = await requirePermission("manageBilling"); // admins only
+  const target = await loadOwnMembership(membershipId, session.organizationId);
+  if (target.userId === session.userId) throw new UserError(t("transferToSelf"));
+  const [mine] = await db
+    .select()
+    .from(memberships)
+    .where(and(eq(memberships.userId, session.userId), eq(memberships.organizationId, session.organizationId)));
+  await db.transaction(async (tx) => {
+    await tx.update(memberships).set({ role: "admin" }).where(eq(memberships.id, target.id));
+    await tx.update(memberships).set({ role: "manager" }).where(eq(memberships.id, mine.id));
+  });
+  revalidatePath("/", "layout");
+}
+
+export async function leaveOrganization() {
+  return attempt(() => leaveOrganizationImpl(), "leaveOrganization");
+}
+export async function transferOwnership(membershipId: string) {
+  return attempt(() => transferOwnershipImpl(membershipId), "transferOwnership");
 }

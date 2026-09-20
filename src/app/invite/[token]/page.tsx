@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth, isGoogleSignInEnabled } from "@/auth";
@@ -11,6 +11,8 @@ import { acceptInviteViaSession } from "@/lib/onboarding";
 import { getOrgLockReason } from "@/lib/session";
 import { memberships } from "@/db/schema";
 import { AcceptInviteForm } from "./accept-invite-form";
+import { RequestNewInvite } from "./request-new-invite";
+import { PublicLink } from "@/components/public-link";
 import { NOINDEX } from "@/lib/seo";
 
 
@@ -23,10 +25,13 @@ export default async function InvitePage({
   const { token } = await params;
   const t = await getTranslations("invite");
 
-  const [invite] = await db
-    .select()
-    .from(invites)
-    .where(and(eq(invites.token, token), isNull(invites.acceptedAt), gt(invites.expiresAt, new Date())));
+  // The row is loaded regardless of state so a dead link can still say
+  // which company and who invited, and offer to ask them for a new one.
+  const [anyInvite] = await db.select().from(invites).where(eq(invites.token, token));
+  const dead = !anyInvite ? "unknown" : anyInvite.acceptedAt ? "used" : anyInvite.expiresAt.getTime() < Date.now() ? "expired" : null;
+  const invite = dead ? null : anyInvite;
+  const deadOrg = dead && anyInvite ? (await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, anyInvite.organizationId)))[0] : null;
+  const deadInviter = dead && anyInvite ? (await db.select({ name: users.name }).from(users).where(eq(users.id, anyInvite.invitedBy)))[0] : null;
 
   const organization = invite ? (await db.select().from(organizations).where(eq(organizations.id, invite.organizationId)))[0] : null;
   const existingUser = invite ? (await db.select().from(users).where(eq(users.normalizedEmail, normalizeEmail(invite.email))))[0] : null;
@@ -64,14 +69,16 @@ export default async function InvitePage({
   return (
     <AuthShell>
       <div style={{ width: "100%", maxWidth: 360 }}>
-        <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 19, letterSpacing: ".06em", textAlign: "center", marginBottom: 8 }}>
-          SMART<span style={{ color: "var(--color-accent)" }}>/</span>DEPO
-        </div>
-
         {!invite || !organization ? (
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, marginBottom: 8 }}>{t("invalidTitle")}</div>
-            <p className="text-muted" style={{ fontSize: 13 }}>{t("invalidBody")}</p>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, marginBottom: 8 }}>{t(`dead.${dead ?? "unknown"}.title`)}</div>
+            <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.55 }}>
+              {t(`dead.${dead ?? "unknown"}.body`, { org: deadOrg?.name ?? "", inviter: deadInviter?.name ?? "" })}
+            </p>
+            {dead === "used" && (
+              <PublicLink href="/login" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>{t("goToLogin")}</PublicLink>
+            )}
+            {dead === "expired" && <RequestNewInvite token={token} inviter={deadInviter?.name ?? ""} />}
           </div>
         ) : (
           <>

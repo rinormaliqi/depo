@@ -280,7 +280,8 @@
       "errorFixFirst": "{n} lines still have errors — nothing was imported",
       "errorFileRead": "Couldn't read that file",
       "changedSincePreview": "The list changed — check it again before importing"
-    }
+    },
+    "exportLink": "Export CSV"
   },
   "team": {
     "title": "Team",
@@ -717,7 +718,8 @@
       },
       "done": "{rows} lines received into {bins} bins"
     },
-    "importLink": "Import a stock count (Excel / CSV)"
+    "importLink": "Import a stock count (Excel / CSV)",
+    "exportLink": "Export CSV"
   },
   "metrics": {
     "mappedFloor": "Mapped floor",

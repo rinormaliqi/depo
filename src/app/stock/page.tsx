@@ -58,11 +58,16 @@ export default async function StockPage({
           >
             {t("stock.zoneUtilisation")}
           </div>
-          {caps?.can.manageItems && (
-            <Link href="/stock/import" className="btn btn-ghost" style={{ marginBottom: 12, alignSelf: "flex-start" }}>
-              {t("stock.importLink")}
-            </Link>
-          )}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
+            <a href="/stock/export" className="btn btn-ghost" download>
+              {t("stock.exportLink")}
+            </a>
+            {caps?.can.manageItems && (
+              <Link href="/stock/import" className="btn btn-ghost">
+                {t("stock.importLink")}
+              </Link>
+            )}
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 0, maxWidth: 560 }}>
             {zones.map((z) => (
               <div

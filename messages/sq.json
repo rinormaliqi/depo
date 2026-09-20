@@ -281,7 +281,20 @@
       "errorFileRead": "Skedari nuk u lexua dot",
       "changedSincePreview": "Lista ndryshoi — kontrolloje sërish para se ta importosh"
     },
-    "exportLink": "Eksporto CSV"
+    "exportLink": "Eksporto CSV",
+    "edit": "Ndrysho",
+    "save": "Ruaj",
+    "saving": "Duke ruajtur…",
+    "cancel": "Anulo",
+    "delete": "Fshi",
+    "updated": "{name} u përditësua",
+    "deleted": "{name} u hoq nga katalogu",
+    "deleteTitle": "Ta heqim {name}?",
+    "deleteBody": "Hiqet vetëm një artikull pa stok dhe pa historik. Nuk kthehet mbrapsht.",
+    "errorNotFound": "Artikulli nuk u gjet",
+    "errorHasStock": "{name} ka ende stok në një kuti — nxirre fillimisht",
+    "errorHasHistory": "{name} ka lëvizje në historik dhe mbetet në katalog; riemërtoje nëse është gabim",
+    "stockNote": "{count} në stok"
   },
   "team": {
     "title": "Ekipi",

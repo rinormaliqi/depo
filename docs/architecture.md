@@ -238,6 +238,14 @@ detection in `import-table.ts` skips columns it doesn't know (the export's `unit
 own `price`) as long as most are recognised. Reading, so a locked company can still take its
 data out. Tests: `src/lib/csv.test.ts` (round trip through the parsers), `src/tests/csv-export.test.ts`.
 
+**Edit and delete** (`src/app/items/items-list.tsx`, `updateItem` / `deleteItem`): a row on
+`/items` opens into a one-line form (name, unit, SKU, category — same rules as create, a taken
+SKU named). Delete only while nothing ever happened to the item: stock on the floor is refused
+("pick it first"), and any movement — even a fully picked one — keeps it, since the depot's
+history stays complete (the rule that keeps `performed_by` on a deleted account); emptied
+`stock` rows (quantity 0) go with it. The list shows each item's total on the floor so the
+answer is visible before the click. Tests: `src/tests/items-edit-delete.test.ts`.
+
 **Stock import** (`/stock/import`, from `/stock`, same `manageItems` gate — the count is a
 setup task, not floor work) is the inventory count as a list: `item, location, quantity`.
 `src/lib/import-table.ts` holds the text-to-cells half both imports share (delimiter, quoting,

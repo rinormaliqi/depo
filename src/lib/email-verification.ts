@@ -5,6 +5,8 @@ import { db } from "@/db";
 import { emailVerifications, memberships, organizations, users } from "@/db/schema";
 import { appBaseUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email";
+import { isDisposableEmail, normalizeEmail } from "@/lib/email-normalize";
+import { UserError } from "@/lib/user-error";
 
 const VERIFY_VALID_HOURS = 24;
 // Minimum gap between two verification mails to the same user — the
@@ -67,14 +69,49 @@ export async function markEmailVerified(userId: string) {
 }
 
 // Redeems a token: null if it's unknown, expired, or already used.
-export async function consumeVerificationToken(token: string): Promise<{ userId: string } | null> {
-  const [row] = await db
-    .select()
-    .from(emailVerifications)
-    .where(and(eq(emailVerifications.token, token), isNull(emailVerifications.usedAt)));
-  if (!row || row.expiresAt.getTime() < Date.now()) return null;
+// Redeems a token. The failure says *why*, so the page can offer the right
+// next step: an expired link gets "send a new one", a used one "you're
+// already verified, log in", an unknown one nothing but the login.
+export type VerificationOutcome =
+  | { ok: true; userId: string }
+  | { ok: false; reason: "expired" | "used" | "unknown"; userId?: string };
+
+export async function consumeVerificationToken(token: string): Promise<VerificationOutcome> {
+  const [row] = await db.select().from(emailVerifications).where(eq(emailVerifications.token, token));
+  if (!row) return { ok: false, reason: "unknown" };
+  if (row.usedAt) return { ok: false, reason: "used", userId: row.userId };
+  if (row.expiresAt.getTime() < Date.now()) return { ok: false, reason: "expired", userId: row.userId };
 
   await db.update(emailVerifications).set({ usedAt: new Date() }).where(eq(emailVerifications.id, row.id));
   await markEmailVerified(row.userId);
-  return { userId: row.userId };
+  return { ok: true, userId: row.userId };
+}
+
+// A signup that typed the wrong address can fix it before verifying: the
+// old tokens die (a link to the wrong inbox must never verify the new
+// address), the row moves to the new address under the same uniqueness
+// and disposable-domain rules as signup, and a fresh link goes out.
+export async function changeUnverifiedEmail(userId: string, rawEmail: string): Promise<{ email: string }> {
+  const t = await getTranslations("verifyEmail.change");
+  const email = rawEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new UserError(t("errorEmail"));
+  if (isDisposableEmail(email)) throw new UserError(t("errorDisposable"));
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  if (!user) throw new UserError(t("errorNotSignedIn"));
+  if (user.emailVerifiedAt) throw new UserError(t("errorAlreadyVerified"));
+
+  const normalizedEmail = normalizeEmail(email);
+  if (normalizedEmail !== user.normalizedEmail) {
+    const [taken] = await db.select({ id: users.id }).from(users).where(eq(users.normalizedEmail, normalizedEmail));
+    if (taken) throw new UserError(t("errorTaken"));
+  }
+
+  await db.update(users).set({ email, normalizedEmail }).where(eq(users.id, userId));
+  await db
+    .update(emailVerifications)
+    .set({ usedAt: new Date() })
+    .where(and(eq(emailVerifications.userId, userId), isNull(emailVerifications.usedAt)));
+  await sendVerificationEmail({ id: userId, email });
+  return { email };
 }

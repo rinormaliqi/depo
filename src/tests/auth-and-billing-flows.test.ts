@@ -62,15 +62,39 @@ describe("signup and email verification", () => {
     const [user] = await db.select().from(users).where(eq(users.email, "vera.test+a@gmail.com"));
     const [v] = await db.select().from(emailVerifications).where(and(eq(emailVerifications.userId, user.id), isNull(emailVerifications.usedAt)));
     const before = Date.now();
-    assert.deepEqual(await consumeVerificationToken(v.token), { userId: user.id });
+    assert.deepEqual(await consumeVerificationToken(v.token), { ok: true, userId: user.id });
     const [after] = await db.select().from(users).where(eq(users.id, user.id));
     assert.ok(after.emailVerifiedAt);
     const [m] = await db.select().from(memberships).where(eq(memberships.userId, user.id));
     const org = await orgById(m.organizationId);
     const days = (org.trialEndsAt!.getTime() - before) / 86_400_000;
     assert.ok(days > 29.9 && days < 30.1, `trial is ${days} days`);
-    assert.equal(await consumeVerificationToken(v.token), null, "second use refused");
-    assert.equal(await consumeVerificationToken("nonsense"), null);
+    assert.deepEqual(await consumeVerificationToken(v.token), { ok: false, reason: "used", userId: user.id }, "second use refused, and says so");
+    assert.deepEqual(await consumeVerificationToken("nonsense"), { ok: false, reason: "unknown" });
+  });
+
+  test("an expired link is reported as expired; a mistyped address can be changed before verifying", async () => {
+    assert.equal(await runSignup({ name: "Blerta", companyName: "B Co", email: "blerta@gmial.com", password: "password123" }), "redirected");
+    const [user] = await db.select().from(users).where(eq(users.email, "blerta@gmial.com"));
+    const [v] = await db.select().from(emailVerifications).where(and(eq(emailVerifications.userId, user.id), isNull(emailVerifications.usedAt)));
+    await db.update(emailVerifications).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(emailVerifications.id, v.id));
+    assert.deepEqual(await consumeVerificationToken(v.token), { ok: false, reason: "expired", userId: user.id });
+
+    // Fix the typo: old tokens die, the row moves, a new token is issued.
+    const { changeUnverifiedEmail } = await import("@/lib/email-verification");
+    await assert.rejects(changeUnverifiedEmail(user.id, "blerta@mailinator.com"), /errorDisposable/);
+    await assert.rejects(changeUnverifiedEmail(user.id, "vera.test+a@gmail.com"), /errorTaken/, "an address with an account can't be taken over");
+    assert.deepEqual(await changeUnverifiedEmail(user.id, "Blerta@Gmail.com"), { email: "blerta@gmail.com" });
+    const [moved] = await db.select().from(users).where(eq(users.id, user.id));
+    assert.equal(moved.normalizedEmail, "blerta@gmail.com");
+    assert.equal(moved.emailVerifiedAt, null);
+    const live = await db.select().from(emailVerifications).where(and(eq(emailVerifications.userId, user.id), isNull(emailVerifications.usedAt)));
+    assert.equal(live.length, 1, "exactly one live token: the new one");
+    assert.notEqual(live[0].token, v.token);
+    assert.deepEqual(await consumeVerificationToken(v.token), { ok: false, reason: "used", userId: user.id }, "the old link can't verify the new address");
+    // Once verified, the address is fixed.
+    await consumeVerificationToken(live[0].token);
+    await assert.rejects(changeUnverifiedEmail(user.id, "x@gmail.com"), /errorAlreadyVerified/);
   });
 });
 

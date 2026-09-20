@@ -189,6 +189,23 @@ over first. **Make owner** (`transferOwnership`, admins only) promotes another m
 and steps the caller down to manager in one transaction, so an organization never has zero
 admins and never gets stuck with one person. Tests: `src/tests/invite-lifecycle.test.ts`.
 
+## Account settings
+
+`/account` (every role, from the ⋯ menu) — `src/lib/account.ts` behind `src/app/account/actions.ts`:
+name; **email change** as a two-step (the new address must prove itself: a pending row in
+`email_changes` and a link mailed to the *new* inbox, `/account/confirm-email/<token>`, public,
+24 hours, single-use, uniqueness rechecked at confirm time so a race can't steal an address);
+**password** (a password user proves the current one, a Google-only user just sets their first —
+and is told that's how to add email + password sign-in); **sign out everywhere** — bumps
+`users.session_version`, which the JWT carries as `sv` from sign-in and `getMySession()` compares
+on every request (the edge middleware can't check the DB, so an old token is treated as signed
+out by the app rather than at the edge); **delete account** — erasure, not row removal: movements
+keep `performed_by` so a depot's history stays complete, the user row loses everything personal
+(email → `deleted-<id>@deleted.invalid`, no name, no password), memberships go, companies where
+this was the only member are deleted with all their data (explicit, bottom-up through the
+non-cascading foreign keys), and the only admin of a shared company is refused until they hand
+over. Confirmation asks for the email address to be typed. Tests: `src/tests/account.test.ts`.
+
 ## Sign-in hardening
 
 `src/lib/rate-limit.ts` is the one limiter: a sliding window over rows in `rate_limit_events`

@@ -10,16 +10,16 @@ const can = (over: Record<string, boolean>) => ({
 test("workers see find / scan / labels / map and nothing to manage", () => {
   const caps = { role: "worker" as const, can: can({ editLayout: false, manageItems: false, manageTeam: false, manageBilling: false, multiFacility: false, viewMetrics: false }) };
   assert.deepEqual(primaryNav(caps).map((n) => n.key), ["find", "scanner", "labels", "blueprint"]);
-  assert.deepEqual(secondaryNav(caps), []);
+  assert.deepEqual(secondaryNav(caps).map((n) => n.key), ["account"]);
   assert.equal(homeFor("worker"), "/stock");
 });
 
 test("managers get the depot, admins add billing; a plan without metrics drops the tab", () => {
   const manager = { role: "manager" as const, can: can({ manageBilling: false }) };
   assert.deepEqual(primaryNav(manager).map((n) => n.key), ["blueprint", "stock", "metrics", "scanner"]);
-  assert.deepEqual(secondaryNav(manager).map((n) => n.key), ["items", "team"]);
+  assert.deepEqual(secondaryNav(manager).map((n) => n.key), ["items", "team", "account"]);
   const admin = { role: "admin" as const, can: can({}) };
-  assert.deepEqual(secondaryNav(admin).map((n) => n.key), ["items", "team", "billing"]);
+  assert.deepEqual(secondaryNav(admin).map((n) => n.key), ["items", "team", "billing", "account"]);
   assert.deepEqual(primaryNav({ role: "admin", can: can({ viewMetrics: false }) }).map((n) => n.key), ["blueprint", "stock", "scanner"]);
   assert.equal(homeFor("admin"), "/builder");
 });

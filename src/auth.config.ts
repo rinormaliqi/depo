@@ -20,6 +20,7 @@ export const authConfig = {
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
+        session.user.sessionVersion = typeof token.sv === "number" ? token.sv : undefined;
       }
       return session;
     },

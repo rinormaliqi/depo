@@ -23,7 +23,8 @@
     "verifyEmail": "Verify your email",
     "planExpired": "{plan} · Expired",
     "planRenewSoon": "{plan} · Renew in {n}d",
-    "menu": "Menu"
+    "menu": "Menu",
+    "account": "Account"
   },
   "nav": {
     "blueprint": "Blueprint",
@@ -1012,5 +1013,92 @@
   },
   "rateLimit": {
     "tooMany": "Too many attempts — try again in {minutes} minutes"
+  },
+  "account": {
+    "title": "Account",
+    "intro": "Your name, sign-in and sessions. Company settings live under Team and Billing.",
+    "save": "Save",
+    "role": {
+      "admin": "Admin",
+      "manager": "Manager",
+      "worker": "Worker"
+    },
+    "profile": {
+      "title": "Profile",
+      "name": "Your name",
+      "saved": "Name saved"
+    },
+    "email": {
+      "title": "Email",
+      "hint": "You sign in as {email}. A new address takes effect only after you click the link we send to it.",
+      "new": "New email address",
+      "send": "Send confirmation",
+      "sent": "Confirmation sent to {email} — click the link there to switch."
+    },
+    "password": {
+      "title": "Password",
+      "hintHas": "Change your password. Other devices stay signed in unless you sign out everywhere below.",
+      "hintNone": "This account signs in with Google and has no password yet. Set one to also sign in with email + password.",
+      "current": "Current password",
+      "new": "New password",
+      "repeat": "Repeat new password",
+      "change": "Change password",
+      "set": "Set password",
+      "saved": "Password saved",
+      "mismatch": "The two new passwords don't match"
+    },
+    "sessions": {
+      "title": "Sessions",
+      "hint": "Signed in on a phone you no longer have? This signs every device out, including this one.",
+      "signOutEverywhere": "Sign out everywhere"
+    },
+    "danger": {
+      "title": "Delete account",
+      "hint": "Removes your name, email and sign-in for good. Companies where you're the only member are deleted with all their data; where others remain, you simply leave. Stock history stays complete but no longer names you.",
+      "delete": "Delete my account",
+      "confirmTitle": "Delete your account?",
+      "confirmBody": "This can't be undone. Type your email address to confirm.",
+      "typeToConfirm": "Your email address",
+      "confirm": "Delete for good",
+      "typedMismatch": "That doesn't match your email address"
+    },
+    "emailChange": {
+      "email": {
+        "subject": "Confirm your new SmartDepo email",
+        "body": "Click to make this your SmartDepo sign-in address:\n\n{url}\n\nThe link works once and expires in {hours} hours. If you didn't ask for this, ignore it — nothing changes."
+      },
+      "doneTitle": "Email changed",
+      "doneBody": "You now sign in as {email}.",
+      "back": "Back to account",
+      "dead": {
+        "expired": {
+          "title": "This link has expired",
+          "body": "Request the change again from your account page."
+        },
+        "used": {
+          "title": "Already confirmed",
+          "body": "This change was applied earlier."
+        },
+        "unknown": {
+          "title": "This link isn't valid",
+          "body": "It doesn't match any pending change."
+        },
+        "taken": {
+          "title": "That address is taken",
+          "body": "Someone created an account with it in the meantime. Pick another address."
+        }
+      }
+    },
+    "error": {
+      "notSignedIn": "Please log in first",
+      "nameRequired": "Enter your name",
+      "passwordLength": "Use at least {min} characters",
+      "wrongCurrentPassword": "The current password is wrong",
+      "emailInvalid": "That email address doesn't look right",
+      "emailDisposable": "Temporary email addresses can't be used",
+      "emailSame": "That's already your address",
+      "emailTaken": "That address already has an account",
+      "lastAdminOf": "You're the only admin of {org} — make someone else the owner (Team page) or remove the other members first"
+    }
   }
 }

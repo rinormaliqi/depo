@@ -17,7 +17,7 @@ export const publicPaths = new Set([
 // (next.config.ts). /icon, /apple-icon and /opengraph-image are the
 // metadata files Next serves from src/app.
 export const publicPrefixes = [
-  "/invite/", "/reset-password/", "/verify-email/", "/api/auth", "/api/billing/paysera/", "/paysera_", "/monitoring",
+  "/invite/", "/reset-password/", "/verify-email/", "/account/confirm-email/", "/api/auth", "/api/billing/paysera/", "/paysera_", "/monitoring",
   "/icon", "/apple-icon", "/opengraph-image",
 ];
 
@@ -25,7 +25,7 @@ export const publicPrefixes = [
 // directory under src/app with a page is either public or listed here,
 // so a new route can't ship unprotected by forgetting this list.
 export const protectedPrefixes = [
-  "/billing", "/builder", "/internal", "/items", "/labels", "/metrics", "/scanner", "/stock", "/team", "/verify-email", "/welcome", "/start",
+  "/billing", "/builder", "/internal", "/items", "/labels", "/metrics", "/scanner", "/stock", "/team", "/verify-email", "/welcome", "/start", "/account",
 ];
 
 export function routeAccess(pathname: string): "public" | "protected" | "unknown" {

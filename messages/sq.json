@@ -23,7 +23,8 @@
     "verifyEmail": "Verifiko email-in",
     "planExpired": "{plan} · Skaduar",
     "planRenewSoon": "{plan} · Rinovo brenda {n} ditësh",
-    "menu": "Menuja"
+    "menu": "Menuja",
+    "account": "Llogaria"
   },
   "nav": {
     "blueprint": "Skema",
@@ -1012,5 +1013,92 @@
   },
   "rateLimit": {
     "tooMany": "Shumë përpjekje — provo sërish pas {minutes} minutash"
+  },
+  "account": {
+    "title": "Llogaria",
+    "intro": "Emri, kyçja dhe sesionet e tua. Cilësimet e kompanisë janë te Ekipi dhe Faturimi.",
+    "save": "Ruaj",
+    "role": {
+      "admin": "Admin",
+      "manager": "Menaxher",
+      "worker": "Punëtor"
+    },
+    "profile": {
+      "title": "Profili",
+      "name": "Emri yt",
+      "saved": "Emri u ruajt"
+    },
+    "email": {
+      "title": "Email",
+      "hint": "Kyçesh si {email}. Adresa e re hyn në fuqi vetëm pasi të klikosh linkun që të dërgojmë aty.",
+      "new": "Adresa e re e email-it",
+      "send": "Dërgo konfirmimin",
+      "sent": "Konfirmimi u dërgua te {email} — kliko linkun aty për të kaluar."
+    },
+    "password": {
+      "title": "Fjalëkalimi",
+      "hintHas": "Ndrysho fjalëkalimin. Pajisjet e tjera mbeten të kyçura nëse s'del kudo më poshtë.",
+      "hintNone": "Kjo llogari kyçet me Google dhe s'ka fjalëkalim ende. Vendos një për t'u kyçur edhe me email + fjalëkalim.",
+      "current": "Fjalëkalimi aktual",
+      "new": "Fjalëkalimi i ri",
+      "repeat": "Përsërit fjalëkalimin e ri",
+      "change": "Ndrysho fjalëkalimin",
+      "set": "Vendos fjalëkalimin",
+      "saved": "Fjalëkalimi u ruajt",
+      "mismatch": "Dy fjalëkalimet e reja s'përputhen"
+    },
+    "sessions": {
+      "title": "Sesionet",
+      "hint": "Je kyçur në një telefon që s'e ke më? Kjo i nxjerr të gjitha pajisjet, përfshirë këtë.",
+      "signOutEverywhere": "Dil kudo"
+    },
+    "danger": {
+      "title": "Fshi llogarinë",
+      "hint": "Heq përgjithmonë emrin, email-in dhe kyçjen tënde. Kompanitë ku je anëtari i vetëm fshihen me gjithë të dhënat; ku ka të tjerë, thjesht largohesh. Historiku i stokut mbetet i plotë, por s'të emërton më.",
+      "delete": "Fshi llogarinë time",
+      "confirmTitle": "Ta fshijmë llogarinë?",
+      "confirmBody": "Kjo s'kthehet mbrapsht. Shkruaj adresën tënde të email-it për të konfirmuar.",
+      "typeToConfirm": "Adresa jote e email-it",
+      "confirm": "Fshi përgjithmonë",
+      "typedMismatch": "S'përputhet me adresën tënde"
+    },
+    "emailChange": {
+      "email": {
+        "subject": "Konfirmo email-in e ri në SmartDepo",
+        "body": "Kliko për ta bërë këtë adresën tënde të kyçjes në SmartDepo:\n\n{url}\n\nLinku punon një herë dhe skadon pas {hours} orësh. Nëse s'e ke kërkuar ti, injoroje — asgjë s'ndryshon."
+      },
+      "doneTitle": "Email-i u ndryshua",
+      "doneBody": "Tani kyçesh si {email}.",
+      "back": "Kthehu te llogaria",
+      "dead": {
+        "expired": {
+          "title": "Ky link ka skaduar",
+          "body": "Kërkoje ndryshimin sërish nga faqja e llogarisë."
+        },
+        "used": {
+          "title": "Konfirmuar tashmë",
+          "body": "Ky ndryshim është bërë më herët."
+        },
+        "unknown": {
+          "title": "Ky link s'është i vlefshëm",
+          "body": "S'përputhet me asnjë ndryshim në pritje."
+        },
+        "taken": {
+          "title": "Ajo adresë është e zënë",
+          "body": "Dikush krijoi llogari me të ndërkohë. Zgjidh një adresë tjetër."
+        }
+      }
+    },
+    "error": {
+      "notSignedIn": "Kyçu së pari",
+      "nameRequired": "Shkruaj emrin",
+      "passwordLength": "Përdor të paktën {min} karaktere",
+      "wrongCurrentPassword": "Fjalëkalimi aktual është i gabuar",
+      "emailInvalid": "Ai email s'duket i saktë",
+      "emailDisposable": "Adresat e përkohshme s'mund të përdoren",
+      "emailSame": "Ajo është tashmë adresa jote",
+      "emailTaken": "Ajo adresë ka tashmë llogari",
+      "lastAdminOf": "Je admini i vetëm i {org} — bëje dikë tjetër pronar (faqja Ekipi) ose hiq anëtarët e tjerë së pari"
+    }
   }
 }

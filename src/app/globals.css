@@ -79,7 +79,7 @@ input[type="number"] {
   }
   .app-nav-bottom-item.is-active { color: var(--color-accent-800); border-top-color: var(--color-accent); }
   /* Room for the bar on the pages that scroll inside a 100vh column. */
-  .bin-page, .scan-page, .stock-zones-pane, .labels-page, .team-page, .items-page, .billing-page, .metrics-page { padding-bottom: calc(24px + 54px + env(safe-area-inset-bottom, 0px)) !important; }
+  .bin-page, .scan-page, .stock-zones-pane, .labels-page, .team-page, .items-page, .billing-page, .metrics-page, .account-page { padding-bottom: calc(24px + 54px + env(safe-area-inset-bottom, 0px)) !important; }
   /* !important: the markup sets display:flex inline for the desktop row. */
   .app-header .app-header-secondary { order: 11; flex: 1 1 100%; display: none !important; margin-left: 0 !important; }
   .app-header.is-open .app-header-secondary { display: flex !important; }
@@ -117,6 +117,7 @@ input[type="number"] {
    label is kept whole across page breaks. */
 
 .labels-page { padding: 26px; }
+.account-page { padding: 26px; }
 .label-sheet { display: grid; grid-template-columns: repeat(auto-fill, 70mm); gap: 6mm; }
 .label {
   width: 70mm; height: 40mm; box-sizing: border-box; padding: 3mm 3.5mm;

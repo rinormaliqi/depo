@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
@@ -44,6 +45,10 @@ export default async function RootLayout({
             <CapabilitiesProvider value={capabilities}>{children}</CapabilitiesProvider>
           </NotificationsProvider>
         </NextIntlClientProvider>
+        {/* Vercel Web Analytics: page views only, no cookies, no
+            cross-site identifier — declared in the privacy policy
+            (src/content/legal.ts). Renders nothing outside Vercel. */}
+        <Analytics />
       </body>
     </html>
   );

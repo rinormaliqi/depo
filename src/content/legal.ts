@@ -8,7 +8,7 @@ import type { Locale } from "@/i18n/locales";
 // is a courtesy translation, and the terms say so.
 export const LEGAL_UPDATED = "2026-09-15";
 // The privacy policy moves on its own when a processor changes.
-export const PRIVACY_UPDATED = "2026-09-18";
+export const PRIVACY_UPDATED = "2026-09-20";
 
 type Section = { title: string; paragraphs: string[] };
 
@@ -146,7 +146,7 @@ export const privacy: Record<Locale, Section[]> = {
       "Të dhëna llogarie: emri, adresa e email-it dhe fjalëkalimi (i ruajtur vetëm si hash, asnjëherë në tekst të hapur), roli në organizatë, data e verifikimit të email-it dhe e krijimit të llogarisë.",
       "Të dhëna të organizatës: emri i kompanisë, objektet dhe planimetritë e tyre, artikujt, sasitë e stokut dhe historiku i lëvizjeve. Çdo lëvizje stoku regjistron cilin përdorues e kreu — kjo është pjesë e funksionit të produktit (gjurmueshmëria) dhe është e dukshme për organizatën.",
       "Të dhëna pagese: plani, periudha e blerë, shuma, data dhe numri i referencës nga Paysera. Nuk marrim dhe nuk ruajmë asnjëherë numra kartash apo të dhëna bankare — ato futen vetëm në faqen e Paysera-s.",
-      "Të dhëna teknike: adresa IP, lloji i shfletuesit dhe koha e kërkesave, në log-et e serverit të ofruesit të hostimit, të ruajtura për një periudhë të shkurtër për siguri dhe diagnostikim. Nuk përdorim mjete analitike apo reklamuese të palëve të treta.",
+      "Të dhëna teknike: adresa IP, lloji i shfletuesit dhe koha e kërkesave, në log-et e serverit të ofruesit të hostimit, të ruajtura për një periudhë të shkurtër për siguri dhe diagnostikim. Për të parë cilat faqe përdoren, përdorim Vercel Web Analytics: numëron shikimet e faqeve pa cookies dhe pa identifikues që të ndjek nëpër faqe të tjera (një hash i përkohshëm i kërkesës, i pavlefshëm pas 24 orësh); nuk na tregon kush je. Asnjë mjet reklamimi.",
     ]},
     { title: "Cookies", paragraphs: [
       "Përdorim vetëm cookies rreptësisht të nevojshme: sesioni i hyrjes (që të mbetesh i identifikuar), gjuha e zgjedhur dhe objekti (depoja) ku po punon. Asnjë cookie gjurmimi apo reklamimi. Prandaj nuk shfaqim banner pëlqimi për cookies.",
@@ -158,7 +158,7 @@ export const privacy: Record<Locale, Section[]> = {
       "Për detyrime ligjore: ruajtja e të dhënave të faturimit sa kohë e kërkon ligji tatimor dhe i kontabilitetit.",
     ]},
     { title: "Kush i sheh të dhënat (nënpërpunuesit)", paragraphs: [
-      "Nuk i shesim dhe nuk i ndajmë të dhënat me palë të treta për qëllimet e tyre. I përdorim këta ofrues, të cilët i përpunojnë vetëm sipas udhëzimeve tona: Vercel (hostimi i aplikacionit), Neon (baza e të dhënave, rajoni Frankfurt, BE), Google (Gmail — dërgimi i email-eve operacionale: verifikim, rivendosje fjalëkalimi, ftesa, kujtesa faturimi), Sentry (raportim i gabimeve teknike; një raport mund të përmbajë adresën e email-it të përdoruesit të kyçur dhe të dhëna teknike të kërkesës), Paysera (procesimi i pagesave — merr emrin, email-in dhe shumën e pagesës).",
+      "Nuk i shesim dhe nuk i ndajmë të dhënat me palë të treta për qëllimet e tyre. I përdorim këta ofrues, të cilët i përpunojnë vetëm sipas udhëzimeve tona: Vercel (hostimi i aplikacionit dhe statistikat e shikimeve të faqeve), Neon (baza e të dhënave, rajoni Frankfurt, BE), Google (Gmail — dërgimi i email-eve operacionale: verifikim, rivendosje fjalëkalimi, ftesa, kujtesa faturimi), Sentry (raportim i gabimeve teknike; një raport mund të përmbajë adresën e email-it të përdoruesit të kyçur dhe të dhëna teknike të kërkesës), Paysera (procesimi i pagesave — merr emrin, email-in dhe shumën e pagesës).",
       "Brenda organizatës tënde, administratorët dhe menaxherët shohin listën e anëtarëve (emër, email, rol) dhe historikun e lëvizjeve me emrin e personit që i ka kryer.",
     ]},
     { title: "Sa kohë i ruajmë", paragraphs: [
@@ -189,7 +189,7 @@ export const privacy: Record<Locale, Section[]> = {
       "Account data: name, email address and password (stored only as a hash, never in clear text), role in the organization, email-verification and account-creation dates.",
       "Organization data: company name, facilities and their floor plans, items, stock quantities and movement history. Every stock movement records which user performed it — that is part of the product (traceability) and is visible to the organization.",
       "Payment data: plan, period bought, amount, date and Paysera's reference number. We never receive or store card numbers or bank details — those are entered only on Paysera's page.",
-      "Technical data: IP address, browser type and request times, in the hosting provider's server logs, kept briefly for security and diagnostics. We use no third-party analytics or advertising tools.",
+      "Technical data: IP address, browser type and request times, in the hosting provider's server logs, kept briefly for security and diagnostics. To see which pages get used we run Vercel Web Analytics: it counts page views without cookies and without any identifier that follows you across other sites (a temporary hash of the request, void after 24 hours); it does not tell us who you are. No advertising tools.",
     ]},
     { title: "Cookies", paragraphs: [
       "We use only strictly necessary cookies: the login session (so you stay signed in), your chosen language, and the facility you are working in. No tracking or advertising cookies — which is why there is no cookie consent banner.",
@@ -201,7 +201,7 @@ export const privacy: Record<Locale, Section[]> = {
       "For legal obligations: keeping billing records for as long as tax and accounting law requires.",
     ]},
     { title: "Who sees it (subprocessors)", paragraphs: [
-      "We do not sell or share data with third parties for their own purposes. We use these providers, who process it only on our instructions: Vercel (application hosting), Neon (database, Frankfurt region, EU), Google (Gmail — operational email: verification, password reset, invites, billing reminders), Sentry (technical error reporting; a report may include the signed-in user's email address and technical request data), Paysera (payment processing — receives name, email and the payment amount).",
+      "We do not sell or share data with third parties for their own purposes. We use these providers, who process it only on our instructions: Vercel (application hosting and page-view statistics), Neon (database, Frankfurt region, EU), Google (Gmail — operational email: verification, password reset, invites, billing reminders), Sentry (technical error reporting; a report may include the signed-in user's email address and technical request data), Paysera (payment processing — receives name, email and the payment amount).",
       "Within your organization, admins and managers see the member list (name, email, role) and the movement history with the name of the person who performed each movement.",
     ]},
     { title: "How long we keep it", paragraphs: [

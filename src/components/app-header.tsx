@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { getBillingSummary } from "@/app/billing/actions";
 import { useCapabilities } from "@/components/capabilities";
 import { LockBanner } from "@/components/lock-banner";
+import { OrganizationSwitcher } from "@/components/organization-switcher";
 import { homeFor, primaryNav, secondaryNav } from "@/lib/navigation";
 import { logout } from "@/lib/actions/auth";
 import { FacilitySwitcher } from "./facility-switcher";
@@ -197,6 +198,7 @@ export function AppHeader({
           }}
           style={{ flex: "1 1 160px", minWidth: 120, maxWidth: 250 }}
         />
+        {caps && <OrganizationSwitcher currentId={caps.organizationId} />}
         {secondary.map((n) => (
           <Link key={n.href} href={n.href} className="btn btn-secondary">
             {t(`common.${n.key}`)}

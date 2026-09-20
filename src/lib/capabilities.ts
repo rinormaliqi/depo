@@ -44,6 +44,7 @@ export type Limit = { used: number; max: number | null };
 export type BlockReason = { kind: "role" } | { kind: "plan" } | { kind: "locked"; lock: NonNullable<OrgLockReason> };
 
 export type Capabilities = {
+  organizationId: string;
   role: MembershipRole;
   plan: { key: string; name: string };
   locked: OrgLockReason;
@@ -64,6 +65,7 @@ export type PlanEntitlements = {
 
 // Pure — the table-driven tests run this directly.
 export function resolveCapabilities(input: {
+  organizationId?: string;
   role: MembershipRole;
   plan: PlanEntitlements;
   locked: OrgLockReason;
@@ -110,6 +112,7 @@ export function resolveCapabilities(input: {
   }
 
   return {
+    organizationId: input.organizationId ?? "",
     role,
     plan: { key: plan.key, name: plan.name },
     locked,
@@ -152,7 +155,7 @@ async function loadPlan(organizationId: string): Promise<PlanEntitlements> {
 
 export async function getCapabilitiesFor(organizationId: string, role: MembershipRole): Promise<Capabilities> {
   const [plan, locked, usage] = await Promise.all([loadPlan(organizationId), getOrgLockReason(organizationId), loadUsage(organizationId)]);
-  return resolveCapabilities({ role, plan, locked, usage });
+  return resolveCapabilities({ organizationId, role, plan, locked, usage });
 }
 
 // For pages: null when there's no session or no organization yet.

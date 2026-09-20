@@ -89,7 +89,7 @@ export async function createInvite(_prevState: { error?: string } | undefined, f
       .select()
       .from(memberships)
       .where(and(eq(memberships.userId, existingUser.id), eq(memberships.organizationId, session.organizationId)));
-    if (existingMembership) return { error: t("alreadyMember") };
+    if (existingMembership) return { error: t("alreadyMember", { email: existingUser.email }) };
   }
 
   const expiresAt = expiryFromNow();

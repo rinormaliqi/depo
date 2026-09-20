@@ -265,7 +265,7 @@
       "notAuthorized": "Nuk ke leje të menaxhosh ekipin",
       "required": "Emaili dhe roli janë të detyrueshëm",
       "onlyAdminCanInviteAdmin": "Vetëm një admin mund të ftojë një admin tjetër",
-      "alreadyMember": "Ai person është tashmë anëtar i kësaj organizate",
+      "alreadyMember": "{email} është tashmë anëtar i kësaj organizate",
       "inviteNotFound": "Kjo ftesë nuk ekziston më",
       "emailFailed": "Ftesa u krijua, por email-i nuk u dërgua — kopjo lidhjen më poshtë dhe ndaje direkt.",
       "memberNotFound": "Ai anëtar nuk ekziston më",
@@ -319,7 +319,8 @@
     },
     "acceptWithGoogle": "Prano me Google",
     "signedInAsOther": "Je kyçur si {current}, por kjo ftesë është për {invited}. Dil dhe hape linkun sërish, ose kërko një ftesë për {current}.",
-    "lockedBody": "{org} s'ka plan aktiv për momentin, prandaj anëtarë të rinj s'mund të bashkohen ende. Mund ta rregullojë:"
+    "lockedBody": "{org} s'ka plan aktiv për momentin, prandaj anëtarë të rinj s'mund të bashkohen ende. Mund ta rregullojë:",
+    "alsoMemberOf": "Je tashmë anëtar i {orgs}. Pranimi shton {org} krahas — mund të kalosh mes kompanive nga menyja kurdo."
   },
   "billing": {
     "title": "Faturimi",
@@ -889,5 +890,13 @@
     "askAdmins": "Kërkoji",
     "verifyCta": "Verifiko email-in",
     "billingCta": "Te Faturimi"
+  },
+  "organization": {
+    "switch": "Ndërro kompaninë",
+    "role": {
+      "admin": "Admin",
+      "manager": "Menaxher",
+      "worker": "Punëtor"
+    }
   }
 }

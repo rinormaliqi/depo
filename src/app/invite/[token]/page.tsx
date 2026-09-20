@@ -30,6 +30,15 @@ export default async function InvitePage({
 
   const organization = invite ? (await db.select().from(organizations).where(eq(organizations.id, invite.organizationId)))[0] : null;
   const existingUser = invite ? (await db.select().from(users).where(eq(users.normalizedEmail, normalizeEmail(invite.email))))[0] : null;
+  // An existing user who already belongs elsewhere keeps those
+  // memberships; say so, so "joining" isn't read as "moving".
+  const otherOrgs = existingUser && invite
+    ? (await db
+        .select({ name: organizations.name })
+        .from(memberships)
+        .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
+        .where(eq(memberships.userId, existingUser.id))).map((o) => o.name).filter((n) => n !== organization?.name)
+    : [];
   // A locked company can't take new members (acceptance is refused with
   // the reason) — say so up front, and name who can fix it.
   const lockReason = invite ? await getOrgLockReason(invite.organizationId) : null;
@@ -80,6 +89,11 @@ export default async function InvitePage({
                 {lockAdmins.map((a, i) => (
                   <span key={a.email}>{i > 0 && ", "}<a href={`mailto:${a.email}`} style={{ color: "inherit", textDecoration: "underline" }}>{a.name}</a></span>
                 ))}
+              </p>
+            )}
+            {otherOrgs.length > 0 && mismatchEmail === null && (
+              <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>
+                {t("alsoMemberOf", { orgs: otherOrgs.join(", "), org: organization.name })}
               </p>
             )}
             {mismatchEmail !== null ? (

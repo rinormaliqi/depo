@@ -10,6 +10,7 @@ import { invites, memberships, users } from "@/db/schema";
 import { normalizeEmail } from "@/lib/email-normalize";
 import { markEmailVerified } from "@/lib/email-verification";
 import { getOrgLockReason } from "@/lib/session";
+import { rememberOrganization } from "@/lib/organizations";
 
 type FormState = { error?: string } | undefined;
 
@@ -56,6 +57,8 @@ export async function acceptInviteAsExistingUser(_prevState: FormState, formData
   // Reaching this page means the invite link landed in that inbox — as
   // good a proof as a verification link, so don't make them do both.
   await markEmailVerified(user.id);
+  // Land in the company just joined, not whichever one came first.
+  await rememberOrganization(invite.organizationId);
 
   try {
     await signIn("credentials", { email: user.email, password, redirectTo: "/start" });
@@ -89,6 +92,7 @@ export async function acceptInviteAsNewUser(_prevState: FormState, formData: For
     .returning();
   await db.insert(memberships).values({ userId: user.id, organizationId: invite.organizationId, role: invite.role });
   await db.update(invites).set({ acceptedAt: new Date() }).where(eq(invites.id, invite.id));
+  await rememberOrganization(invite.organizationId);
 
   try {
     await signIn("credentials", { email: invite.email, password, redirectTo: "/start" });

@@ -319,3 +319,17 @@ input[type="number"] {
   .map-sheet { left: 8px; right: 8px; bottom: calc(8px + var(--bottom-nav, 0px) + env(safe-area-inset-bottom, 0px)); }
   .map-sheet .btn { min-height: 44px; }
 }
+
+/* ── Lock banner (src/components/lock-banner.tsx) ────────────────────── */
+.lock-banner {
+  order: 20; flex: 1 1 100%;
+  display: flex; align-items: center; gap: 10px; margin: 0 -14px -9px; padding: 8px 14px;
+  background: var(--color-warning-100); border-top: 1px solid color-mix(in srgb, var(--color-warning-500) 40%, transparent);
+  font-size: 13px; line-height: 1.45; color: var(--color-text);
+}
+.lock-banner-mark { flex: none; width: 18px; height: 18px; display: grid; place-items: center; background: var(--color-warning-500); color: #fff; font-family: var(--font-heading); font-weight: 700; font-size: 11px; }
+.lock-banner-text { flex: 1; min-width: 0; }
+@media (max-width: 768px) {
+  .lock-banner { margin: 0 -10px -8px; padding: 8px 10px; flex-wrap: wrap; }
+  .lock-banner .btn { flex: 1 1 100%; }
+}

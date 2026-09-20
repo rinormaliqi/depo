@@ -318,7 +318,8 @@
       "signInFailed": "U bashkua, por hyrja dështoi — provo të hysh"
     },
     "acceptWithGoogle": "Prano me Google",
-    "signedInAsOther": "Je kyçur si {current}, por kjo ftesë është për {invited}. Dil dhe hape linkun sërish, ose kërko një ftesë për {current}."
+    "signedInAsOther": "Je kyçur si {current}, por kjo ftesë është për {invited}. Dil dhe hape linkun sërish, ose kërko një ftesë për {current}.",
+    "lockedBody": "{org} s'ka plan aktiv për momentin, prandaj anëtarë të rinj s'mund të bashkohen ende. Mund ta rregullojë:"
   },
   "billing": {
     "title": "Faturimi",
@@ -862,5 +863,31 @@
     "kicker": "Jo për rolin tënd",
     "title": "Kjo faqe s'është pjesë e punës tënde këtu",
     "back": "Kthehu te puna ime"
+  },
+  "lockBanner": {
+    "title": {
+      "unverified": "Prova s'ka filluar.",
+      "trialEnded": "Prova mbaroi.",
+      "expired": "Plani skadoi.",
+      "pastDue": "Pagesa e vonuar.",
+      "canceled": "Plani u anulua."
+    },
+    "admin": {
+      "unverified": "Verifiko email-in për të filluar provën 30-ditëshe — deri atëherë asgjë s'ruhet.",
+      "trialEnded": "Gjithçka është vetëm-lexim derisa të aktivizohet një plan. Asgjë s'është fshirë.",
+      "expired": "Gjithçka është vetëm-lexim derisa të rinovohet plani. Asgjë s'është fshirë.",
+      "pastDue": "Gjithçka është vetëm-lexim derisa të rregullohet pagesa.",
+      "canceled": "Gjithçka është vetëm-lexim derisa të riaktivizohet plani."
+    },
+    "member": {
+      "unverified": "Pronari i llogarisë s'e ka verifikuar ende email-in, prandaj asgjë s'ruhet.",
+      "trialEnded": "Prova e kompanisë ka mbaruar — stoku shihet, por s'ndryshohet.",
+      "expired": "Plani i kompanisë ka skaduar — stoku shihet, por s'ndryshohet.",
+      "pastDue": "Pagesa e kompanisë është vonuar — stoku shihet, por s'ndryshohet.",
+      "canceled": "Plani i kompanisë u anulua — stoku shihet, por s'ndryshohet."
+    },
+    "askAdmins": "Kërkoji",
+    "verifyCta": "Verifiko email-in",
+    "billingCta": "Te Faturimi"
   }
 }

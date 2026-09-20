@@ -436,6 +436,11 @@ phones the primary tabs live in a fixed **bottom bar** under the thumb (`.app-na
 header keeps a single row (wordmark, facility switcher, ⋯ menu — the plan pill moves into the
 menu), and the toaster sits above the bar (`--bottom-nav`).
 
+While the organization is locked, `LockBanner` (in `AppHeader`, every role) says why in plain
+words: admins get the fix (Billing / verify email), everyone else is told the stock is
+read-only and whom to ask — the admins' names as mailto links, loaded into the client
+capabilities payload only when locked (#77). The invite page carries the same note.
+
 `/start` is where every sign-in lands (login, invites, Google via `/welcome`): it routes by role
 — workers to `/stock`, others to `/builder`, no organization yet to `/welcome`. A page a role
 can't use (`/team`, `/billing`, `/items`, `/metrics`) renders `<NotForRole>` — the normal header,

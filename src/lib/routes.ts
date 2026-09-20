@@ -7,7 +7,7 @@
 // protected prefix needs a session. Anything else is neither — it falls
 // through to Next's 404 instead of bouncing a mistyped URL to /login.
 export const publicPaths = new Set([
-  "/", "/login", "/signup", "/forgot-password", "/pricing", "/terms", "/refunds", "/privacy", "/contact",
+  "/", "/login", "/signup", "/forgot-password", "/pricing", "/terms", "/refunds", "/privacy", "/contact", "/auth-error",
   "/robots.txt", "/sitemap.xml",
 ]);
 

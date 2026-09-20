@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { appBaseUrl } from "@/lib/app-url";
 import { passwordResets, users } from "@/db/schema";
 import { sendEmail } from "@/lib/email";
+import { LIMITS, clientIp, isLimited, record } from "@/lib/rate-limit";
 
 const RESET_VALID_MINUTES = 60;
 
@@ -16,6 +17,14 @@ export async function requestPasswordReset(_prevState: FormState, formData: Form
   const t = await getTranslations("forgotPassword");
   const email = formData.get("email")?.toString().trim().toLowerCase();
   if (!email) return { error: t("error.required") };
+
+  // Over the limit → the same "sent" screen, nothing sent: a flood of
+  // requests must not turn into a flood of mail, and must not reveal
+  // whether the address exists.
+  const ipKey = `forgot:ip:${await clientIp()}`;
+  const emailKey = `forgot:email:${email}`;
+  if ((await isLimited(ipKey, LIMITS.forgotPassword)) || (await isLimited(emailKey, LIMITS.forgotPassword))) return { sent: true };
+  await Promise.all([record(ipKey), record(emailKey)]);
 
   const [user] = await db.select().from(users).where(eq(users.email, email));
 

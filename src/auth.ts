@@ -1,6 +1,6 @@
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { authConfig } from "@/auth.config";
@@ -12,6 +12,12 @@ import { ensureUserFromGoogle } from "@/lib/onboarding";
 // "Continue with Google" is on only where a Google Cloud OAuth client has
 // been configured — the button simply doesn't render otherwise, the same
 // way every optional integration here degrades (email, Paysera, Sentry).
+// Surfaces as `code` on the thrown error so the login action can say
+// "this account signs in with Google" instead of "wrong password".
+class GoogleOnlySignin extends CredentialsSignin {
+  code = "google_only";
+}
+
 export function isGoogleSignInEnabled() {
   return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
@@ -30,7 +36,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!email || !password) return null;
 
         const [user] = await db.select().from(users).where(eq(users.email, email));
-        if (!user || !user.passwordHash) return null;
+        if (!user) return null;
+        if (!user.passwordHash) throw new GoogleOnlySignin();
 
         const valid = await compare(password, user.passwordHash);
         if (!valid) return null;
@@ -57,9 +64,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ account, profile }) {
       if (account?.provider !== "google") return true;
       const email = profile?.email;
-      if (!email) return false;
+      if (!email) return "/auth-error?error=GoogleNoEmail";
       const user = await ensureUserFromGoogle({ email, name: profile?.name, emailVerified: profile?.email_verified === true });
-      return !!user;
+      // A refusal lands on our own error page with a specific reason,
+      // not Auth.js's default AccessDenied screen.
+      return user ? true : "/auth-error?error=GoogleUnverified";
     },
     // The JWT carries *our* user id. Credentials returns it from
     // authorize(); for Google the `user` object is the OAuth profile, so

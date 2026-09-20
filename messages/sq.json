@@ -252,7 +252,7 @@
       "placeholder": "Çimento 50kg\tthes\tNDR-0001\tÇimento\nKabllo 3x1.5\tm\tELK-0001\tKabllo",
       "preview": "Kontrollo",
       "previewing": "Duke kontrolluar…",
-      "commit": "Importo {n} artikuj",
+      "commit": "Importo {total} artikuj",
       "committing": "Duke importuar…",
       "back": "Kthehu te artikujt",
       "summary": "{create} të rinj · {update} përditësime sipas SKU · {errors} gabime",
@@ -677,7 +677,47 @@
     "zoneUtilisation": "Shfrytëzimi i zonave",
     "noZones": "Ende nuk ka zona në skemë.",
     "occupiedOfTotal": "{occupied} nga {total} vendndodhje të zëna · {area} m²",
-    "manageStock": "Menaxho stokun"
+    "manageStock": "Menaxho stokun",
+    "import": {
+      "template": "Shkarko CSV shembull",
+      "chooseFile": "Hap një skedar CSV…",
+      "preview": "Kontrollo",
+      "previewing": "Duke kontrolluar…",
+      "committing": "Duke importuar…",
+      "headerDetected": "Rreshti i titujve u njoh",
+      "errorsTitle": "Rregullo këto rreshta dhe kontrollo sërish",
+      "line": "Rreshti {line}",
+      "errorTooLarge": "Lista është më e madhe se 2 MB — ndaje",
+      "errorFixFirst": "{n} rreshta kanë ende gabime — asgjë nuk u importua",
+      "errorFileRead": "Skedari nuk u lexua dot",
+      "changedSincePreview": "Lista ndryshoi — kontrolloje sërish para se ta importosh",
+      "title": "Importo stokun — {facility}",
+      "intro": "Inventarizimi si listë: cili artikull, në cilën kuti, sa. Ngjit nga Excel ose hap një CSV. Kolonat: artikulli (SKU, ose emri i saktë nëse artikulli s'ka SKU), vendndodhja (kodi i kutisë në etiketë, p.sh. A-03-2-4), sasia. Çdo rresht bëhet një hyrje në atë kuti të këtij objekti, mbi atë që ka.",
+      "placeholder": "NDR-0001\tA-01-1-1\t40\nKabllo 3x1.5\tA-01-1-2\t120",
+      "commit": "Importo {rows} rreshta",
+      "back": "Kthehu te stoku",
+      "summary": "{rows} rreshta · {bins} kuti · {units} njësi · {errors} gabime",
+      "sampleTitle": "Rreshtat e parë siç do të hyjnë",
+      "noHeader": "Pa rresht titujsh — kolonat lexohen si artikulli, vendndodhja, sasia",
+      "error": {
+        "itemMissing": "artikulli mungon",
+        "locationMissing": "vendndodhja mungon",
+        "quantityInvalid": "sasia duhet të jetë numër i plotë mbi zero (u dha “{value}”)",
+        "tooLong": "{field} është më i gjatë se 200 karaktere ({value})",
+        "tooManyRows": "më shumë se 5.000 rreshta — ndaje listën",
+        "empty": "s'ka asgjë për të importuar",
+        "itemUnknown": "s'ka artikull me SKU ose emër “{value}” — importo fillimisht katalogun",
+        "itemAmbiguous": "“{value}” emërton më shumë se një artikull — jepu SKU",
+        "locationUnknown": "s'ka kuti “{value}” në këtë objekt — kontrollo etiketën"
+      },
+      "field": {
+        "item": "artikulli",
+        "location": "vendndodhja",
+        "quantity": "sasia"
+      },
+      "done": "{rows} rreshta hynë në {bins} kuti"
+    },
+    "importLink": "Importo inventarin (Excel / CSV)"
   },
   "metrics": {
     "mappedFloor": "Sipërfaqja e mapuar",

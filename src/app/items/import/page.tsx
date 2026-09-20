@@ -5,7 +5,9 @@ import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
 import { NotForRole } from "@/components/not-for-role";
 import { getCapabilities } from "@/lib/capabilities";
-import { ImportForm } from "./import-form";
+import { PasteImport } from "@/components/paste-import";
+import { IMPORT_COLUMNS } from "@/lib/import-items";
+import { commitItemsImport, previewItemsImport } from "./actions";
 
 export default async function ItemsImportPage() {
   const session = await auth();
@@ -29,7 +31,14 @@ export default async function ItemsImportPage() {
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, marginBottom: 6 }}>{t("items.import.title")}</div>
           <p className="text-muted" style={{ fontSize: 13, marginTop: 0, marginBottom: 16 }}>{t("items.import.intro")}</p>
-          <ImportForm />
+          <PasteImport
+            ns="items.import"
+            columns={IMPORT_COLUMNS}
+            templateHref="/items/import/template"
+            backHref="/items"
+            preview={previewItemsImport}
+            commit={commitItemsImport}
+          />
         </div>
       </div>
     </div>

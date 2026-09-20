@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
+import { getCapabilities } from "@/lib/capabilities";
 import { getZoneUtilization, searchStock } from "./actions";
 import { StockSearch } from "./stock-search";
 
@@ -25,9 +27,10 @@ export default async function StockPage({
   }
 
   const { q } = await searchParams;
-  const [initialResults, zones] = await Promise.all([
+  const [initialResults, zones, caps] = await Promise.all([
     q ? searchStock(q) : Promise.resolve([]),
     getZoneUtilization(),
+    getCapabilities(),
   ]);
 
   return (
@@ -55,6 +58,11 @@ export default async function StockPage({
           >
             {t("stock.zoneUtilisation")}
           </div>
+          {caps?.can.manageItems && (
+            <Link href="/stock/import" className="btn btn-ghost" style={{ marginBottom: 12, alignSelf: "flex-start" }}>
+              {t("stock.importLink")}
+            </Link>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 0, maxWidth: 560 }}>
             {zones.map((z) => (
               <div

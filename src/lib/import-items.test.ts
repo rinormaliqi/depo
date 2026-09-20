@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { detectDelimiter, MAX_IMPORT_ROWS, parseItemsText, tokenize } from "./import-items";
+import { MAX_IMPORT_ROWS, parseItemsText } from "./import-items";
+import { detectDelimiter, tokenize } from "./import-table";
 
 test("delimiter: a tab anywhere wins, then ';' over ',' by count", () => {
   assert.equal(detectDelimiter("a\tb\tc"), "\t");

@@ -18,12 +18,11 @@ import { UserError } from "@/lib/user-error";
 // catalogue is worse than none.
 
 export type ImportPreview = {
-  create: number;
-  update: number;
+  counts: { create: number; update: number };
   errors: ImportError[];
   // The first few rows as they'll be written, so a wrong column mapping
   // is visible before anything happens.
-  sample: ImportRow[];
+  sample: string[][];
   hasHeader: boolean;
 };
 
@@ -50,7 +49,12 @@ async function analyse(text: string, organizationId: string) {
 async function previewItemsImportImpl(text: string): Promise<ImportPreview> {
   const { organizationId } = await requirePermission("manageItems");
   const { parsed, create, update } = await analyse(text, organizationId);
-  return { create, update, errors: parsed.errors, sample: parsed.rows.slice(0, SAMPLE_ROWS), hasHeader: parsed.hasHeader };
+  return {
+    counts: { create, update },
+    errors: parsed.errors,
+    sample: parsed.rows.slice(0, SAMPLE_ROWS).map((r) => [r.name, r.unit, r.sku ?? "", r.category ?? ""]),
+    hasHeader: parsed.hasHeader,
+  };
 }
 
 export async function previewItemsImport(text: string) {

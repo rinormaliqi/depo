@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
@@ -33,7 +34,14 @@ export default async function ItemsPage() {
       )}
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 26 }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, marginBottom: 16 }}>{t("items.title")}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 20 }}>{t("items.title")}</div>
+            {caps?.can.manageItems && (
+              <Link href="/items/import" className="btn btn-ghost">
+                {t("items.importLink")}
+              </Link>
+            )}
+          </div>
 
           {caps?.can.manageItems ? (
             <ItemForm />

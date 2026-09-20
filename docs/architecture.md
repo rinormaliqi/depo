@@ -206,6 +206,27 @@ this was the only member are deleted with all their data (explicit, bottom-up th
 non-cascading foreign keys), and the only admin of a shared company is refused until they hand
 over. Confirmation asks for the email address to be typed. Tests: `src/tests/account.test.ts`.
 
+## Items import — the catalogue from a spreadsheet
+
+Typing a depot's catalogue one form at a time was the onboarding wall a 30-day trial would
+expire behind (#85). `/items/import` (managers and admins, `manageItems`) takes the list the
+company already has: paste straight from Excel (tab-separated) or open a CSV — `;` as a
+European Excel saves it, or `,`. `src/lib/import-items.ts` is the pure parser (delimiter
+detection on the first line, RFC 4180 quoting, a header row recognised by sq/en column names
+in any order, otherwise positional `name, unit, sku, category` — required columns first so a
+two-column paste works); it returns rows and per-line errors, never throws. Two server
+actions in `src/app/items/import/actions.ts`: **preview** re-parses on the server and reports
+`{create, update, errors}` plus the first rows as they'd be saved — the only confirmation
+there is — and **commit** re-parses the same text again (rows are never trusted from the
+browser), refuses if a single line is wrong, and writes in one transaction: rows with a SKU
+upsert on the new partial unique index `items_org_sku_idx (organization_id, sku) where sku is
+not null` (migration 0012, which first suffixes any pre-existing duplicates `-2`, `-3`…), rows
+without one are plain inserts and never merge. The client pins the preview to the exact text
+it was computed for, so editing the box hides the import button until the next check. Limits:
+5,000 rows, 2 MB, 200 characters a field. `createItem` reports a taken SKU rather than the
+constraint error. Tests: `src/lib/import-items.test.ts` (parser), `src/tests/items-import.test.ts`
+(actions, isolation, roles). Stock import and export are the next phases (#88, #89).
+
 ## Sign-in hardening
 
 `src/lib/rate-limit.ts` is the one limiter: a sliding window over rows in `rate_limit_events`

@@ -241,7 +241,46 @@
     "noItems": "Ende nuk ka artikuj.",
     "errorRequired": "Emri dhe njësia matëse janë të detyrueshme",
     "viewOnly": "Vetëm menaxherët dhe administratorët mund të shtojnë artikuj në katalog.",
-    "created": "{name} u shtua në katalog"
+    "created": "{name} u shtua në katalog",
+    "errorSkuTaken": "SKU {sku} përdoret tashmë nga një artikull tjetër",
+    "importLink": "Importo nga Excel / CSV",
+    "import": {
+      "title": "Importo artikuj",
+      "intro": "Ngjit listën direkt nga Excel (zgjedh qelizat, kopjo, ngjit këtu) ose hap një skedar CSV. Kolonat: emri, njësia, SKU, kategoria — dy të parat janë të detyrueshme. Rreshti i titujve njihet në shqip ose anglisht; pa të, kolonat lexohen në atë radhë.",
+      "template": "Shkarko CSV shembull",
+      "chooseFile": "Hap një skedar CSV…",
+      "placeholder": "Çimento 50kg\tthes\tNDR-0001\tÇimento\nKabllo 3x1.5\tm\tELK-0001\tKabllo",
+      "preview": "Kontrollo",
+      "previewing": "Duke kontrolluar…",
+      "commit": "Importo {n} artikuj",
+      "committing": "Duke importuar…",
+      "back": "Kthehu te artikujt",
+      "summary": "{create} të rinj · {update} përditësime sipas SKU · {errors} gabime",
+      "sampleTitle": "Rreshtat e parë siç do të ruhen",
+      "headerDetected": "Rreshti i titujve u njoh",
+      "noHeader": "Pa rresht titujsh — kolonat lexohen si emri, njësia, SKU, kategoria",
+      "errorsTitle": "Rregullo këto rreshta dhe kontrollo sërish",
+      "line": "Rreshti {line}",
+      "error": {
+        "nameMissing": "emri mungon",
+        "unitMissing": "njësia mungon",
+        "tooLong": "{field} është më i gjatë se 200 karaktere ({value})",
+        "duplicateSku": "SKU {value} shfaqet më shumë se një herë në listë",
+        "tooManyRows": "më shumë se 5.000 rreshta — ndaje listën",
+        "empty": "s'ka asgjë për të importuar"
+      },
+      "field": {
+        "name": "emri",
+        "unit": "njësia",
+        "sku": "SKU",
+        "category": "kategoria"
+      },
+      "done": "{created} artikuj u shtuan, {updated} u përditësuan",
+      "errorTooLarge": "Lista është më e madhe se 2 MB — ndaje",
+      "errorFixFirst": "{n} rreshta kanë ende gabime — asgjë nuk u importua",
+      "errorFileRead": "Skedari nuk u lexua dot",
+      "changedSincePreview": "Lista ndryshoi — kontrolloje sërish para se ta importosh"
+    }
   },
   "team": {
     "title": "Ekipi",

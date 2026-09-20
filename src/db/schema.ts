@@ -11,6 +11,7 @@ import {
   jsonb,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const plans = pgTable("plans", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -301,6 +302,12 @@ export const items = pgTable(
   (table) => [
     index("items_org_idx").on(table.organizationId),
     index("items_name_idx").on(table.name),
+    // A SKU names one item within a company — what lets a bulk import
+    // update the row it already created instead of adding a twin. Partial:
+    // items without a SKU stay as many as the company likes.
+    uniqueIndex("items_org_sku_idx")
+      .on(table.organizationId, table.sku)
+      .where(sql`${table.sku} is not null`),
   ],
 );
 

@@ -177,6 +177,18 @@ is dead (`expired` / `used` / `unknown`), and the token page offers the matching
 resend button right there for the signed-in owner of an expired link, "you're already
 verified, log in" for a used one.
 
+## Invite lifecycle
+
+A dead invite link still names the company and the inviter: the page loads the row regardless
+of state, tells the difference between expired / used / unknown, and an expired one offers
+"Ask {inviter} for a new invite" — `requestNewInvite()` (public, one email per invite per hour)
+mails the inviter a link to the Team page, where Resend already exists. Members can **leave**
+an organization (`leaveOrganization`: deletes their membership, moves the org cookie to another
+company or lets `/start` send them to `/welcome`); the only admin cannot, and is told to hand
+over first. **Make owner** (`transferOwnership`, admins only) promotes another member to admin
+and steps the caller down to manager in one transaction, so an organization never has zero
+admins and never gets stuck with one person. Tests: `src/tests/invite-lifecycle.test.ts`.
+
 ## Sign-in hardening
 
 `src/lib/rate-limit.ts` is the one limiter: a sliding window over rows in `rate_limit_events`

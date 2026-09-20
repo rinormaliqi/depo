@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { facilities, invites, memberships, organizations, plans, users } from "@/db/schema";
 import { normalizeEmail } from "@/lib/email-normalize";
 import { markEmailVerified, TRIAL_DAYS } from "@/lib/email-verification";
+import { rememberOrganization } from "@/lib/organizations";
 
 // What a new company gets on day one, whichever door it came in through:
 // the password signup form (src/app/signup/actions.ts) and the Google
@@ -22,6 +23,7 @@ export async function createOrganizationForFounder(opts: { userId: string; compa
     .returning();
   await db.insert(memberships).values({ userId: opts.userId, organizationId: org.id, role: "admin" });
   await db.insert(facilities).values({ organizationId: org.id, name: "Main Facility" });
+  await rememberOrganization(org.id);
   return org;
 }
 
@@ -77,11 +79,13 @@ export async function acceptInviteViaSession(token: string, userId: string): Pro
     .where(and(eq(memberships.userId, userId), eq(memberships.organizationId, invite.organizationId)));
   if (existing) {
     await db.update(invites).set({ acceptedAt: new Date() }).where(eq(invites.id, invite.id));
+    await rememberOrganization(invite.organizationId);
     return "already-member";
   }
 
   await db.insert(memberships).values({ userId, organizationId: invite.organizationId, role: invite.role });
   await db.update(invites).set({ acceptedAt: new Date() }).where(eq(invites.id, invite.id));
   await markEmailVerified(userId);
+  await rememberOrganization(invite.organizationId);
   return "joined";
 }

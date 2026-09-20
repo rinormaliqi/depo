@@ -2,22 +2,21 @@ import { eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { memberships, organizations } from "@/db/schema";
+import { organizations } from "@/db/schema";
+import { currentOrganization } from "@/lib/organizations";
 import { UserError } from "@/lib/user-error";
 
-// Assumes one org per user for now — no multi-org switching UI yet.
+// The organization comes from the per-browser choice in
+// src/lib/organizations.ts (cookie, validated against memberships), so a
+// user in several companies acts in the one they picked.
 export async function getMySession() {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  const [membership] = await db
-    .select()
-    .from(memberships)
-    .where(eq(memberships.userId, session.user.id))
-    .limit(1);
-  if (!membership) return null;
+  const org = await currentOrganization(session.user.id);
+  if (!org) return null;
 
-  return { userId: session.user.id, organizationId: membership.organizationId, role: membership.role };
+  return { userId: session.user.id, organizationId: org.id, role: org.role };
 }
 
 export async function requireSession() {

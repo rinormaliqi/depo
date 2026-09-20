@@ -425,6 +425,21 @@ confirmed every write path above is blocked with the correct translated message 
 own distinct message; confirmed zero partial writes against Postgres directly, not just the
 UI; then restored the org and confirmed normal writes resume immediately.
 
+## Organizations — one person, several companies
+
+`getMySession()` used to take the *first* membership row; a contractor invited into a second
+company joined silently and kept seeing the first (#74). Now the current organization is an
+explicit per-browser choice like the facility and the locale: `src/lib/organizations.ts` keeps
+it in the `smartdepo_org` cookie, validated against the user's memberships on every read and
+defaulting to the **most recently joined** — which is what a just-accepted invite should land
+in. Every path that creates a membership (`createOrganizationForFounder`, both invite
+acceptances, `acceptInviteViaSession`) remembers the new organization; `/start` then routes by
+the role there. `OrganizationSwitcher` appears in the header only for users with more than one
+membership (name · role), and switching revalidates the layout and goes through `/start`. The
+invite page tells an existing user that accepting *adds* the company alongside their current
+ones. Everything else was already scoped by `organizationId`; `src/tests/multi-org.test.ts`
+covers the cookie default, override, fallback and the cross-company invite.
+
 ## Role-specific navigation
 
 `src/lib/navigation.ts` decides what the app shows from capabilities (not the role name, so a

@@ -281,7 +281,20 @@
       "errorFileRead": "Couldn't read that file",
       "changedSincePreview": "The list changed — check it again before importing"
     },
-    "exportLink": "Export CSV"
+    "exportLink": "Export CSV",
+    "edit": "Edit",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "updated": "{name} updated",
+    "deleted": "{name} removed from the catalog",
+    "deleteTitle": "Remove {name}?",
+    "deleteBody": "Only an item with no stock and no history can be removed. This can't be undone.",
+    "errorNotFound": "Item not found",
+    "errorHasStock": "{name} still has stock in a bin — pick it first",
+    "errorHasHistory": "{name} has movements in the history and stays in the catalog; rename it if it's wrong",
+    "stockNote": "{count} in stock"
   },
   "team": {
     "title": "Team",

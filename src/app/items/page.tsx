@@ -6,8 +6,9 @@ import { auth } from "@/auth";
 import { NotForRole } from "@/components/not-for-role";
 import { AppHeader } from "@/components/app-header";
 import { getCapabilities } from "@/lib/capabilities";
-import { getMyItems } from "./actions";
+import { getMyItemsWithStock } from "./actions";
 import { ItemForm } from "./item-form";
+import { ItemsList } from "./items-list";
 
 export default async function ItemsPage() {
   const session = await auth();
@@ -17,7 +18,7 @@ export default async function ItemsPage() {
 
   const [facility, myItems, caps, t] = await Promise.all([
     getMyFacility(),
-    getMyItems(),
+    getMyItemsWithStock(),
     getCapabilities(),
     getTranslations(),
   ]);
@@ -54,20 +55,7 @@ export default async function ItemsPage() {
             <p className="text-muted" style={{ fontSize: 12 }}>{t("items.viewOnly")}</p>
           )}
 
-          <div style={{ marginTop: 20, display: "flex", flexDirection: "column" }}>
-            {myItems.map((item) => (
-              <div
-                key={item.id}
-                style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--color-divider)", fontSize: 13 }}
-              >
-                <span>{item.name}</span>
-                <span style={{ color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>
-                  {item.unitOfMeasure}
-                  {item.category ? ` · ${item.category}` : ""}
-                </span>
-              </div>
-            ))}
-          </div>
+          <ItemsList items={myItems} canManage={!!caps?.can.manageItems} />
 
           {myItems.length === 0 && (
             <p className="text-muted" style={{ marginTop: 20, textAlign: "center", fontSize: 13 }}>{t("items.noItems")}</p>

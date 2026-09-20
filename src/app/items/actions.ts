@@ -35,13 +35,24 @@ export async function createItem(_prevState: FormState, formData: FormData): Pro
     return { error: t("errorRequired") };
   }
 
-  await db.insert(items).values({
-    organizationId,
-    name,
-    unitOfMeasure,
-    sku: sku || null,
-    category: category || null,
-  });
+  try {
+    await db.insert(items).values({
+      organizationId,
+      name,
+      unitOfMeasure,
+      sku: sku || null,
+      category: category || null,
+    });
+  } catch (e) {
+    // items_org_sku_idx: the same SKU twice in one company. Drizzle wraps
+    // the driver's error, so the Postgres code sits on `cause`.
+    const cause = (e as { cause?: { code?: string } }).cause;
+    if (cause?.code === "23505") {
+      const t = await getTranslations("items");
+      return { error: t("errorSkuTaken", { sku: sku ?? "" }) };
+    }
+    throw e;
+  }
 
   revalidatePath("/items");
   // `at` makes each success distinct, so the form's toast fires per submit.

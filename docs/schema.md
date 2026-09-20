@@ -102,6 +102,8 @@ inserted fresh.
 - `locations.parent_id` — tree traversal (recursive CTE).
 - `items.name` — search-to-locate is the highest-frequency query in the product.
 - `stock (item_id, location_id)` unique — prevents double-counting the same item/bin pair.
+- `items (organization_id, sku) where sku is not null` unique — a SKU names one item per
+  company, so a bulk import can update in place; items without a SKU stay unconstrained.
 
 ## Notes
 - `locations.is_bin = true` is the only place stock can attach — enforced at the app layer

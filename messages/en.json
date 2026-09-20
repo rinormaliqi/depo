@@ -241,7 +241,46 @@
     "noItems": "No items yet.",
     "errorRequired": "Name and unit of measure are required",
     "viewOnly": "Only managers and admins can add items to the catalog.",
-    "created": "{name} added to the catalog"
+    "created": "{name} added to the catalog",
+    "errorSkuTaken": "SKU {sku} is already used by another item",
+    "importLink": "Import from Excel / CSV",
+    "import": {
+      "title": "Import items",
+      "intro": "Paste the list straight from Excel (select the cells, copy, paste here) or open a CSV file. Columns: name, unit, SKU, category — the first two are required. A header row is recognised in Albanian or English; without one, the columns are read in that order.",
+      "template": "Download example CSV",
+      "chooseFile": "Open a CSV file…",
+      "placeholder": "Çimento 50kg\tthes\tNDR-0001\tÇimento\nKabllo 3x1.5\tm\tELK-0001\tKabllo",
+      "preview": "Check",
+      "previewing": "Checking…",
+      "commit": "Import {n} items",
+      "committing": "Importing…",
+      "back": "Back to items",
+      "summary": "{create} new · {update} updated by SKU · {errors} errors",
+      "sampleTitle": "First rows as they'll be saved",
+      "headerDetected": "Header row recognised",
+      "noHeader": "No header row — columns read as name, unit, SKU, category",
+      "errorsTitle": "Fix these lines and check again",
+      "line": "Line {line}",
+      "error": {
+        "nameMissing": "name is empty",
+        "unitMissing": "unit is empty",
+        "tooLong": "{field} is longer than 200 characters ({value})",
+        "duplicateSku": "SKU {value} appears more than once in the list",
+        "tooManyRows": "more than 5,000 rows — split the list",
+        "empty": "nothing to import"
+      },
+      "field": {
+        "name": "name",
+        "unit": "unit",
+        "sku": "SKU",
+        "category": "category"
+      },
+      "done": "{created} items added, {updated} updated",
+      "errorTooLarge": "The list is larger than 2 MB — split it",
+      "errorFixFirst": "{n} lines still have errors — nothing was imported",
+      "errorFileRead": "Couldn't read that file",
+      "changedSincePreview": "The list changed — check it again before importing"
+    }
   },
   "team": {
     "title": "Team",

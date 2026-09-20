@@ -252,7 +252,7 @@
       "placeholder": "Çimento 50kg\tthes\tNDR-0001\tÇimento\nKabllo 3x1.5\tm\tELK-0001\tKabllo",
       "preview": "Check",
       "previewing": "Checking…",
-      "commit": "Import {n} items",
+      "commit": "Import {total} items",
       "committing": "Importing…",
       "back": "Back to items",
       "summary": "{create} new · {update} updated by SKU · {errors} errors",
@@ -280,7 +280,8 @@
       "errorFixFirst": "{n} lines still have errors — nothing was imported",
       "errorFileRead": "Couldn't read that file",
       "changedSincePreview": "The list changed — check it again before importing"
-    }
+    },
+    "exportLink": "Export CSV"
   },
   "team": {
     "title": "Team",
@@ -677,7 +678,48 @@
     "zoneUtilisation": "Zone utilisation",
     "noZones": "No zones on the blueprint yet.",
     "occupiedOfTotal": "{occupied} of {total} locations occupied · {area} m²",
-    "manageStock": "Manage stock"
+    "manageStock": "Manage stock",
+    "import": {
+      "template": "Download example CSV",
+      "chooseFile": "Open a CSV file…",
+      "preview": "Check",
+      "previewing": "Checking…",
+      "committing": "Importing…",
+      "headerDetected": "Header row recognised",
+      "errorsTitle": "Fix these lines and check again",
+      "line": "Line {line}",
+      "errorTooLarge": "The list is larger than 2 MB — split it",
+      "errorFixFirst": "{n} lines still have errors — nothing was imported",
+      "errorFileRead": "Couldn't read that file",
+      "changedSincePreview": "The list changed — check it again before importing",
+      "title": "Import stock — {facility}",
+      "intro": "The inventory count as a list: which item, in which bin, how many. Paste from Excel or open a CSV. Columns: item (SKU, or the exact name if the item has no SKU), location (the bin code on its label, e.g. A-03-2-4), quantity. Every line becomes a receive into that bin of this facility, on top of what's there.",
+      "placeholder": "NDR-0001\tA-01-1-1\t40\nKabllo 3x1.5\tA-01-1-2\t120",
+      "commit": "Import {rows} lines",
+      "back": "Back to stock",
+      "summary": "{rows} lines · {bins} bins · {units} units · {errors} errors",
+      "sampleTitle": "First lines as they'll be received",
+      "noHeader": "No header row — columns read as item, location, quantity",
+      "error": {
+        "itemMissing": "item is empty",
+        "locationMissing": "location is empty",
+        "quantityInvalid": "quantity must be a whole number above zero (got “{value}”)",
+        "tooLong": "{field} is longer than 200 characters ({value})",
+        "tooManyRows": "more than 5,000 rows — split the list",
+        "empty": "nothing to import",
+        "itemUnknown": "no item with SKU or name “{value}” — import the catalogue first",
+        "itemAmbiguous": "“{value}” names more than one item — give them SKUs",
+        "locationUnknown": "no bin “{value}” in this facility — check the label"
+      },
+      "field": {
+        "item": "item",
+        "location": "location",
+        "quantity": "quantity"
+      },
+      "done": "{rows} lines received into {bins} bins"
+    },
+    "importLink": "Import a stock count (Excel / CSV)",
+    "exportLink": "Export CSV"
   },
   "metrics": {
     "mappedFloor": "Mapped floor",

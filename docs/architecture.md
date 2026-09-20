@@ -225,7 +225,32 @@ without one are plain inserts and never merge. The client pins the preview to th
 it was computed for, so editing the box hides the import button until the next check. Limits:
 5,000 rows, 2 MB, 200 characters a field. `createItem` reports a taken SKU rather than the
 constraint error. Tests: `src/lib/import-items.test.ts` (parser), `src/tests/items-import.test.ts`
-(actions, isolation, roles). Stock import and export are the next phases (#88, #89).
+(actions, isolation, roles).
+
+**Export** closes the loop: `/items/export` (route handler, `manageItems`) is the catalogue in
+the import's own shape — `name;unit;sku;category` — so export → edit in Excel → import is the
+bulk-edit path (SKU lines update in place; SKU-less lines can only be created again, which the
+preview says); `/stock/export` (every role, it's what `/stock` shows) is the current facility's
+stocked bins as `item;name;location;quantity;unit`, where `item` is the SKU or, without one,
+the name — what the stock import takes back. `src/lib/csv.ts` writes both: `;` separated like
+the templates, UTF-8 BOM so Excel keeps "ç" and "ë", CRLF, RFC 4180 quoting; the header
+detection in `import-table.ts` skips columns it doesn't know (the export's `unit`, a company's
+own `price`) as long as most are recognised. Reading, so a locked company can still take its
+data out. Tests: `src/lib/csv.test.ts` (round trip through the parsers), `src/tests/csv-export.test.ts`.
+
+**Stock import** (`/stock/import`, from `/stock`, same `manageItems` gate — the count is a
+setup task, not floor work) is the inventory count as a list: `item, location, quantity`.
+`src/lib/import-table.ts` holds the text-to-cells half both imports share (delimiter, quoting,
+header mapping); `src/lib/import-stock.ts` reads the rows (`item` is a SKU or, for a catalogue
+without SKUs, an exact item name; `location` is the bin code on the label, upper-cased like the
+Scanner; `quantity` a whole number above zero, spreadsheet thousands separators tolerated).
+`src/app/stock/import/actions.ts` resolves every row against the catalogue (SKU first, then
+name — a name two items share is `itemAmbiguous`, not a guess) and the *current facility's*
+bins, and the commit writes one `receive` movement per line (the count sheet is the audit
+trail) plus the stock upsert summed per item × bin, added to what's already there — the same
+outcome as `receiveStockAt()` once per line, in one transaction. `src/components/paste-import.tsx`
+is the shared paste → check → import client for both. Tests: `src/lib/import-stock.test.ts`,
+`src/tests/stock-import.test.ts`.
 
 ## Sign-in hardening
 

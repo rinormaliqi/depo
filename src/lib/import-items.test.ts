@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { detectDelimiter, MAX_IMPORT_ROWS, parseItemsText, tokenize } from "./import-items";
+import { MAX_IMPORT_ROWS, parseItemsText } from "./import-items";
+import { detectDelimiter, tokenize } from "./import-table";
 
 test("delimiter: a tab anywhere wins, then ';' over ',' by count", () => {
   assert.equal(detectDelimiter("a\tb\tc"), "\t");
@@ -40,10 +41,17 @@ test("no header: positional name, unit, sku, category — a two-column paste is 
   ]);
 });
 
-test("an English header with an unknown column is still a header when the rest is blank-or-known", () => {
+test("a header with columns we don't know (blank, or the company's own) still maps the ones we do", () => {
   const parsed = parseItemsText("name,unit,sku,\nBolt,pcs,B-1,\n");
   assert.equal(parsed.hasHeader, true);
   assert.equal(parsed.rows.length, 1);
+
+  const extra = parseItemsText("Kodi;Çmimi;Emri;Furnitori;Njësia\nB-1;4.50;Bulon;ACME;copë\n");
+  assert.equal(extra.hasHeader, true);
+  assert.deepEqual(extra.rows, [{ line: 2, name: "Bulon", unit: "copë", sku: "B-1", category: null }]);
+
+  const notHeader = parseItemsText("Emri;a;b;c;d\nBulon;copë\n");
+  assert.equal(notHeader.hasHeader, false, "one known cell out of five is a product line, not a header");
 });
 
 test("errors carry the source line number; good rows still parse", () => {

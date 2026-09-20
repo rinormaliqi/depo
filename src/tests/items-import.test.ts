@@ -43,8 +43,7 @@ describe("items import", () => {
     const text = "Emri\tNjësia\tKodi\nÇimento 50kg\tthes\tNDR-1\n\tthes\tNDR-2\nHekur\tm\tNDR-1\n";
     const result = await previewItemsImport(text);
     assert.ok(result.ok);
-    assert.equal(result.value.create, 1);
-    assert.equal(result.value.update, 0);
+    assert.deepEqual(result.value.counts, { create: 1, update: 0 });
     assert.deepEqual(
       result.value.errors.map((e) => [e.line, e.code]),
       [
@@ -73,7 +72,7 @@ describe("items import", () => {
 
     const preview = await previewItemsImport("Çimento 50kg (i ri);thes;NDR-1;Çimento\nHekur Ø12;m;NDR-2;Hekur\n");
     assert.ok(preview.ok);
-    assert.deepEqual([preview.value.create, preview.value.update], [1, 1]);
+    assert.deepEqual(preview.value.counts, { create: 1, update: 1 });
 
     const second = await commitItemsImport("Çimento 50kg (i ri);thes;NDR-1;Çimento\nHekur Ø12;m;NDR-2;Hekur\n");
     assert.ok(second.ok);

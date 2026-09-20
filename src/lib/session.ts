@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { organizations } from "@/db/schema";
+import { organizations, users } from "@/db/schema";
 import { currentOrganization } from "@/lib/organizations";
 import { UserError } from "@/lib/user-error";
 
@@ -12,6 +12,14 @@ import { UserError } from "@/lib/user-error";
 export async function getMySession() {
   const session = await auth();
   if (!session?.user?.id) return null;
+
+  // "Sign out everywhere" bumps users.session_version; a token minted
+  // before that is refused here (the edge middleware can't check the DB,
+  // so the app treats such a session as signed out).
+  if (session.user.sessionVersion !== undefined) {
+    const [row] = await db.select({ sv: users.sessionVersion }).from(users).where(eq(users.id, session.user.id));
+    if (!row || row.sv !== session.user.sessionVersion) return null;
+  }
 
   const org = await currentOrganization(session.user.id);
   if (!org) return null;

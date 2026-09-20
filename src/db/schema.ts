@@ -105,8 +105,31 @@ export const users = pgTable("users", {
   // invite (which proves the inbox the same way). A signup's org trial
   // doesn't start until this is set — see getOrgLockReason().
   emailVerifiedAt: timestamp("email_verified_at"),
+  // Bumped by "sign out everywhere": a JWT carrying an older number is
+  // treated as signed out (src/lib/session.ts).
+  sessionVersion: integer("session_version").notNull().default(1),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// A verified user changing their address: the new address must prove
+// itself before it replaces the old one (a typo here would lock the
+// account out), so the change is a pending row with a token mailed to the
+// new inbox. Single-use, 24 hours, like a signup verification.
+export const emailChanges = pgTable(
+  "email_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    newEmail: text("new_email").notNull(),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("email_changes_user_idx").on(table.userId)],
+);
 
 // Same shape as passwordResets: single-use, time-boxed bearer token, but
 // a 24-hour window instead of 1 hour — nothing is being taken over here,

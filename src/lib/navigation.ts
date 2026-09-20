@@ -30,6 +30,8 @@ export function secondaryNav(caps: Pick<Capabilities, "role" | "can">): NavItem[
     ...(caps.can.manageItems ? [{ key: "items", href: "/items" }] : []),
     ...(caps.can.manageTeam ? [{ key: "team", href: "/team" }] : []),
     ...(caps.can.manageBilling ? [{ key: "billing", href: "/billing" }] : []),
+    // Everyone has an account to look after.
+    { key: "account", href: "/account" },
   ];
 }
 

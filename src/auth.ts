@@ -73,13 +73,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // The JWT carries *our* user id. Credentials returns it from
     // authorize(); for Google the `user` object is the OAuth profile, so
     // look the row up by email on the first sign-in.
+    // `sv` is the user's session_version at sign-in; "sign out everywhere"
+    // bumps the column and getMySession() refuses older tokens.
     async jwt({ token, user, account }) {
       if (account?.provider === "google" && user?.email) {
-        const [row] = await db.select({ id: users.id }).from(users).where(eq(users.normalizedEmail, normalizeEmail(user.email)));
-        if (row) token.id = row.id;
+        const [row] = await db.select({ id: users.id, sv: users.sessionVersion }).from(users).where(eq(users.normalizedEmail, normalizeEmail(user.email)));
+        if (row) { token.id = row.id; token.sv = row.sv; }
         return token;
       }
-      if (user) token.id = user.id;
+      if (user?.id) {
+        token.id = user.id;
+        const [row] = await db.select({ sv: users.sessionVersion }).from(users).where(eq(users.id, user.id));
+        token.sv = row?.sv ?? 1;
+      }
       return token;
     },
   },

@@ -280,7 +280,8 @@
       "errorFixFirst": "{n} rreshta kanë ende gabime — asgjë nuk u importua",
       "errorFileRead": "Skedari nuk u lexua dot",
       "changedSincePreview": "Lista ndryshoi — kontrolloje sërish para se ta importosh"
-    }
+    },
+    "exportLink": "Eksporto CSV"
   },
   "team": {
     "title": "Ekipi",
@@ -717,7 +718,8 @@
       },
       "done": "{rows} rreshta hynë në {bins} kuti"
     },
-    "importLink": "Importo inventarin (Excel / CSV)"
+    "importLink": "Importo inventarin (Excel / CSV)",
+    "exportLink": "Eksporto CSV"
   },
   "metrics": {
     "mappedFloor": "Sipërfaqja e mapuar",

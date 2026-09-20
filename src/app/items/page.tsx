@@ -37,9 +37,14 @@ export default async function ItemsPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
             <div style={{ fontFamily: "var(--font-heading)", fontSize: 20 }}>{t("items.title")}</div>
             {caps?.can.manageItems && (
-              <Link href="/items/import" className="btn btn-ghost">
-                {t("items.importLink")}
-              </Link>
+              <div style={{ display: "flex", gap: 4 }}>
+                <a href="/items/export" className="btn btn-ghost" download>
+                  {t("items.exportLink")}
+                </a>
+                <Link href="/items/import" className="btn btn-ghost">
+                  {t("items.importLink")}
+                </Link>
+              </div>
             )}
           </div>
 

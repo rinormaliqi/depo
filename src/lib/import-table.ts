@@ -125,10 +125,14 @@ export function parseTable<C extends string>(text: string, spec: TableSpec<C>): 
   let mapping: (C | null)[] = [...spec.columns];
   if (raw.length > 0) {
     const first = raw[0].cells.map(headerColumn);
-    // A header is a line where the leading column is recognised and every
-    // other cell is either a known column or blank — a product called
-    // "Kodi" on line 1 would be a very unlucky catalogue.
-    if (first.includes(spec.columns[0]) && first.every((c, i) => c !== null || raw[0].cells[i].trim() === "")) {
+    // A header is a line where the leading column is recognised and most
+    // of the other cells are known columns too; the rest (a "unit" column
+    // on a stock export, a "price" column from the company's own sheet)
+    // are simply skipped. A product called "Kodi" on line 1 would be a
+    // very unlucky catalogue.
+    const filled = raw[0].cells.filter((c) => c.trim() !== "").length;
+    const known = first.filter((c) => c !== null).length;
+    if (first.includes(spec.columns[0]) && known * 2 >= filled) {
       hasHeader = true;
       mapping = first;
       raw.shift();

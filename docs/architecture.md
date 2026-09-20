@@ -377,8 +377,9 @@ UI strings; Albanian is the binding version and the English text says so. Compan
 env-driven because it changes exactly once, at ARBK registration. Refund policy as written: 30
 days free, then full refund within 14 days of any payment, no questions — we absorb Paysera's
 non-refundable commission on those (1%, cheaper than a dispute). Signup links all three documents. The privacy policy is written for what the app actually does
-— strictly-necessary cookies only (so no consent banner), no analytics, four named subprocessors
-(Vercel, Neon, Resend, Paysera), payment data never touching our servers, Kosovo's Law 06/L-082
+— strictly-necessary cookies only (so no consent banner), Vercel Web Analytics as the one
+usage measure (page views; cookieless, a request hash that expires in 24h, so still no banner —
+`<Analytics/>` in the root layout), named subprocessors (Vercel, Neon, Gmail, Sentry, Paysera), payment data never touching our servers, Kosovo's Law 06/L-082
 plus GDPR where applicable — rather than a generic template; if any of those facts change (an
 analytics tool, a new provider), the policy has to change with them.
 

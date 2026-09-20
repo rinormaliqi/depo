@@ -57,6 +57,7 @@ describe("invite lifecycle: leaving and handing over", () => {
     assert.deepEqual(await requestNewInvite("dead-1"), { ok: true }, "second ask is swallowed, not an error");
     const [inv] = await db.select().from(invites).where(eq(invites.token, "dead-1"));
     assert.equal(await countRecent(`invite-renew:${inv.id}`, LIMITS.inviteRenew), 1, "only one email went out");
-    assert.match((await requestNewInvite("no-such"))?.error ?? "", /invite\.error\.invalid/);
+    const unknown = await requestNewInvite("no-such");
+    assert.match("error" in unknown ? unknown.error : "", /invite\.error\.invalid/);
   });
 });

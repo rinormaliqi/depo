@@ -248,6 +248,14 @@ export const locationKinds = [
   "bin",
   "dock",
   "wall",
+  // Structural fixtures — the building itself, not storage. Never hold
+  // stock; they exist so the plan reads as the real space (where you get
+  // in, where the columns are) before any racking is placed.
+  "door",
+  "exit",
+  "window",
+  "vent",
+  "pillar",
 ] as const;
 export type LocationKind = (typeof locationKinds)[number];
 

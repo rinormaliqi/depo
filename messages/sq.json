@@ -506,6 +506,11 @@
   },
   "builder": {
     "entities": "Elementet",
+    "paletteGroup": {
+      "areas": "Hapësira",
+      "storage": "Ruajtje",
+      "structure": "Strukturë"
+    },
     "entitiesHint": "Kliko një element, pastaj kliko në planimetri ku do ta vendosësh — ose tërhiqe direkt në planimetri. Mbaj Shift për të vendosur disa.",
     "placingHint": "Kliko në planimetri për ta vendosur. Esc e anulon.",
     "placingHintSticky": "Kliko në planimetri për t'i vendosur njëri pas tjetrit. Esc kur mbaron.",
@@ -517,7 +522,12 @@
       "pallet": "Paletë",
       "bin": "Kuti",
       "dock": "Dok",
-      "wall": "Mur"
+      "wall": "Mur",
+      "door": "Derë",
+      "exit": "Dalje emergjente",
+      "window": "Dritare",
+      "vent": "Ventilim",
+      "pillar": "Shtyllë"
     },
     "kindPlural": {
       "zone": "Zona",
@@ -527,7 +537,12 @@
       "pallet": "Paleta",
       "bin": "Kuti",
       "dock": "Doke",
-      "wall": "Mure"
+      "wall": "Mure",
+      "door": "Dyer",
+      "exit": "Dalje emergjente",
+      "window": "Dritare",
+      "vent": "Ventilime",
+      "pillar": "Shtylla"
     },
     "hint": {
       "zone": "sipërfaqe",

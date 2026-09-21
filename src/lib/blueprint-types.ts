@@ -15,6 +15,12 @@ export const LOCATION_TYPES: Record<
   bin: { label: "Bin", spatial: "store", w: 1, h: 1, bays: 1, levels: 1 },
   dock: { label: "Dock", spatial: "fixture", w: 3.4, h: 2.6, bays: 1, levels: 1 },
   wall: { label: "Wall", spatial: "fixture", w: 8, h: 0.3, bays: 1, levels: 1 },
+  // Openings are wall-thick by default so they sit flush in a wall segment.
+  door: { label: "Door", spatial: "fixture", w: 1.2, h: 0.3, bays: 1, levels: 1 },
+  exit: { label: "Exit", spatial: "fixture", w: 1.2, h: 0.3, bays: 1, levels: 1 },
+  window: { label: "Window", spatial: "fixture", w: 1.5, h: 0.3, bays: 1, levels: 1 },
+  vent: { label: "Vent", spatial: "fixture", w: 0.8, h: 0.8, bays: 1, levels: 1 },
+  pillar: { label: "Pillar", spatial: "fixture", w: 0.5, h: 0.5, bays: 1, levels: 1 },
 };
 
 const CODE_SUFFIX: Partial<Record<LocationKind, string>> = {
@@ -23,6 +29,11 @@ const CODE_SUFFIX: Partial<Record<LocationKind, string>> = {
   bin: "B",
   dock: "D",
   wall: "W",
+  door: "DR",
+  exit: "EX",
+  window: "WN",
+  vent: "V",
+  pillar: "C", // column
 };
 
 export function round2(v: number) {

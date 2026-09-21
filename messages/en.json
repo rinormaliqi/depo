@@ -506,6 +506,11 @@
   },
   "builder": {
     "entities": "Entities",
+    "paletteGroup": {
+      "areas": "Areas",
+      "storage": "Storage",
+      "structure": "Structure"
+    },
     "entitiesHint": "Click an entity, then click the floor where it goes — or drag it straight onto the floor. Hold Shift to place several.",
     "placingHint": "Click the floor to place it. Esc puts it back.",
     "placingHintSticky": "Click the floor to place one after another. Esc when done.",
@@ -517,7 +522,12 @@
       "pallet": "Pallet",
       "bin": "Bin",
       "dock": "Dock",
-      "wall": "Wall"
+      "wall": "Wall",
+      "door": "Door",
+      "exit": "Emergency exit",
+      "window": "Window",
+      "vent": "Vent",
+      "pillar": "Pillar"
     },
     "kindPlural": {
       "zone": "Zones",
@@ -527,7 +537,12 @@
       "pallet": "Pallets",
       "bin": "Bins",
       "dock": "Docks",
-      "wall": "Walls"
+      "wall": "Walls",
+      "door": "Doors",
+      "exit": "Emergency exits",
+      "window": "Windows",
+      "vent": "Vents",
+      "pillar": "Pillars"
     },
     "hint": {
       "zone": "area",

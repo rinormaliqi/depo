@@ -921,6 +921,31 @@ window, vent) — with the legend following the same order; and a fixture smalle
 (pillars, vents, windows) hides its on-canvas label unless selected, because a pillar grid or a
 run of windows would otherwise drown the plan in 9px labels. The label is still the tooltip and
 the inspector title.
+### Placing from the palette: click-to-place and drag-and-drop
+
+The palette originally *created* an object on click, at a computed slot (`defaultPosition()`:
+top-left corner, 1.5 m steps) — every new object landed in a pile and had to be dragged out,
+which a pilot customer named as the single biggest usability gap ("elements should be dragged
+from the sidebar to where I want them"). Both established models now work, sharing one code
+path (`Placing` state in `blueprint-canvas.tsx`):
+
+- **Click-to-place**: clicking a palette entry arms that kind (the entry highlights, the hint
+  text changes, the canvas cursor turns to a crosshair). A real-scale ghost of the object —
+  its kind's own appearance, centred on the cursor, snapped to the 0.25 m grid and clamped
+  inside the floor, labelled with kind and metre coordinates — follows the mouse; clicking the
+  floor creates it there. `Esc` puts it back, as does clicking the armed entry again or
+  leaving Edit mode. `Shift` while picking up keeps the kind armed after each placement, for
+  laying out a row of the same thing.
+- **Drag-and-drop**: a palette mousedown is armed like an object drag (same `DRAG_THRESHOLD_PX`),
+  so a press that travels becomes a drag placement with the same ghost; mouseup over the floor
+  places, anywhere else cancels. Releasing without travel is the click path above.
+
+The drop lands where the mouse is even over an existing object: the canvas wrapper handles the
+placing click in the **capture phase** (`onMouseDownCapture`) and stops propagation, so the
+object's own `startDrag` never sees it. Creation is the unchanged `createEntity(kind, x, y)` +
+undo entry, so a placed object is indistinguishable from one the old palette made. Pointer-based
+rather than the HTML5 drag-and-drop API: that API gives no control over the ghost (a bitmap
+snapshot, not a real-scale box on the floor) and never fires over the drag source itself.
 
 ### Two-axis subdivision: bays × levels, and the level selector
 

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
 import { KIND_APPEARANCE, kindAppearance, kindLabelColor } from "./kind-appearance";
-import { LOCATION_TYPES, TEMPLATE_KEYS, bayLayout, flip, intersects, isRotation, pillarGridPositions, rotateBox, turnClockwise, type Box as FloorBox, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
+import { LOCATION_TYPES, TEMPLATE_KEYS, bayLayout, flip, intersects, isOpening, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise, type Box as FloorBox, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
 import type { FacilityLevel } from "@/lib/levels";
 import { useConfirm } from "@/components/notifications";
@@ -51,8 +51,8 @@ const DRAG_THRESHOLD_PX = 4;
 type Box = { xM: number; yM: number; widthM: number; heightM: number };
 
 type Drag =
-  | { kind: "move"; id: string; pointerStart: { x: number; y: number }; origin: Box }
-  | { kind: "resize"; id: string; pointerStart: { x: number; y: number }; origin: Box };
+  | { kind: "move"; id: string; pointerStart: { x: number; y: number }; origin: Box; originRotation: number }
+  | { kind: "resize"; id: string; pointerStart: { x: number; y: number }; origin: Box; originRotation: number };
 
 // Palette order = legend order. Grouped the way a floor plan is drawn:
 // the space, then what stores things in it, then the building around it.
@@ -204,6 +204,10 @@ export function BlueprintCanvas({
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
+  // The window-level drag handlers are bound once per zoom level, so they
+  // read the current rows through this ref rather than a stale closure.
+  const locationsRef = useRef(locations);
+  locationsRef.current = locations;
   // Set at mousedown; the drag only becomes "live" past DRAG_THRESHOLD_PX.
   const dragArmRef = useRef<{ clientX: number; clientY: number; live: boolean } | null>(null);
   const boxRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -855,12 +859,21 @@ export function BlueprintCanvas({
     const deltaX = p.x - d.pointerStart.x;
     const deltaY = p.y - d.pointerStart.y;
     if (d.kind === "move") {
-      return {
+      const moved = {
         xM: Math.max(0, snap(d.origin.xM + deltaX)),
         yM: Math.max(0, snap(d.origin.yM + deltaY)),
         widthM: d.origin.widthM,
         heightM: d.origin.heightM,
       };
+      // An opening shows where it will settle while it's still being dragged,
+      // so the drop holds no surprise; the server applies the same rule.
+      const rows = locationsRef.current;
+      const entity = rows.find((l) => l.id === d.id);
+      if (entity && isOpening(entity.kind as LocationKind)) {
+        const settled = snapToWall(moved, rows.filter((l) => l.kind === "wall"));
+        if (settled) return settled.box;
+      }
+      return moved;
     }
     return {
       xM: d.origin.xM,
@@ -882,6 +895,7 @@ export function BlueprintCanvas({
       id: entity.id,
       pointerStart: pointFromEvent(ev),
       origin: { xM: entity.xM, yM: entity.yM, widthM: entity.widthM, heightM: entity.heightM },
+      originRotation: entity.rotation,
     } as Drag;
   }
 
@@ -918,16 +932,25 @@ export function BlueprintCanvas({
         delete next[d.id];
         return next;
       });
+      // A move that snapped an opening onto a wall running the other way has
+      // turned it too, so the whole box goes in the patch whenever it changed.
+      const dragged = locationsRef.current.find((l) => l.id === d.id);
+      const opening = !!dragged && isOpening(dragged.kind as LocationKind);
+      const turned = box.widthM !== d.origin.widthM || box.heightM !== d.origin.heightM;
       const unchanged =
         d.kind === "move"
-          ? box.xM === d.origin.xM && box.yM === d.origin.yM
-          : box.widthM === d.origin.widthM && box.heightM === d.origin.heightM;
+          ? box.xM === d.origin.xM && box.yM === d.origin.yM && !turned
+          : !turned;
       if (unchanged) return;
 
       const patch: Record<string, number> =
-        d.kind === "move" ? { xM: box.xM, yM: box.yM } : { widthM: box.widthM, heightM: box.heightM };
+        d.kind === "move" && !turned
+          ? { xM: box.xM, yM: box.yM }
+          : { xM: box.xM, yM: box.yM, widthM: box.widthM, heightM: box.heightM, ...(opening ? { rotation: box.widthM >= box.heightM ? 0 : 90 } : {}) };
       const prevPatch: Record<string, number> =
-        d.kind === "move" ? { xM: d.origin.xM, yM: d.origin.yM } : { widthM: d.origin.widthM, heightM: d.origin.heightM };
+        d.kind === "move" && !turned
+          ? { xM: d.origin.xM, yM: d.origin.yM }
+          : { xM: d.origin.xM, yM: d.origin.yM, widthM: d.origin.widthM, heightM: d.origin.heightM, ...(opening ? { rotation: d.originRotation } : {}) };
       setBusy(true);
       updateEntity(d.id, patch)
         .then(() => reload())
@@ -1281,6 +1304,32 @@ export function BlueprintCanvas({
                         <span style={{ position: "absolute", right: -1, bottom: -1, width: 4, height: 4, background: "var(--color-accent-900)", pointerEvents: "none", zIndex: 5 }} />
                       </>
                     )}
+                    {(e.kind === "door" || e.kind === "exit") && (() => {
+                      // The leaf and its swing, drawn as on a floor plan: a
+                      // quarter arc from the hinge, opening into the building
+                      // (the side facing the floor's centre), the leaf's length
+                      // being the opening's own. Pure CSS: one bordered box with
+                      // one rounded corner.
+                      const vertical = rotationOf(e) === 90 || rotationOf(e) === 270;
+                      const len = (vertical ? live.heightM : live.widthM) * z;
+                      const cx = live.xM + live.widthM / 2;
+                      const cy = live.yM + live.heightM / 2;
+                      const color = kindLabelColor(e.kind as LocationKind);
+                      const base: React.CSSProperties = { position: "absolute", width: len, height: len, pointerEvents: "none", boxSizing: "border-box" };
+                      let style: React.CSSProperties;
+                      if (!vertical) {
+                        const inward = cy < facility.heightM / 2 ? "down" : "up";
+                        style = inward === "up"
+                          ? { ...base, left: 0, bottom: "100%", borderLeft: `1px solid ${color}`, borderTop: `1px solid ${color}`, borderRight: `1px solid ${color}`, borderTopRightRadius: "100%" }
+                          : { ...base, left: 0, top: "100%", borderLeft: `1px solid ${color}`, borderBottom: `1px solid ${color}`, borderRight: `1px solid ${color}`, borderBottomRightRadius: "100%" };
+                      } else {
+                        const inward = cx < facility.widthM / 2 ? "right" : "left";
+                        style = inward === "right"
+                          ? { ...base, top: 0, left: "100%", borderTop: `1px solid ${color}`, borderRight: `1px solid ${color}`, borderBottom: `1px solid ${color}`, borderBottomRightRadius: "100%" }
+                          : { ...base, top: 0, right: "100%", borderTop: `1px solid ${color}`, borderLeft: `1px solid ${color}`, borderBottom: `1px solid ${color}`, borderBottomLeftRadius: "100%" };
+                      }
+                      return <span aria-hidden style={style} />;
+                    })()}
                     {/* A pillar grid or a run of windows would drown the plan in
                         9px labels — small fixtures keep theirs for the tooltip and
                         the inspector, and show it only while selected. */}

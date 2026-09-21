@@ -12,12 +12,14 @@ import {
   detectOrientation,
   findContainingZone,
   intersects,
+  isOpening,
   isRotation,
   LOCATION_TYPES,
   nextCode,
   pillarGridPositions,
   rescaleWithinZone,
   round2,
+  snapToWall,
   type Box,
   type PillarGridSpec,
   type Rotation,
@@ -206,6 +208,19 @@ async function checkNoStock(
   }
 }
 
+// Doors, exits and windows belong in walls: an opening put down on or near
+// one is turned to run along it and set into its thickness (snapToWall).
+// Applied on create and on every move so the server, not just the drag
+// preview, guarantees an opening never floats a few centimetres off its wall.
+async function settleOpening(facilityId: string, kind: LocationKind, box: Box): Promise<{ box: Box; rotation: Rotation } | null> {
+  if (!isOpening(kind)) return null;
+  const walls = await db
+    .select()
+    .from(locations)
+    .where(and(eq(locations.facilityId, facilityId), eq(locations.kind, "wall")));
+  return snapToWall(box, walls);
+}
+
 async function createEntityAt(
   facilityId: string,
   kind: LocationKind,
@@ -267,12 +282,15 @@ async function createEntityImpl(
     await assertCanAddBins(facility.organizationId, type.bays * type.levels);
   }
 
+  const box: Box = { xM: round2(xM), yM: round2(yM), widthM: type.w, heightM: type.h };
+  const settled = await settleOpening(facilityId, kind, box);
   const created = await createEntityAt(
     facilityId,
     kind,
-    { xM: round2(xM), yM: round2(yM), widthM: type.w, heightM: type.h },
+    settled?.box ?? box,
     type.bays,
     type.levels,
+    settled?.rotation ?? 0,
   );
 
   revalidatePath("/builder");
@@ -530,6 +548,19 @@ async function updateEntityImpl(
   if (patch.rotation !== undefined) {
     if (!isRotation(patch.rotation)) throw new UserError(t("badRotation"));
     values.rotation = patch.rotation;
+  }
+
+  if (
+    isOpening(location.kind as LocationKind) &&
+    (patch.xM !== undefined || patch.yM !== undefined || patch.widthM !== undefined || patch.heightM !== undefined || patch.rotation !== undefined)
+  ) {
+    const settled = await settleOpening(location.facilityId, location.kind as LocationKind, {
+      xM: values.xM ?? location.xM,
+      yM: values.yM ?? location.yM,
+      widthM: values.widthM ?? location.widthM,
+      heightM: values.heightM ?? location.heightM,
+    });
+    if (settled) Object.assign(values, settled.box, { rotation: settled.rotation });
   }
 
   // Dragging (or typing new coordinates) can move a non-zone entity into a

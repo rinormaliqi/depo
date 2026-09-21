@@ -133,6 +133,65 @@ export function bayCode(parentCode: string, level: number, bay: number, totalLev
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Openings sit in walls
+// ─────────────────────────────────────────────────────────────────────────
+
+export const OPENING_KINDS: readonly LocationKind[] = ["door", "exit", "window"];
+
+export function isOpening(kind: LocationKind) {
+  return OPENING_KINDS.includes(kind);
+}
+
+// How close (metres) an opening's centre has to come to a wall to be taken
+// as belonging to it. Generous on purpose: dropping a door "roughly on the
+// wall" is the whole point.
+export const WALL_SNAP_M = 0.6;
+
+// An opening dropped on or near a wall becomes part of it: it turns to run
+// along the wall, takes the wall's thickness, and slides so it stays within
+// the wall's length. Returns null when no wall is close enough — the
+// opening then stays a free box, exactly where it was put. The opening's
+// long side is kept as its length whichever way it was turned before.
+export function snapToWall(
+  box: Box,
+  walls: Box[],
+  tolerance = WALL_SNAP_M,
+): { box: Box; rotation: Rotation } | null {
+  const cx = box.xM + box.widthM / 2;
+  const cy = box.yM + box.heightM / 2;
+  const length = Math.max(box.widthM, box.heightM);
+  let best: { wall: Box; dist: number } | null = null;
+  for (const wall of walls) {
+    const horizontal = wall.widthM >= wall.heightM;
+    // Gap between the opening's near edge and the wall's centre line (a door
+    // still lying the other way is long across the wall, so its centre is
+    // far from the line while its edge already touches it), and whether the
+    // centre falls within the wall's run (same tolerance at the ends).
+    const halfAcross = horizontal ? box.heightM / 2 : box.widthM / 2;
+    const dist = Math.max(0, (horizontal ? Math.abs(cy - (wall.yM + wall.heightM / 2)) : Math.abs(cx - (wall.xM + wall.widthM / 2))) - halfAcross);
+    const along = horizontal
+      ? cx >= wall.xM - tolerance && cx <= wall.xM + wall.widthM + tolerance
+      : cy >= wall.yM - tolerance && cy <= wall.yM + wall.heightM + tolerance;
+    if (dist <= tolerance && along && (!best || dist < best.dist)) best = { wall, dist };
+  }
+  if (!best) return null;
+  const { wall } = best;
+  const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+  if (wall.widthM >= wall.heightM) {
+    const len = Math.min(length, wall.widthM);
+    return {
+      box: { xM: round2(clamp(cx - len / 2, wall.xM, wall.xM + wall.widthM - len)), yM: wall.yM, widthM: round2(len), heightM: wall.heightM },
+      rotation: 0,
+    };
+  }
+  const len = Math.min(length, wall.heightM);
+  return {
+    box: { xM: wall.xM, yM: round2(clamp(cy - len / 2, wall.yM, wall.yM + wall.heightM - len)), widthM: wall.widthM, heightM: round2(len) },
+    rotation: 90,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Structural columns
 // ─────────────────────────────────────────────────────────────────────────
 

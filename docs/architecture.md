@@ -773,6 +773,30 @@ inflating the count and skipping codes (a zone's second rack came out `"A-08"` i
 `"A-02"`). Templates create multiple racks in one zone in quick succession, which surfaced it
 immediately; fixed by requiring the remainder after the stem to be pure digits.
 
+### "Build from your building": the parametric layout wizard
+
+The fixed starter templates are one drawing each; the pilot customer's ask was that the
+template *change based on the building*. `LayoutWizard` (`src/app/builder/layout-wizard.tsx`)
+asks five things — floor size (and whether to draw the perimeter), docks (how many, which wall)
+and the personnel entrance (wall, position), a column grid (spacing, size), and how the storage
+divides (zones, side-by-side or banded, rack levels, bays per rack) — and `buildParametric()`
+(`blueprint-types.ts`) generates the depot from the answers. Structure first (walls, docks set
+just inside their wall, the door wall-thick, columns at `spacing + n × spacing`), then the zones
+in whatever floor is left — pulled back from the dock wall by the docks' depth plus a 1.2 m
+staging strip — then racks through `avoidObstacles()` around every fixture, generated or
+already on the floor. It is the same `applyGenerated()` pipeline a fixed template goes through
+(keep the building, replace the scheme, re-home kept fixtures), just driven by a
+`ParametricLayout` instead of a key. `buildDepot()` was refactored onto the same
+`zonesInArea()` so the fixed templates and the wizard can't drift apart.
+
+Every step redraws a to-scale SVG preview (`Preview`) with the very function the server runs,
+kept structure included, so the counts on the review step are the counts that land. Asking for
+3-level racking grows the facility's level list to three (`addLevel`) rather than silently
+flattening the racks; a floor-size change is written first so the generator runs against the
+new envelope. Server-side the answers are clamped (≤ 12 zones, ≤ 4 levels, ≤ 12 docks, column
+spacing ≥ 2 m) and the usual stock guard applies. Offered on the empty floor and at the top of
+the Templates dialog; the fixed templates stay below it as the one-click option.
+
 ### Openings sit in walls
 
 In every floor-plan editor a door is not a free box — it's a segment of a wall, drawn as an

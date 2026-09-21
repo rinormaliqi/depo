@@ -20,13 +20,17 @@ import {
   rescaleWithinZone,
   round2,
   snapToWall,
+  buildParametric,
   type Box,
+  type ParametricLayout,
   type PillarGridSpec,
   type Rotation,
+  type TemplateEntitySpec,
   type TemplateKey,
+  type TemplateOptions,
 } from "@/lib/blueprint-types";
 import { assertCanAddBins } from "@/lib/plan-limits";
-import { addLevel as addLevelRow, ensureLevels, removeTopLevel as removeTopLevelRow, renameLevel as renameLevelRow, type FacilityLevel } from "@/lib/levels";
+import { addLevel as addLevelRow, ensureLevels, MAX_FACILITY_LEVELS, removeTopLevel as removeTopLevelRow, renameLevel as renameLevelRow, type FacilityLevel } from "@/lib/levels";
 import { requirePermission } from "@/lib/permissions";
 import { currentFacility, listFacilities, rememberFacility } from "@/lib/facilities";
 import { getCapabilitiesFor, requireCapability, requireRoom } from "@/lib/capabilities";
@@ -298,6 +302,44 @@ async function createEntityImpl(
 }
 
 async function applyTemplateImpl(facilityId: string, templateKey: TemplateKey, replace: boolean) {
+  await applyGenerated(facilityId, replace, (w, h, opts) => buildTemplate(templateKey, w, h, opts));
+}
+
+// The wizard: same pipeline as a fixed template — keep the building, replace
+// the scheme, route racks around structure — driven by the user's answers.
+// Floor size is part of the answers, so it's written first; the generator
+// then runs against the new envelope.
+async function applyParametricImpl(facilityId: string, layout: ParametricLayout, floor: { widthM: number; heightM: number } | null, replace: boolean) {
+  await requirePermission("editLayout");
+  if (floor) await updateFacilityImpl(facilityId, floor);
+  const clean: ParametricLayout = {
+    zones: Math.min(12, Math.max(1, Math.round(layout.zones))),
+    orientation: layout.orientation === "horizontal" ? "horizontal" : "vertical",
+    levels: Math.min(4, Math.max(1, Math.round(layout.levels))),
+    bays: Math.min(MAX_BAYS, Math.max(1, Math.round(layout.bays))),
+    walls: !!layout.walls,
+    docks: { count: Math.min(12, Math.max(0, Math.round(layout.docks.count))), wall: layout.docks.wall },
+    entrance: layout.entrance ? { wall: layout.entrance.wall, at: layout.entrance.at } : null,
+    pillars: layout.pillars
+      ? { spacingX: Math.max(2, layout.pillars.spacingX), spacingY: Math.max(2, layout.pillars.spacingY), size: Math.min(2, Math.max(0.2, layout.pillars.size)) }
+      : null,
+  };
+  // Asking for 3-level racking means the building has three levels: grow the
+  // facility's level list to match rather than silently flattening the racks.
+  let facilityLevels = await ensureLevels(facilityId);
+  while (facilityLevels.length < clean.levels && facilityLevels.length < MAX_FACILITY_LEVELS) {
+    await addLevelRow(facilityId);
+    facilityLevels = await ensureLevels(facilityId);
+  }
+  clean.levels = Math.min(clean.levels, facilityLevels.length);
+  await applyGenerated(facilityId, replace, (w, h, opts) => buildParametric(clean, w, h, opts));
+}
+
+async function applyGenerated(
+  facilityId: string,
+  replace: boolean,
+  build: (floorW: number, floorH: number, opts: TemplateOptions) => TemplateEntitySpec[],
+) {
   await requirePermission("editLayout");
   const facility = await requireOwnedFacility(facilityId);
 
@@ -324,7 +366,7 @@ async function applyTemplateImpl(facilityId: string, templateKey: TemplateKey, r
     await db.delete(locations).where(inArray(locations.id, scheme.map((l) => l.id)));
   }
 
-  const specs = buildTemplate(templateKey, facility.widthM, facility.heightM, {
+  const specs = build(facility.widthM, facility.heightM, {
     hasWalls: structure.some((l) => l.kind === "wall"),
     obstacles: structure.filter((l) => l.kind !== "wall").map((l) => ({ xM: l.xM, yM: l.yM, widthM: l.widthM, heightM: l.heightM })),
   });
@@ -709,6 +751,15 @@ export async function applyTemplate(facilityId: string, templateKey: TemplateKey
 
 export async function addPillarGrid(facilityId: string, zoneId: string | null, grid: PillarGridSpec) {
   return attempt(() => addPillarGridImpl(facilityId, zoneId, grid), "addPillarGrid");
+}
+
+export async function applyParametric(
+  facilityId: string,
+  layout: ParametricLayout,
+  floor: { widthM: number; heightM: number } | null,
+  replace: boolean,
+) {
+  return attempt(() => applyParametricImpl(facilityId, layout, floor, replace), "applyParametric");
 }
 
 export async function addSector(facilityId: string) {

@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
 import { KIND_APPEARANCE, kindAppearance, kindLabelColor } from "./kind-appearance";
-import { LOCATION_TYPES, TEMPLATE_KEYS, bayLayout, flip, intersects, isOpening, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise, type Box as FloorBox, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
+import { LayoutWizard } from "./layout-wizard";
+import { LOCATION_TYPES, TEMPLATE_KEYS, bayLayout, flip, intersects, isOpening, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise, type Box as FloorBox, type ParametricLayout, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
 import type { FacilityLevel } from "@/lib/levels";
 import { useConfirm } from "@/components/notifications";
@@ -17,6 +18,7 @@ import { Gate } from "@/components/capabilities";
 
 const addSector = unwrap(rawActions.addSector);
 const addPillarGrid = unwrap(rawActions.addPillarGrid);
+const applyParametric = unwrap(rawActions.applyParametric);
 const addLevel = unwrap(rawActions.addLevel);
 const renameLevel = unwrap(rawActions.renameLevel);
 const removeTopLevel = unwrap(rawActions.removeTopLevel);
@@ -166,6 +168,8 @@ export function BlueprintCanvas({
   const [floorOpen, setFloorOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [pillarsOpen, setPillarsOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [confirmWizard, setConfirmWizard] = useState<{ layout: ParametricLayout; floor: { widthM: number; heightM: number } | null } | null>(null);
   // Metres, as typed; a real building's column grid is commonly 6–12 m.
   const [pillarDraft, setPillarDraft] = useState({ spacingX: "8", spacingY: "8", size: "0.5", offsetX: "8", offsetY: "8", scope: "floor" as "floor" | "zone" });
   const [confirmTemplate, setConfirmTemplate] = useState<TemplateKey | null>(null);
@@ -799,6 +803,32 @@ export function BlueprintCanvas({
     }
   }
 
+  const hasScheme = locations.some((l) => LOCATION_TYPES[l.kind as LocationKind].spatial !== "fixture");
+
+  function chooseWizard(layout: ParametricLayout, floor: { widthM: number; heightM: number } | null) {
+    if (hasScheme) { setConfirmWizard({ layout, floor }); return; }
+    void runWizard(layout, floor, false);
+  }
+
+  async function runWizard(layout: ParametricLayout, floor: { widthM: number; heightM: number } | null, replace: boolean) {
+    setBusy(true);
+    try {
+      await applyParametric(facility.id, layout, floor, replace);
+      if (floor) setFacility((f) => ({ ...f, ...floor }));
+      await reload();
+      setLevels(await rawActions.getFacilityLevels(facility.id));
+      setSelectedId(null);
+      setWizardOpen(false);
+      setConfirmWizard(null);
+      setTemplatesOpen(false);
+      clearHistory();
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : t("error.couldntApplyTemplate"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function chooseTemplate(key: TemplateKey) {
     if (locations.length > 0) {
       setConfirmTemplate(key);
@@ -977,7 +1007,7 @@ export function BlueprintCanvas({
     }
     function onKeyDown(ev: KeyboardEvent) {
       if (isEditableTarget(ev.target)) return;
-      if (floorOpen || templatesOpen || confirmTemplate || levelsOpen || pillarsOpen) return;
+      if (floorOpen || templatesOpen || confirmTemplate || levelsOpen || pillarsOpen || wizardOpen || confirmWizard) return;
       const meta = ev.metaKey || ev.ctrlKey;
       const key = ev.key.toLowerCase();
       if (!meta) {
@@ -1251,6 +1281,11 @@ export function BlueprintCanvas({
                         {t("templatePrompt")}
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                        {!readOnly && (
+                          <button className="btn btn-primary" onClick={() => setWizardOpen(true)} disabled={busy} title={t("wizard.openHint")}>
+                            {t("wizard.open")}
+                          </button>
+                        )}
                         {TEMPLATE_KEYS.map((key) => (
                           <button key={key} className="btn btn-secondary" onClick={() => chooseTemplate(key)} disabled={busy} title={t(`template.${key}.description`)}>
                             {t(`template.${key}.name`)}
@@ -1653,6 +1688,31 @@ export function BlueprintCanvas({
         </div>
       )}
 
+      {wizardOpen && (
+        <LayoutWizard
+          floor={{ widthM: facility.widthM, heightM: facility.heightM }}
+          structure={locations}
+          hasScheme={hasScheme}
+          busy={busy}
+          onCancel={() => setWizardOpen(false)}
+          onGenerate={chooseWizard}
+        />
+      )}
+
+      {confirmWizard && (
+        <div className="dialog-backdrop" style={{ position: "fixed", zIndex: 70 }}>
+          <div className="dialog blueprint">
+            <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+            <div className="dialog-title">{t("confirmReplaceTitle")}</div>
+            <div className="dialog-body">{t("confirmReplaceBody")}</div>
+            <div className="dialog-actions">
+              <button className="btn btn-secondary" onClick={() => setConfirmWizard(null)} style={{ flex: 1 }}>{t("cancel")}</button>
+              <button className="btn btn-primary" onClick={() => runWizard(confirmWizard.layout, confirmWizard.floor, true)} disabled={busy} style={{ flex: 1 }}>{t("confirmReplace")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {pillarsOpen && (
         <div className="dialog-backdrop" style={{ position: "fixed", zIndex: 60 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setPillarsOpen(false); }}>
           <div className="dialog blueprint">
@@ -1692,6 +1752,10 @@ export function BlueprintCanvas({
           <div className="dialog blueprint">
             <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
             <div className="dialog-title">{t("templatesButton")}</div>
+            <button className="btn btn-primary btn-block" onClick={() => { setTemplatesOpen(false); setWizardOpen(true); }} disabled={busy} style={{ textAlign: "left" }}>
+              {t("wizard.open")}
+              <span style={{ display: "block", fontSize: 11, fontWeight: 400, opacity: 0.85 }}>{t("wizard.openHint")}</span>
+            </button>
             <div className="dialog-body">{locations.length > 0 ? t("templatesReplaceHint") : t("templatePrompt")}</div>
             {templateButtons}
             <div className="dialog-actions">

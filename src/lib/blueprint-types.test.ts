@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { avoidObstacles, bayLayout, buildTemplate, flip, intersects, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise } from "./blueprint-types";
+import { avoidObstacles, bayLayout, buildParametric, buildTemplate, DEFAULT_PARAMETRIC, flip, intersects, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise } from "./blueprint-types";
 
 describe("rotation", () => {
   it("a quarter turn swaps width and depth about the same centre, on the grid", () => {
@@ -129,5 +129,50 @@ describe("snapToWall", () => {
   it("picks the nearer of two walls at a corner", () => {
     const r = snapToWall({ xM: 0.5, yM: 0.1, widthM: 1.2, heightM: 0.3 }, [top, left]);
     assert.equal(r?.rotation, 0);
+  });
+});
+
+describe("buildParametric", () => {
+  const base = { ...DEFAULT_PARAMETRIC };
+
+  it("lays docks along the chosen wall and keeps the zones clear of them", () => {
+    const specs = buildParametric({ ...base, docks: { count: 3, wall: "bottom" } }, 40, 24);
+    const docks = specs.filter((s) => s.kind === "dock");
+    assert.equal(docks.length, 3);
+    for (const d of docks) assert.ok(Math.abs(d.yM + d.heightM - (24 - 0.3)) < 1e-6); // set just inside the bottom wall
+    const zones = specs.filter((s) => s.kind === "zone");
+    assert.equal(zones.length, 4);
+    for (const z of zones) assert.ok(z.yM + z.heightM <= docks[0].yM - 1.2 + 1e-9, "zone stops before the staging strip");
+  });
+
+  it("puts the entrance on the asked wall, at the asked end, wall-thick", () => {
+    const [door] = buildParametric({ ...base, entrance: { wall: "left", at: "start" } }, 40, 24).filter((s) => s.kind === "door");
+    assert.deepEqual([door.xM, door.widthM], [0.3, 0.3]);
+    assert.ok(door.yM < 12);
+    assert.equal(door.heightM, 1.2);
+  });
+
+  it("with a column grid, no rack overlaps a column", () => {
+    const specs = buildParametric({ ...base, pillars: { spacingX: 8, spacingY: 8, size: 0.5 } }, 40, 24);
+    const pillars = specs.filter((s) => s.kind === "pillar");
+    assert.ok(pillars.length >= 6);
+    for (const r of specs.filter((s) => s.kind === "rack")) {
+      for (const c of pillars) assert.equal(intersects(r, c, 0.3), false);
+    }
+  });
+
+  it("honours zone count, orientation and levels", () => {
+    const specs = buildParametric({ ...base, zones: 3, orientation: "horizontal", levels: 3, bays: 8 }, 40, 24);
+    const zones = specs.filter((s) => s.kind === "zone");
+    assert.equal(zones.length, 3);
+    assert.ok(zones.every((z) => z.widthM > z.heightM), "horizontal bands");
+    const racks = specs.filter((s) => s.kind === "rack");
+    assert.ok(racks.length > 0);
+    assert.ok(racks.every((r) => r.levels === 3));
+  });
+
+  it("leaves its perimeter out when the floor already has walls", () => {
+    assert.equal(buildParametric(base, 40, 24, { hasWalls: true }).filter((s) => s.kind === "wall").length, 0);
+    assert.equal(buildParametric({ ...base, walls: false }, 40, 24).filter((s) => s.kind === "wall").length, 0);
   });
 });

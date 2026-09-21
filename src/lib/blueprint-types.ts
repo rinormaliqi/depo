@@ -356,47 +356,159 @@ function perimeterWalls(floorW: number, floorH: number): TemplateEntitySpec[] {
   ];
 }
 
-// 4 zones, walled perimeter, aisles between zones, each zone packed with as
-// many rows of 2-level pallet racking as realistically fit it (see
-// racksAlongZone) — a filled-out depot to land on, not a sparse demo.
-// Positions scale with the facility's actual floor size; rack depth and
-// wall thickness stay at their real-world defaults.
-function buildDepot(floorW: number, floorH: number, orientation: "vertical" | "horizontal"): TemplateEntitySpec[] {
-  const margin = Math.max(0.6, round2(Math.min(floorW, floorH) * 0.03));
-  const aisleW = Math.max(1.2, round2(Math.min(floorW, floorH) * 0.05));
-  const zoneCount = 4;
-
-  const specs: TemplateEntitySpec[] = [...perimeterWalls(floorW, floorH)];
+// N zones side by side inside `area`, aisles between them, each zone packed
+// with as many rows of pallet racking as realistically fit it (see
+// racksAlongZone) — a filled-out depot to land on, not a sparse demo. Rack
+// depth and wall thickness stay at their real-world defaults; everything
+// else scales with the area handed in.
+function zonesInArea(
+  area: Box,
+  orientation: "vertical" | "horizontal",
+  zoneCount: number,
+  levels: number,
+  bays: number,
+): TemplateEntitySpec[] {
+  const aisleW = Math.max(1.2, round2(Math.min(area.widthM, area.heightM) * 0.05));
+  const specs: TemplateEntitySpec[] = [];
+  const n = Math.max(1, zoneCount);
 
   if (orientation === "vertical") {
-    const usableW = floorW - 2 * margin - (zoneCount - 1) * aisleW;
-    const zoneW = round2(usableW / zoneCount);
-    const zoneH = round2(floorH - 2 * margin);
-    for (let i = 0; i < zoneCount; i++) {
-      const xM = round2(margin + i * (zoneW + aisleW));
-      const zone: Box = { xM, yM: margin, widthM: zoneW, heightM: zoneH };
+    const usableW = area.widthM - (n - 1) * aisleW;
+    const zoneW = round2(usableW / n);
+    for (let i = 0; i < n; i++) {
+      const xM = round2(area.xM + i * (zoneW + aisleW));
+      const zone: Box = { xM, yM: area.yM, widthM: zoneW, heightM: area.heightM };
       specs.push({ kind: "zone", ...zone, bays: 1, levels: 1 });
-      specs.push(...racksAlongZone(zone, 2, 6, true));
-      if (i < zoneCount - 1) {
-        specs.push({ kind: "aisle", xM: round2(xM + zoneW), yM: margin, widthM: aisleW, heightM: zoneH, bays: 1, levels: 1 });
+      specs.push(...racksAlongZone(zone, levels, bays, true));
+      if (i < n - 1) {
+        specs.push({ kind: "aisle", xM: round2(xM + zoneW), yM: area.yM, widthM: aisleW, heightM: area.heightM, bays: 1, levels: 1 });
       }
     }
   } else {
-    const usableH = floorH - 2 * margin - (zoneCount - 1) * aisleW;
-    const zoneH = round2(usableH / zoneCount);
-    const zoneW = round2(floorW - 2 * margin);
-    for (let i = 0; i < zoneCount; i++) {
-      const yM = round2(margin + i * (zoneH + aisleW));
-      const zone: Box = { xM: margin, yM, widthM: zoneW, heightM: zoneH };
+    const usableH = area.heightM - (n - 1) * aisleW;
+    const zoneH = round2(usableH / n);
+    for (let i = 0; i < n; i++) {
+      const yM = round2(area.yM + i * (zoneH + aisleW));
+      const zone: Box = { xM: area.xM, yM, widthM: area.widthM, heightM: zoneH };
       specs.push({ kind: "zone", ...zone, bays: 1, levels: 1 });
-      specs.push(...racksAlongZone(zone, 2, 6, false));
-      if (i < zoneCount - 1) {
-        specs.push({ kind: "aisle", xM: margin, yM: round2(yM + zoneH), widthM: zoneW, heightM: aisleW, bays: 1, levels: 1 });
+      specs.push(...racksAlongZone(zone, levels, bays, false));
+      if (i < n - 1) {
+        specs.push({ kind: "aisle", xM: area.xM, yM: round2(yM + zoneH), widthM: area.widthM, heightM: aisleW, bays: 1, levels: 1 });
       }
     }
   }
-
   return specs;
+}
+
+function floorMargin(floorW: number, floorH: number) {
+  return Math.max(0.6, round2(Math.min(floorW, floorH) * 0.03));
+}
+
+// The fixed starter depots: walled perimeter, 4 zones of two-level, 6-bay racking.
+function buildDepot(floorW: number, floorH: number, orientation: "vertical" | "horizontal"): TemplateEntitySpec[] {
+  const margin = floorMargin(floorW, floorH);
+  const area: Box = { xM: margin, yM: margin, widthM: round2(floorW - 2 * margin), heightM: round2(floorH - 2 * margin) };
+  return [...perimeterWalls(floorW, floorH), ...zonesInArea(area, orientation, 4, 2, 6)];
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Parametric layout — the wizard's generator
+// ─────────────────────────────────────────────────────────────────────────
+
+export type WallSide = "top" | "bottom" | "left" | "right";
+
+export interface ParametricLayout {
+  zones: number;
+  orientation: "vertical" | "horizontal";
+  levels: number;
+  bays: number;
+  walls: boolean;
+  docks: { count: number; wall: WallSide };
+  entrance: { wall: WallSide; at: "start" | "middle" | "end" } | null;
+  pillars: { spacingX: number; spacingY: number; size: number } | null;
+}
+
+export const DEFAULT_PARAMETRIC: ParametricLayout = {
+  zones: 4,
+  orientation: "vertical",
+  levels: 2,
+  bays: 6,
+  walls: true,
+  docks: { count: 2, wall: "bottom" },
+  entrance: { wall: "left", at: "middle" },
+  pillars: null,
+};
+
+// How deep a dock reaches into the floor, plus the truck-side staging strip
+// in front of it that racking must leave clear.
+const DOCK_STAGING = 1.2;
+
+// `count` boxes of `size` spread evenly along one wall, set just inside it.
+function alongWall(floorW: number, floorH: number, wall: WallSide, count: number, len: number, depth: number, positions?: number[]): Box[] {
+  const t = LOCATION_TYPES.wall.h;
+  const run = wall === "top" || wall === "bottom" ? floorW : floorH;
+  const fractions = positions ?? Array.from({ length: count }, (_, i) => (i + 1) / (count + 1));
+  return fractions.map((f) => {
+    const along = round2(Math.min(Math.max(t, run * f - len / 2), run - t - len));
+    switch (wall) {
+      case "top": return { xM: along, yM: t, widthM: len, heightM: depth };
+      case "bottom": return { xM: along, yM: round2(floorH - t - depth), widthM: len, heightM: depth };
+      case "left": return { xM: t, yM: along, widthM: depth, heightM: len };
+      case "right": return { xM: round2(floorW - t - depth), yM: along, widthM: depth, heightM: len };
+    }
+  });
+}
+
+// A whole depot from a handful of answers about the real building: where
+// the trucks dock, where people come in, how the roof is held up, how the
+// storage should be divided. Structure first, then zones in whatever floor
+// is left clear of it, then racks routed around every obstacle — the same
+// pipeline a fixed template goes through, just driven by the answers.
+export function buildParametric(p: ParametricLayout, floorW: number, floorH: number, opts: TemplateOptions = {}): TemplateEntitySpec[] {
+  const t = LOCATION_TYPES.wall.h;
+  const structure: TemplateEntitySpec[] = [];
+  const fixture = (kind: LocationKind, box: Box): TemplateEntitySpec => ({ kind, ...box, bays: 1, levels: 1 });
+
+  if (p.walls && !opts.hasWalls) structure.push(...perimeterWalls(floorW, floorH));
+
+  const dockDepth = LOCATION_TYPES.dock.h;
+  const dockLen = LOCATION_TYPES.dock.w;
+  if (p.docks.count > 0) {
+    for (const box of alongWall(floorW, floorH, p.docks.wall, p.docks.count, dockLen, dockDepth)) structure.push(fixture("dock", box));
+  }
+
+  if (p.entrance) {
+    const at = p.entrance.at === "start" ? 0.12 : p.entrance.at === "end" ? 0.88 : 0.5;
+    const [box] = alongWall(floorW, floorH, p.entrance.wall, 1, LOCATION_TYPES.door.w, t, [at]);
+    structure.push(fixture("door", box));
+  }
+
+  if (p.pillars) {
+    const grid = pillarGridPositions(
+      { xM: 0, yM: 0, widthM: floorW, heightM: floorH },
+      { ...p.pillars, offsetX: p.pillars.spacingX, offsetY: p.pillars.spacingY },
+    );
+    for (const box of grid) structure.push(fixture("pillar", box));
+  }
+
+  // Zones fill the floor inside the margin, pulled back from the dock wall
+  // by the docks' depth and their staging strip.
+  const margin = floorMargin(floorW, floorH);
+  const inset = { top: margin, bottom: margin, left: margin, right: margin };
+  if (p.docks.count > 0) inset[p.docks.wall] = round2(t + dockDepth + DOCK_STAGING);
+  const area: Box = {
+    xM: inset.left,
+    yM: inset.top,
+    widthM: round2(floorW - inset.left - inset.right),
+    heightM: round2(floorH - inset.top - inset.bottom),
+  };
+  const scheme = area.widthM > 2 && area.heightM > 2 ? zonesInArea(area, p.orientation, p.zones, p.levels, p.bays) : [];
+
+  const obstacles: Box[] = [
+    ...structure.filter((f) => f.kind !== "wall"),
+    ...(opts.obstacles ?? []),
+  ];
+  return [...structure, ...avoidObstacles(scheme, obstacles)];
 }
 
 // Positions/sizes are fractions of the facility's actual width/height, so a

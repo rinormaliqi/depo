@@ -11,12 +11,15 @@ import {
   computeZoneSlots,
   detectOrientation,
   findContainingZone,
+  intersects,
   isRotation,
   LOCATION_TYPES,
   nextCode,
+  pillarGridPositions,
   rescaleWithinZone,
   round2,
   type Box,
+  type PillarGridSpec,
   type Rotation,
   type TemplateKey,
 } from "@/lib/blueprint-types";
@@ -280,19 +283,33 @@ async function applyTemplateImpl(facilityId: string, templateKey: TemplateKey, r
   await requirePermission("editLayout");
   const facility = await requireOwnedFacility(facilityId);
 
-  const existing = await db.select({ id: locations.id }).from(locations).where(eq(locations.facilityId, facilityId));
-  if (existing.length > 0) {
+  const existing = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
+  // The building survives a template: walls, columns, docks, doors, windows
+  // and vents are the structure the scheme is drawn *inside*, not part of
+  // the scheme. They stay, and the template's racks are routed around them.
+  const structure = existing.filter((l) => LOCATION_TYPES[l.kind as LocationKind].spatial === "fixture");
+  const scheme = existing.filter((l) => LOCATION_TYPES[l.kind as LocationKind].spatial !== "fixture");
+  if (scheme.length > 0) {
     if (!replace) {
       const t = await getTranslations("builder.error");
       throw new UserError(t("confirmationRequired"));
     }
-    // The scheme's structure can be freely replaced once confirmed — but
-    // real stock is never silently destroyed, confirmation or not.
-    await checkNoStock(existing.map((l) => l.id), "replaceHasStock");
-    await db.delete(locations).where(eq(locations.facilityId, facilityId));
+    // The scheme can be freely replaced once confirmed — but real stock is
+    // never silently destroyed, confirmation or not.
+    await checkNoStock(scheme.map((l) => l.id), "replaceHasStock");
+    // A dock or door drawn inside a zone reports to it (parentId), and
+    // deleting the zone would cascade to it — so the structure is detached
+    // first and re-homed into the template's zones below.
+    if (structure.length > 0) {
+      await db.update(locations).set({ parentId: null }).where(inArray(locations.id, structure.map((l) => l.id)));
+    }
+    await db.delete(locations).where(inArray(locations.id, scheme.map((l) => l.id)));
   }
 
-  const specs = buildTemplate(templateKey, facility.widthM, facility.heightM);
+  const specs = buildTemplate(templateKey, facility.widthM, facility.heightM, {
+    hasWalls: structure.some((l) => l.kind === "wall"),
+    obstacles: structure.filter((l) => l.kind !== "wall").map((l) => ({ xM: l.xM, yM: l.yM, widthM: l.widthM, heightM: l.heightM })),
+  });
 
   // Check the whole template's bin total upfront rather than per-entity as
   // the loop below goes — discovering the plan doesn't have room for it
@@ -303,17 +320,52 @@ async function applyTemplateImpl(facilityId: string, templateKey: TemplateKey, r
   );
   await assertCanAddBins(facility.organizationId, totalBins);
 
+  const newZones: { id: string; kind: string; xM: number; yM: number; widthM: number; heightM: number }[] = [];
   for (const spec of specs) {
-    await createEntityAt(
+    const created = await createEntityAt(
       facilityId,
       spec.kind,
       { xM: spec.xM, yM: spec.yM, widthM: spec.widthM, heightM: spec.heightM },
       spec.bays,
       spec.levels,
     );
+    if (created.kind === "zone") newZones.push(created);
+  }
+  for (const l of structure) {
+    const zone = findContainingZone(newZones, l);
+    if (zone) await db.update(locations).set({ parentId: zone.id }).where(eq(locations.id, l.id));
   }
 
   revalidatePath("/builder");
+}
+
+const MAX_PILLARS_PER_GRID = 200;
+
+// Lays a regular grid of structural columns over the whole floor or one
+// zone. Positions that already hold a column are skipped, so re-running with
+// the same spacing is idempotent and a denser grid only adds the new lines.
+async function addPillarGridImpl(facilityId: string, zoneId: string | null, grid: PillarGridSpec) {
+  await requirePermission("editLayout");
+  const facility = await requireOwnedFacility(facilityId);
+  const t = await getTranslations("builder.error");
+
+  const existing = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
+  let area: Box = { xM: 0, yM: 0, widthM: facility.widthM, heightM: facility.heightM };
+  if (zoneId) {
+    const zone = existing.find((l) => l.id === zoneId && l.kind === "zone");
+    if (!zone) throw new UserError(t("zoneNotFound"));
+    area = { xM: zone.xM, yM: zone.yM, widthM: zone.widthM, heightM: zone.heightM };
+  }
+
+  const pillars = existing.filter((l) => l.kind === "pillar");
+  const wanted = pillarGridPositions(area, grid).filter((box) => !pillars.some((p) => intersects(box, p)));
+  if (wanted.length === 0) throw new UserError(t("pillarGridEmpty"));
+  if (wanted.length > MAX_PILLARS_PER_GRID) throw new UserError(t("pillarGridTooMany", { max: MAX_PILLARS_PER_GRID }));
+
+  const created = [];
+  for (const box of wanted) created.push(await createEntityAt(facilityId, "pillar", box, 1, 1));
+  revalidatePath("/builder");
+  return created;
 }
 
 // Adds one more top-level zone by proportionally shrinking the existing
@@ -622,6 +674,10 @@ export async function createEntity(
 
 export async function applyTemplate(facilityId: string, templateKey: TemplateKey, replace: boolean) {
   return attempt(() => applyTemplateImpl(facilityId, templateKey, replace), "applyTemplate");
+}
+
+export async function addPillarGrid(facilityId: string, zoneId: string | null, grid: PillarGridSpec) {
+  return attempt(() => addPillarGridImpl(facilityId, zoneId, grid), "addPillarGrid");
 }
 
 export async function addSector(facilityId: string) {

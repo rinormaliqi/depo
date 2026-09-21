@@ -773,6 +773,29 @@ inflating the count and skipping codes (a zone's second rack came out `"A-08"` i
 `"A-02"`). Templates create multiple racks in one zone in quick succession, which surfaced it
 immediately; fixed by requiring the remainder after the stem to be pure digits.
 
+### Locations import: a depot that already has a list
+
+The third way onto the floor, next to drawing and the wizard: a depot that already runs on a
+location list (zones, racks, bays, levels in a spreadsheet) pastes it and the floor is drawn.
+`/builder/import` reuses the `PasteImport` shell and the preview-then-commit shape of the items
+and stock imports (`src/lib/import-locations.ts` is the pure parser; the actions live in
+`builder/actions.ts` because they need `createEntityAt`, which must not be exported from a
+`"use server"` file — an exported async function there becomes an unauthenticated endpoint).
+
+Columns: `code, kind, parent, x, y, width, depth, bays, levels`. Only code and kind are
+required. Kinds resolve from English, Albanian and common synonyms (`raft`, `shtyllë`,
+`column`…); bins are refused (they're generated from a rack's `bays × levels`). A position is
+all four of x/y/width/depth or none: **rows without one are auto-laid out** (`autoLayout()`)
+inside their parent zone — left to right, wrapping into rows with real aisle clearance, a rack
+as wide as its bays — and kept inside the container even when it's too short (a small overlap
+beats an object pushed off the floor where it can't be seen to be dragged back). The preview
+resolves parents against both the list and the floor, refuses codes already on the floor and
+rack levels beyond the facility's, and shows the first rows with the positions they'll get.
+Commit writes zones first (positioned before auto-laid) so every parent exists, then the rest,
+through `createEntityAt` with an explicit code and parent (a new `override` argument) — one
+small write per row rather than one transaction over a re-read of the floor per row; the
+preview has already proven each row. Plan bin limits are checked once, upfront.
+
 ### The underlay: tracing over the real drawing
 
 The most direct way from a real building to a digital plan, and what every floor-plan editor

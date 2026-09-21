@@ -12,7 +12,7 @@ import { unwrap, type ActionResult } from "@/lib/action-result";
 // was computed for: editing the box after a check hides the import
 // button until the next check, so the numbers on screen are always the
 // numbers that will be written. Copy lives under the `ns` namespace
-// (items.import / stock.import): summary, done, error.<code>, field.<name>.
+// (items.import / stock.import / builder.import): summary, done, error.<code>, field.<name>.
 
 export type PastePreview = {
   counts: Record<string, number>;
@@ -22,7 +22,7 @@ export type PastePreview = {
 };
 
 type Props = {
-  ns: "items.import" | "stock.import";
+  ns: "items.import" | "stock.import" | "builder.import";
   columns: readonly string[];
   templateHref: string;
   backHref: string;

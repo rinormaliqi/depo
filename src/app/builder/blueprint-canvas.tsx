@@ -1216,6 +1216,7 @@ export function BlueprintCanvas({
             <>
               <button className="btn btn-secondary btn-block" onClick={() => setFloorOpen(true)}>{t("editFloor")}</button>
               <button className="btn btn-secondary btn-block" onClick={() => setTemplatesOpen(true)}>{t("templatesButton")}</button>
+              <Link href="/builder/import" className="btn btn-ghost btn-block" style={{ fontSize: 12 }}>{t("importLink")}</Link>
             </>
           )}
           <div style={{ height: 1, background: "var(--color-divider)", margin: "9px 0" }} />

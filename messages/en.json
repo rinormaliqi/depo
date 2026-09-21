@@ -607,6 +607,11 @@
     "depth": "Depth",
     "xFromWall": "X from wall",
     "yFromWall": "Y from wall",
+    "orientation": "Orientation",
+    "rotate": "Rotate",
+    "rotateHint": "Quarter turn clockwise (R). Width and depth swap; bays run the other way.",
+    "flip": "Flip",
+    "flipHint": "Same footprint, bay 1 at the other end (F).",
     "subdivision": "Subdivision",
     "bays": "Bays",
     "levels": {
@@ -649,6 +654,7 @@
     "error": {
       "facilityNotFound": "Facility not found",
       "locationNotFound": "Location not found",
+      "badRotation": "Rotation must be 0, 90, 180 or 270 degrees",
       "nameRequired": "Name is required",
       "codeRequired": "Code is required",
       "codeInUse": "{code} is already in use on this floor",

@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { LocationKind } from "@/db/schema";
+import type { Rotation } from "@/lib/blueprint-types";
 
 // The colour each kind owns (tokens in src/app/ds.css). Everything that
 // draws a kind — its box, its label, the palette swatch, the legend, the
@@ -127,3 +128,49 @@ export const KIND_APPEARANCE: Record<LocationKind, CSSProperties> = {
       `repeating-linear-gradient(45deg,transparent 0 3px,color-mix(in srgb,#fff 35%,transparent) 3px 4px),` + KIND_COLOR.pillar,
   },
 };
+
+// The same drawings turned a quarter: a rack's end-posts move to the top and
+// bottom, pallet boards and vent louvres run up-down, a door or window's
+// centre line stands upright. Only kinds whose drawing has a direction need
+// one; a hatch, a dashed outline or a solid fill looks the same either way.
+const VERTICAL_APPEARANCE: Partial<Record<LocationKind, CSSProperties>> = {
+  rack: {
+    borderLeft: `1px solid ${KIND_COLOR.rack}`,
+    borderRight: `1px solid ${KIND_COLOR.rack}`,
+    borderTop: `4px solid ${KIND_COLOR.rack}`,
+    borderBottom: `4px solid ${KIND_COLOR.rack}`,
+    background: kindTint("rack", 9),
+  },
+  pallet: {
+    border: `1px solid ${KIND_COLOR.pallet}`,
+    backgroundColor: kindTint("pallet", 10),
+    backgroundImage: `linear-gradient(90deg,${kindTint("pallet", 55)} 0 18%,transparent 18% 41%,${kindTint("pallet", 55)} 41% 59%,transparent 59% 82%,${kindTint("pallet", 55)} 82% 100%)`,
+  },
+  door: {
+    border: `1px solid ${KIND_COLOR.door}`,
+    background:
+      `repeating-linear-gradient(0deg,transparent 0 4px,#fff 4px 6px) center / 2px 100% no-repeat,` + kindTint("door", 45),
+  },
+  exit: {
+    border: `1px solid ${KIND_COLOR.exit}`,
+    background:
+      `repeating-linear-gradient(0deg,transparent 0 4px,#fff 4px 6px) center / 2px 100% no-repeat,` + kindTint("exit", 50),
+  },
+  window: {
+    border: `1px solid ${KIND_COLOR.window}`,
+    background: `linear-gradient(${KIND_COLOR.window},${KIND_COLOR.window}) center / 1px 100% no-repeat,` + kindTint("window", 18),
+  },
+  vent: {
+    border: `1px solid ${KIND_COLOR.vent}`,
+    background: `repeating-linear-gradient(90deg,transparent 0 2px,${kindAlpha("vent", 55)} 2px 3px),` + kindTint("vent", 12),
+  },
+};
+
+// A kind's drawing at a given rotation. Half turns reuse the upright
+// drawing: every pattern here is symmetric end-to-end, so 180° only changes
+// which end bay 1 sits at — and that is the bay grid's job, not the box's.
+export function kindAppearance(kind: LocationKind, rotation: number): CSSProperties {
+  const r = rotation as Rotation;
+  if (r === 90 || r === 270) return VERTICAL_APPEARANCE[kind] ?? KIND_APPEARANCE[kind];
+  return KIND_APPEARANCE[kind];
+}

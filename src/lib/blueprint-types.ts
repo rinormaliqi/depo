@@ -36,6 +36,44 @@ const CODE_SUFFIX: Partial<Record<LocationKind, string>> = {
   pillar: "C", // column
 };
 
+export const ROTATIONS = [0, 90, 180, 270] as const;
+export type Rotation = (typeof ROTATIONS)[number];
+
+export function isRotation(v: number): v is Rotation {
+  return (ROTATIONS as readonly number[]).includes(v);
+}
+
+// A quarter turn clockwise: the contents turn, and because the stored box is
+// always the real footprint, width and height swap around the same centre
+// (snapped to the grid, kept on the floor). A rack lying along a wall stands
+// up against it without drifting.
+export function rotateBox(box: Box, snap = 0.25): Box {
+  const cx = box.xM + box.widthM / 2;
+  const cy = box.yM + box.heightM / 2;
+  const widthM = box.heightM;
+  const heightM = box.widthM;
+  const q = (v: number) => Math.max(0, Math.round(v / snap) * snap);
+  return { xM: round2(q(cx - widthM / 2)), yM: round2(q(cy - heightM / 2)), widthM, heightM };
+}
+
+export function turnClockwise(r: Rotation): Rotation {
+  return ((r + 90) % 360) as Rotation;
+}
+
+// A flip is a half turn: the same footprint, bay 1 at the other end. On a
+// top-down plan that is what "mirror" means for a rack — which end you
+// start counting from.
+export function flip(r: Rotation): Rotation {
+  return ((r + 180) % 360) as Rotation;
+}
+
+// How a rotation lays out a run of bays: down the box instead of across it
+// for a quarter or three-quarter turn, and counted from the far end for a
+// half or three-quarter turn (bay 1 sits where the box's left edge went).
+export function bayLayout(r: Rotation): { vertical: boolean; reversed: boolean } {
+  return { vertical: r === 90 || r === 270, reversed: r === 180 || r === 270 };
+}
+
 export function round2(v: number) {
   return Math.round(v * 100) / 100;
 }

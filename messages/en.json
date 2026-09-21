@@ -506,7 +506,9 @@
   },
   "builder": {
     "entities": "Entities",
-    "entitiesHint": "Click to drop onto the floor, then drag it into place or fine-tune the exact numbers on the right.",
+    "entitiesHint": "Click an entity, then click the floor where it goes — or drag it straight onto the floor. Hold Shift to place several.",
+    "placingHint": "Click the floor to place it. Esc puts it back.",
+    "placingHintSticky": "Click the floor to place one after another. Esc when done.",
     "kind": {
       "zone": "Zone",
       "aisle": "Aisle",

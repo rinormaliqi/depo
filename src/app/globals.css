@@ -309,6 +309,9 @@ input[type="number"] {
 .canvas-wrap.canvas-mode-navigate * { cursor: inherit !important; }
 .canvas-wrap.canvas-mode-inspect { cursor: default; }
 .canvas-wrap.canvas-mode-edit { cursor: default; }
+/* Carrying an object picked up from the palette: wherever the mouse is, a click puts it down. */
+.canvas-wrap.is-placing { cursor: crosshair; }
+.canvas-wrap.is-placing * { cursor: inherit !important; }
 
 /* ── Map-only blueprint (workers, and every role under 768px) ─────────── */
 .map-sheet {

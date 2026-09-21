@@ -777,7 +777,31 @@
       }
     },
     "zoneColor": "Zone colour",
-    "zoneColorDefault": "Default"
+    "zoneColorDefault": "Default",
+    "underlay": {
+      "title": "Underlay",
+      "empty": "Trace over the real drawing: upload a photo, scan or PDF of the floor plan, then calibrate its scale with two points of known distance.",
+      "upload": "Upload floor plan (image / PDF)",
+      "replace": "Replace drawing",
+      "uploading": "Preparing…",
+      "uploaded": "Drawing uploaded — now calibrate its scale.",
+      "uploadFailed": "The drawing could not be uploaded",
+      "tooLarge": "That file is over 4 MB even after downscaling",
+      "opacity": "Opacity",
+      "visible": "Show the drawing",
+      "scaleInfo": "1 px = {cm} cm · drawing spans {w} × {h} m",
+      "offsetX": "Left edge at (m)",
+      "offsetY": "Top edge at (m)",
+      "calibrate": "Calibrate scale (2 points)",
+      "calibrateHint": "Click two points on the drawing whose real distance you know — a wall length, a door width.",
+      "clickFirst": "Click the first point on the drawing.",
+      "clickSecond": "Now click the second point.",
+      "enterDistance": "Real distance between the two points, in metres:",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "calibrated": "Scale calibrated",
+      "remove": "Remove drawing"
+    }
   },
   "bin": {
     "kicker": "Bin",

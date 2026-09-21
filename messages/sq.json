@@ -777,7 +777,31 @@
       }
     },
     "zoneColor": "Ngjyra e zonës",
-    "zoneColorDefault": "Parazgjedhur"
+    "zoneColorDefault": "Parazgjedhur",
+    "underlay": {
+      "title": "Plani i objektit",
+      "empty": "Vizato mbi planin real: ngarko një foto, skanim ose PDF të planimetrisë, pastaj kalibro shkallën me dy pika me distancë të njohur.",
+      "upload": "Ngarko planimetrinë (foto / PDF)",
+      "replace": "Zëvendëso planin",
+      "uploading": "Përgatitet…",
+      "uploaded": "Plani u ngarkua — tani kalibro shkallën.",
+      "uploadFailed": "Plani nuk mund të ngarkohej",
+      "tooLarge": "Skedari është mbi 4 MB edhe pas zvogëlimit",
+      "opacity": "Tejdukshmëria",
+      "visible": "Shfaq planin",
+      "scaleInfo": "1 px = {cm} cm · plani zë {w} × {h} m",
+      "offsetX": "Skaji i majtë në (m)",
+      "offsetY": "Skaji i sipërm në (m)",
+      "calibrate": "Kalibro shkallën (2 pika)",
+      "calibrateHint": "Kliko dy pika në plan me distancë reale të njohur — gjatësinë e një muri, gjerësinë e një dere.",
+      "clickFirst": "Kliko pikën e parë në plan.",
+      "clickSecond": "Tani kliko pikën e dytë.",
+      "enterDistance": "Distanca reale mes dy pikave, në metra:",
+      "apply": "Apliko",
+      "cancel": "Anulo",
+      "calibrated": "Shkalla u kalibrua",
+      "remove": "Hiq planin"
+    }
   },
   "bin": {
     "kicker": "Kuti",

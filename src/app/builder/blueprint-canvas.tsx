@@ -7,6 +7,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
 import { KIND_APPEARANCE, KIND_COLOR, kindAppearance, kindLabelColor } from "./kind-appearance";
 import { LayoutWizard } from "./layout-wizard";
+import { UnderlayPanel, type Calibration } from "./underlay-panel";
+import { calibrateUnderlay, underlayUrl, type UnderlayMeta } from "@/lib/underlay-shared";
 import { LOCATION_TYPES, TEMPLATE_KEYS, ZONE_COLORS, alignSnap, bayLayout, flip, intersects, isOpening, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise, type Box as FloorBox, type Guides, type ParametricLayout, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
 import type { FacilityLevel } from "@/lib/levels";
@@ -19,6 +21,7 @@ import { Gate } from "@/components/capabilities";
 const addSector = unwrap(rawActions.addSector);
 const addPillarGrid = unwrap(rawActions.addPillarGrid);
 const applyParametric = unwrap(rawActions.applyParametric);
+const updateUnderlay = unwrap(rawActions.updateUnderlay);
 const addLevel = unwrap(rawActions.addLevel);
 const renameLevel = unwrap(rawActions.renameLevel);
 const removeTopLevel = unwrap(rawActions.removeTopLevel);
@@ -143,6 +146,7 @@ export function BlueprintCanvas({
   initialLocations,
   initialOccupiedBinIds,
   initialLevels,
+  initialUnderlay = null,
   initialHighlightBinId,
   readOnly = false,
 }: {
@@ -150,6 +154,7 @@ export function BlueprintCanvas({
   initialLocations: LocationRow[];
   initialOccupiedBinIds: string[];
   initialLevels: FacilityLevel[];
+  initialUnderlay?: UnderlayMeta | null;
   initialHighlightBinId?: string;
   // A worker's view: the server rejects every layout write for them anyway
   // (requirePermission("editLayout")), this just stops the UI offering
@@ -162,6 +167,9 @@ export function BlueprintCanvas({
   const [locations, setLocations] = useState(initialLocations);
   const [occupied, setOccupied] = useState(new Set(initialOccupiedBinIds));
   const [levels, setLevels] = useState<FacilityLevel[]>(initialLevels);
+  const [underlay, setUnderlay] = useState<UnderlayMeta | null>(initialUnderlay);
+  // Two-point scale calibration of the underlay: the floor points clicked so far.
+  const [calibration, setCalibration] = useState<Calibration | null>(null);
   const [levelsOpen, setLevelsOpen] = useState(false);
   const confirm = useConfirm();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -397,6 +405,27 @@ export function BlueprintCanvas({
     setLocations(data.locations);
     setOccupied(new Set(data.occupiedBinIds));
     setLevels(data.levels);
+    setUnderlay(data.underlay);
+  }
+
+  // Two clicks on the drawing, then the real distance between them: the
+  // scale is metres / pixels between the two, and the offset moves so the
+  // first clicked point stays exactly where it was — the user pinned it.
+  async function finishCalibration(distanceM: number) {
+    if (!underlay || !calibration || calibration.points.length < 2) return;
+    const result = calibrateUnderlay(underlay, calibration.points[0], calibration.points[1], distanceM);
+    if (!result) { setCalibration(null); return; }
+    setBusy(true);
+    try {
+      await updateUnderlay(facility.id, result);
+      await reload();
+      setStatus(t("underlay.calibrated"));
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : t("error.couldntSave"));
+    } finally {
+      setCalibration(null);
+      setBusy(false);
+    }
   }
 
   // ── Mouse modes ────────────────────────────────────────────────────────
@@ -1160,7 +1189,7 @@ export function BlueprintCanvas({
         if (key === "v" && !readOnly) { setMode("edit"); return; }
         if (key === "i") { setMode("inspect"); return; }
         if (key === " ") { ev.preventDefault(); setSpacePan(true); return; }
-        if (key === "escape") { cancelDrag(); cancelPlacing(); return; }
+        if (key === "escape") { cancelDrag(); cancelPlacing(); setCalibration(null); return; }
         if (key === "r" && !readOnly && effectiveMode === "edit" && selected) { ev.preventDefault(); handleRotate(); return; }
         if (key === "f" && !readOnly && effectiveMode === "edit" && selected) { ev.preventDefault(); handleFlip(); return; }
       }
@@ -1316,6 +1345,18 @@ export function BlueprintCanvas({
               <button className="btn btn-secondary btn-block" onClick={() => setTemplatesOpen(true)}>{t("templatesButton")}</button>
             </>
           )}
+          <div style={{ height: 1, background: "var(--color-divider)", margin: "9px 0" }} />
+          <UnderlayPanel
+            facilityId={facility.id}
+            underlay={underlay}
+            readOnly={readOnly}
+            busy={busy}
+            calibration={calibration}
+            onStartCalibration={() => { setSelectedId(null); setCalibration({ points: [] }); }}
+            onCancelCalibration={() => setCalibration(null)}
+            onCalibrated={finishCalibration}
+            onChanged={reload}
+          />
         </div>
       </div>
       )}
@@ -1397,11 +1438,23 @@ export function BlueprintCanvas({
 
         <div
           ref={wrapRef}
-          className={`canvas-wrap canvas-mode-${panActive ? "navigate" : effectiveMode}${panning ? " is-panning" : ""}${placing ? " is-placing" : ""}`}
+          className={`canvas-wrap canvas-mode-${panActive ? "navigate" : effectiveMode}${panning ? " is-panning" : ""}${placing ? " is-placing" : ""}${calibration ? " is-calibrating" : ""}`}
           style={{ flex: 1, minHeight: 0, position: "relative", overflow: "auto" }}
-          // Capture phase so a carried object lands where the mouse is even
-          // over an existing object, which would otherwise start a move drag.
+          // Capture phase: while calibrating, a click anywhere on the floor is a
+          // measurement point, and a carried object lands where the mouse is —
+          // both even over an existing object, which would otherwise start a
+          // move drag.
           onMouseDownCapture={(e) => {
+            if (calibration && e.button === 0) {
+              const canvas = canvasRef.current;
+              if (!canvas) return;
+              const r = canvas.getBoundingClientRect();
+              if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+              e.stopPropagation(); e.preventDefault();
+              const pt = pointFromEvent(e);
+              setCalibration((c) => (c && c.points.length < 2 ? { points: [...c.points, pt] } : c));
+              return;
+            }
             const p = placingRef.current;
             if (!p || p.source !== "click" || e.button !== 0 || busy) return;
             e.stopPropagation();
@@ -1455,6 +1508,33 @@ export function BlueprintCanvas({
                     </>
                   )}
                 </div>
+              )}
+              {underlay && underlay.visible && (
+                // The real building's drawing, to scale under everything else,
+                // clipped to the floor: after calibration it usually reaches past
+                // the envelope (margins, title block), and that must not spill
+                // out of the sheet.
+                <div aria-hidden style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 0, pointerEvents: "none" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={underlayUrl(facility.id, underlay.version)}
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute", left: underlay.offsetXM * z, top: underlay.offsetYM * z,
+                      width: underlay.widthPx * underlay.scale * z, height: underlay.heightPx * underlay.scale * z,
+                      maxWidth: "none", opacity: underlay.opacity, userSelect: "none",
+                    }}
+                  />
+                </div>
+              )}
+              {calibration && calibration.points.map((pt, i) => (
+                <span key={i} aria-hidden style={{ position: "absolute", left: pt.x * z - 6, top: pt.y * z - 6, width: 12, height: 12, borderRadius: 6, border: "2px solid var(--color-danger-500)", background: "#fff", zIndex: 9, pointerEvents: "none" }} />
+              ))}
+              {calibration && calibration.points.length === 2 && (
+                <svg aria-hidden style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 9, pointerEvents: "none" }}>
+                  <line x1={calibration.points[0].x * z} y1={calibration.points[0].y * z} x2={calibration.points[1].x * z} y2={calibration.points[1].y * z} stroke="var(--color-danger-500)" strokeWidth={1.5} strokeDasharray="4 3" />
+                </svg>
               )}
               {guides.x !== undefined && (
                 <div aria-hidden style={{ position: "absolute", left: guides.x * z, top: 0, bottom: 0, width: 0, borderLeft: "1px dashed var(--color-danger-500)", zIndex: 8, pointerEvents: "none" }} />

@@ -38,6 +38,7 @@ import { getCapabilitiesFor, requireCapability, requireRoom } from "@/lib/capabi
 import { getMyOrgId, getMySession, requireOrgId } from "@/lib/session";
 import { attempt } from "@/lib/action-result";
 import { UserError } from "@/lib/user-error";
+import { deleteUnderlay, getUnderlayMeta, patchUnderlay } from "@/lib/underlay";
 
 export type LocationRow = typeof locations.$inferSelect;
 
@@ -163,7 +164,46 @@ export async function getBlueprint(facilityId: string) {
     : [];
 
   const levels = await ensureLevels(facilityId);
-  return { locations: rows, occupiedBinIds: occupied.map((o) => o.locationId), levels };
+  const underlay = await getUnderlayMeta(facilityId);
+  return { locations: rows, occupiedBinIds: occupied.map((o) => o.locationId), levels, underlay };
+}
+
+// The underlay's placement and viewing settings; the bytes go through
+// /api/builder/underlay/[facilityId]. Scale is metres per pixel — the
+// two-point calibration in the canvas computes it and moves the offset so
+// the first measured point stays put.
+async function updateUnderlayImpl(
+  facilityId: string,
+  patch: { scale?: number; offsetXM?: number; offsetYM?: number; opacity?: number; visible?: boolean },
+) {
+  await requirePermission("editLayout");
+  await requireOwnedFacility(facilityId);
+  const clean: typeof patch = {};
+  if (patch.scale !== undefined) clean.scale = Math.min(10, Math.max(0.0001, patch.scale));
+  if (patch.offsetXM !== undefined) clean.offsetXM = round2(patch.offsetXM);
+  if (patch.offsetYM !== undefined) clean.offsetYM = round2(patch.offsetYM);
+  if (patch.opacity !== undefined) clean.opacity = Math.min(1, Math.max(0.05, patch.opacity));
+  if (patch.visible !== undefined) clean.visible = !!patch.visible;
+  await patchUnderlay(facilityId, clean);
+  revalidatePath("/builder");
+}
+
+async function removeUnderlayImpl(facilityId: string) {
+  await requirePermission("editLayout");
+  await requireOwnedFacility(facilityId);
+  await deleteUnderlay(facilityId);
+  revalidatePath("/builder");
+}
+
+export async function updateUnderlay(
+  facilityId: string,
+  patch: { scale?: number; offsetXM?: number; offsetYM?: number; opacity?: number; visible?: boolean },
+) {
+  return attempt(() => updateUnderlayImpl(facilityId, patch), "updateUnderlay");
+}
+
+export async function removeUnderlay(facilityId: string) {
+  return attempt(() => removeUnderlayImpl(facilityId), "removeUnderlay");
 }
 
 function gridBinRows(

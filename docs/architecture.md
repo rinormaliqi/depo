@@ -773,6 +773,33 @@ inflating the count and skipping codes (a zone's second rack came out `"A-08"` i
 `"A-02"`). Templates create multiple racks in one zone in quick succession, which surfaced it
 immediately; fixed by requiring the remainder after the stem to be pure digits.
 
+### Rotation in quarter turns, and flipping a rack
+
+Nothing could be rotated: a rack always lay along the x-axis with bay 1 at the left. Pilot
+feedback: *"you can't rotate elements horizontally or vertically"*. Free-angle rotation was
+considered and rejected — it would break `findContainingZone` (axis-aligned), grid snapping,
+the corner resize handle and the bay grid, for a plan that is boxes on a grid by design
+(`docs/backlog.md`). Instead, `rotation` (0/90/180/270, `locations.rotation`, migration
+`0013`) is the orientation of the **contents** only: the stored box is always the real
+axis-aligned footprint, and a quarter turn swaps `widthM`/`heightM` about the box's centre
+(`rotateBox()` in `blueprint-types.ts`, snapped and kept on the floor). Containment, snapping,
+resizing and every geometry query stay oblivious; only the drawing changes — which way the
+bays run and which end bay 1 sits at (`bayLayout()`), and where a rack's end-posts, a pallet's
+boards or a door's leaf line go (`kindAppearance(kind, rotation)` in `kind-appearance.ts`,
+with an explicit vertical variant for each kind whose drawing has a direction).
+
+**Flip** is a half turn (`flip()`): same footprint, bays counted from the other end. On a
+top-down plan that is what "mirror" means for a rack — which end you start counting from — so
+it's offered only for multi-bay store kinds. Bin codes never change through a rotate or flip:
+`A-01-3` is still the third bay, it just draws at the other end. To make that visible, bay
+numbers are drawn in the cells whenever a cell is ≥ 14px on its short side.
+
+Controls: `R` rotates and `F` flips the selection in Edit mode; the inspector's **Orientation**
+row shows the current angle with the same two buttons. Both are one `updateEntity` patch
+(`rotation`, plus the swapped box for a rotate), so one undo step reverts either. The server
+rejects any value other than the four quarter turns. Duplicate and restore carry rotation
+along; templates always create at 0°.
+
 ### Structural fixtures: door, exit, window, vent, pillar
 
 Only two fixtures existed (`dock`, `wall`), so a floor plan could show where storage was but

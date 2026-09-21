@@ -277,6 +277,13 @@ export const locations = pgTable(
     yM: real("y_m").notNull().default(0),
     widthM: real("width_m").notNull().default(1),
     heightM: real("height_m").notNull().default(1),
+    // Orientation of the *contents*, in quarter turns clockwise (0/90/180/
+    // 270). The box itself (x/y/width/height) is always the real axis-aligned
+    // footprint — rotating swaps width and height in place — so containment,
+    // snapping and resizing never have to know about rotation; only the
+    // drawing does: which way the bays run, which end bay 1 sits at, where a
+    // rack's end-posts or a door's leaf line go.
+    rotation: integer("rotation").notNull().default(0),
     bays: integer("bays").notNull().default(1),
     levels: integer("levels").notNull().default(1),
     // Grid position — set only on an auto-generated bin child (1-indexed),

@@ -11,11 +11,13 @@ import {
   computeZoneSlots,
   detectOrientation,
   findContainingZone,
+  isRotation,
   LOCATION_TYPES,
   nextCode,
   rescaleWithinZone,
   round2,
   type Box,
+  type Rotation,
   type TemplateKey,
 } from "@/lib/blueprint-types";
 import { assertCanAddBins } from "@/lib/plan-limits";
@@ -207,6 +209,7 @@ async function createEntityAt(
   box: Box,
   bays: number,
   levels: number,
+  rotation: Rotation = 0,
 ) {
   const type = LOCATION_TYPES[kind];
   const existing = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
@@ -233,6 +236,7 @@ async function createEntityAt(
       yM: box.yM,
       widthM: box.widthM,
       heightM: box.heightM,
+      rotation,
       bays: type.spatial === "store" ? bays : 1,
       levels: type.spatial === "store" ? levels : 1,
     })
@@ -441,6 +445,7 @@ async function updateEntityImpl(
     heightM?: number;
     bays?: number;
     levels?: number;
+    rotation?: number;
   },
 ) {
   await requirePermission("editLayout");
@@ -470,6 +475,10 @@ async function updateEntityImpl(
   if (patch.yM !== undefined) values.yM = Math.max(0, round2(patch.yM));
   if (patch.widthM !== undefined) values.widthM = Math.max(0.3, round2(patch.widthM));
   if (patch.heightM !== undefined) values.heightM = Math.max(0.3, round2(patch.heightM));
+  if (patch.rotation !== undefined) {
+    if (!isRotation(patch.rotation)) throw new UserError(t("badRotation"));
+    values.rotation = patch.rotation;
+  }
 
   // Dragging (or typing new coordinates) can move a non-zone entity into a
   // different zone's bounds, or out of any zone — re-derive its parent from
@@ -563,6 +572,7 @@ async function duplicateEntityImpl(id: string) {
     { xM: round2(location.xM + 0.5), yM: round2(location.yM + 0.5), widthM: location.widthM, heightM: location.heightM },
     location.bays,
     location.levels,
+    isRotation(location.rotation) ? location.rotation : 0,
   );
   revalidatePath("/builder");
   return created;
@@ -575,7 +585,7 @@ async function duplicateEntityImpl(id: string) {
 // spec instead of an existing row.
 async function restoreEntityImpl(
   facilityId: string,
-  spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number },
+  spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number; rotation?: number },
 ) {
   await requirePermission("editLayout");
   const facility = await requireOwnedFacility(facilityId);
@@ -588,6 +598,7 @@ async function restoreEntityImpl(
     { xM: spec.xM, yM: spec.yM, widthM: spec.widthM, heightM: spec.heightM },
     spec.bays,
     spec.levels,
+    spec.rotation !== undefined && isRotation(spec.rotation) ? spec.rotation : 0,
   );
   revalidatePath("/builder");
   return created;
@@ -628,6 +639,7 @@ export async function updateEntity(
     heightM?: number;
     bays?: number;
     levels?: number;
+    rotation?: number;
   },
 ) {
   return attempt(() => updateEntityImpl(id, patch), "updateEntity");
@@ -643,7 +655,7 @@ export async function duplicateEntity(id: string) {
 
 export async function restoreEntity(
   facilityId: string,
-  spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number },
+  spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number; rotation?: number },
 ) {
   return attempt(() => restoreEntityImpl(facilityId, spec), "restoreEntity");
 }

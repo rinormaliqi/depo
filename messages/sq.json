@@ -605,6 +605,11 @@
     "depth": "Thellësia",
     "xFromWall": "X nga muri",
     "yFromWall": "Y nga muri",
+    "orientation": "Orientimi",
+    "rotate": "Rrotullo",
+    "rotateHint": "Çerek rrotullimi në drejtim të orës (R). Gjerësia dhe thellësia ndërrohen; hapësirat rrjedhin në drejtimin tjetër.",
+    "flip": "Kthe",
+    "flipHint": "E njëjta gjurmë, hapësira 1 në skajin tjetër (F).",
     "subdivision": "Ndarja",
     "bays": "Hapësira",
     "levels": {
@@ -647,6 +652,7 @@
     "error": {
       "facilityNotFound": "Depo nuk u gjet",
       "locationNotFound": "Vendndodhja nuk u gjet",
+      "badRotation": "Rrotullimi duhet të jetë 0, 90, 180 ose 270 gradë",
       "nameRequired": "Emri është i detyrueshëm",
       "codeRequired": "Kodi është i detyrueshëm",
       "codeInUse": "{code} është tashmë në përdorim në këtë planimetri",

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
-import { KIND_APPEARANCE, kindLabelColor } from "./kind-appearance";
-import { LOCATION_TYPES, TEMPLATE_KEYS, type TemplateKey } from "@/lib/blueprint-types";
+import { KIND_APPEARANCE, kindAppearance, kindLabelColor } from "./kind-appearance";
+import { LOCATION_TYPES, TEMPLATE_KEYS, bayLayout, flip, isRotation, rotateBox, turnClockwise, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
 import type { FacilityLevel } from "@/lib/levels";
 import { useConfirm } from "@/components/notifications";
@@ -74,10 +74,15 @@ type EntitySpec = {
   heightM: number;
   bays: number;
   levels: number;
+  rotation: number;
 };
 
 function specOf(e: LocationRow): EntitySpec {
-  return { kind: e.kind as LocationKind, xM: e.xM, yM: e.yM, widthM: e.widthM, heightM: e.heightM, bays: e.bays, levels: e.levels };
+  return { kind: e.kind as LocationKind, xM: e.xM, yM: e.yM, widthM: e.widthM, heightM: e.heightM, bays: e.bays, levels: e.levels, rotation: e.rotation };
+}
+
+function rotationOf(e: { rotation: number }): Rotation {
+  return isRotation(e.rotation) ? e.rotation : 0;
 }
 
 type UndoEntry = { undo: () => Promise<void>; redo: () => Promise<void> };
@@ -648,6 +653,20 @@ export function BlueprintCanvas({
     }
   }
 
+  // A quarter turn clockwise: the footprint swaps width/height about its
+  // centre and the drawing turns with it. A flip keeps the footprint and
+  // counts the bays from the other end. Both are one updateEntity patch, so
+  // one undo step puts either back.
+  function handleRotate() {
+    if (!selected) return;
+    const box = rotateBox({ xM: selected.xM, yM: selected.yM, widthM: selected.widthM, heightM: selected.heightM });
+    void commit({ ...box, rotation: turnClockwise(rotationOf(selected)) });
+  }
+  function handleFlip() {
+    if (!selected) return;
+    void commit({ rotation: flip(rotationOf(selected)) });
+  }
+
   async function commit(patch: Record<string, string | number>) {
     if (!selected) return;
     const id = selected.id;
@@ -890,6 +909,8 @@ export function BlueprintCanvas({
         if (key === "i") { setMode("inspect"); return; }
         if (key === " ") { ev.preventDefault(); setSpacePan(true); return; }
         if (key === "escape") { cancelDrag(); return; }
+        if (key === "r" && !readOnly && effectiveMode === "edit" && selected) { ev.preventDefault(); handleRotate(); return; }
+        if (key === "f" && !readOnly && effectiveMode === "edit" && selected) { ev.preventDefault(); handleFlip(); return; }
       }
       if (readOnly) return;
       if (meta && key === "z") {
@@ -1166,11 +1187,19 @@ export function BlueprintCanvas({
                   position: "absolute", left: live.xM * z, top: live.yM * z, width: live.widthM * z, height: live.heightM * z,
                   cursor: "move",
                   zIndex: type.spatial === "area" ? 1 : type.spatial === "fixture" ? 2 : 3,
-                  ...KIND_APPEARANCE[e.kind as LocationKind],
+                  ...kindAppearance(e.kind as LocationKind, e.rotation),
                 };
                 if (isSel) { box.outline = "1.5px solid var(--color-accent)"; box.outlineOffset = 1; box.zIndex = 6; }
 
-                const row = type.spatial === "store" && e.bays * e.levels > 1 ? levelRow(e, locations, selectedLevel) : [];
+                const rowUpright = type.spatial === "store" && e.bays * e.levels > 1 ? levelRow(e, locations, selectedLevel) : [];
+                const layout = bayLayout(rotationOf(e));
+                const row = layout.reversed ? [...rowUpright].reverse() : rowUpright;
+                // Bay numbers are drawn in the cells when they fit, so which way
+                // the run counts is visible at a glance after a rotate or flip.
+                const cellPx = row.length
+                  ? Math.min((layout.vertical ? live.widthM : live.widthM / row.length) * z, (layout.vertical ? live.heightM / row.length : live.heightM) * z)
+                  : 0;
+                const showBayNumbers = cellPx >= 14;
 
                 return (
                   <div
@@ -1223,7 +1252,7 @@ export function BlueprintCanvas({
                     )}
 
                     {row.length > 0 ? (
-                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${row.length},minmax(0,1fr))`, gap: 1, padding: 1, width: "100%", height: "100%" }}>
+                      <div style={{ display: "grid", [layout.vertical ? "gridTemplateRows" : "gridTemplateColumns"]: `repeat(${row.length},minmax(0,1fr))`, gap: 1, padding: 1, width: "100%", height: "100%" }}>
                         {row.map(({ bay, ids }) => {
                           const isOcc = ids.some((id) => occupied.has(id));
                           const targetId = ids[0];
@@ -1252,9 +1281,12 @@ export function BlueprintCanvas({
                                   : undefined,
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 fontSize: 8, color: "color-mix(in srgb,var(--color-text) 55%,transparent)",
-                                minWidth: 0, overflow: "hidden", textDecoration: "none",
+                                minWidth: 0, minHeight: 0, overflow: "hidden", textDecoration: "none",
+                                fontFamily: "var(--font-heading)", lineHeight: 1,
                               }}
-                            />
+                            >
+                              {showBayNumbers ? bay : null}
+                            </Link>
                           );
                         })}
                       </div>
@@ -1379,6 +1411,19 @@ export function BlueprintCanvas({
                 <div className="field"><label>{t("depth")}</label><input className="input" type="number" step="0.1" min="0.3" value={draft.heightM ?? ""} onChange={(e) => setDraft((d) => ({ ...d, heightM: e.target.value }))} onBlur={() => commit({ heightM: parseFloat(draft.heightM) })} /></div>
                 <div className="field"><label>{t("xFromWall")}</label><input className="input" type="number" step="0.1" min="0" value={draft.xM ?? ""} onChange={(e) => setDraft((d) => ({ ...d, xM: e.target.value }))} onBlur={() => commit({ xM: parseFloat(draft.xM) })} /></div>
                 <div className="field"><label>{t("yFromWall")}</label><input className="input" type="number" step="0.1" min="0" value={draft.yM ?? ""} onChange={(e) => setDraft((d) => ({ ...d, yM: e.target.value }))} onBlur={() => commit({ yM: parseFloat(draft.yM) })} /></div>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)", marginBottom: 7 }}>
+                {t("orientation")}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontFamily: "var(--font-heading)", fontSize: 16, fontVariantNumeric: "tabular-nums", minWidth: 38 }}>{rotationOf(selected)}°</span>
+                <button type="button" className="btn btn-secondary" onClick={handleRotate} disabled={busy} title={t("rotateHint")} style={{ flex: 1 }}>↻ {t("rotate")}</button>
+                {LOCATION_TYPES[selected.kind as LocationKind].spatial === "store" && selected.bays > 1 && (
+                  <button type="button" className="btn btn-secondary" onClick={handleFlip} disabled={busy} title={t("flipHint")} style={{ flex: 1 }}>⇋ {t("flip")}</button>
+                )}
               </div>
             </div>
 

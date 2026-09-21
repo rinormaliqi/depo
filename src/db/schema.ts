@@ -284,6 +284,9 @@ export const locations = pgTable(
     // drawing does: which way the bays run, which end bay 1 sits at, where a
     // rack's end-posts or a door's leaf line go.
     rotation: integer("rotation").notNull().default(0),
+    // A zone's own colour (#rrggbb), or null for the kind's default. Zones
+    // only — A/B/C in different tints, the way a WMS heat-map does it.
+    color: text("color"),
     bays: integer("bays").notNull().default(1),
     levels: integer("levels").notNull().default(1),
     // Grid position — set only on an auto-generated bin child (1-indexed),

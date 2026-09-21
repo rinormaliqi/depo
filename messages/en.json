@@ -687,7 +687,9 @@
       "couldntUndo": "Couldn't undo that",
       "couldntRedo": "Couldn't redo that",
       "couldntSaveFloor": "Couldn't save the floor",
-      "couldntApplyTemplate": "Couldn't apply that template"
+      "couldntApplyTemplate": "Couldn't apply that template",
+      "colorZonesOnly": "Only zones can be coloured",
+      "badColor": "Pick one of the offered colours"
     },
     "viewOnly": "View only",
     "viewOnlyHint": "Workers can look up and move stock but not change the layout. Ask a manager or admin if something needs to change.",
@@ -773,7 +775,9 @@
         "generate": "Generate",
         "replace": "Replace scheme"
       }
-    }
+    },
+    "zoneColor": "Zone colour",
+    "zoneColorDefault": "Default"
   },
   "bin": {
     "kicker": "Bin",

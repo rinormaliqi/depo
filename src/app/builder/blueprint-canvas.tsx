@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
-import { KIND_APPEARANCE, kindAppearance, kindLabelColor } from "./kind-appearance";
+import { KIND_APPEARANCE, KIND_COLOR, kindAppearance, kindLabelColor } from "./kind-appearance";
 import { LayoutWizard } from "./layout-wizard";
-import { LOCATION_TYPES, TEMPLATE_KEYS, bayLayout, flip, intersects, isOpening, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise, type Box as FloorBox, type ParametricLayout, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
+import { LOCATION_TYPES, TEMPLATE_KEYS, ZONE_COLORS, alignSnap, bayLayout, flip, intersects, isOpening, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise, type Box as FloorBox, type Guides, type ParametricLayout, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
 import type { FacilityLevel } from "@/lib/levels";
 import { useConfirm } from "@/components/notifications";
@@ -189,6 +189,9 @@ export function BlueprintCanvas({
     heightM: String(facility.heightM),
   });
   const [localOverride, setLocalOverride] = useState<Record<string, Box>>({});
+  // Alignment hairlines while a drag is live — the edges/centres the moving
+  // box just snapped onto (alignSnap). Cleared with the drag.
+  const [guides, setGuides] = useState<Guides>({});
   const [mode, setModeState] = useState<CanvasMode>(readOnly ? "inspect" : "edit");
   // Map-only: what a worker sees, and what everyone sees on a phone —
   // the canvas with Navigate/Inspect, a compact sheet for the tapped
@@ -565,7 +568,11 @@ export function BlueprintCanvas({
     setHistoryVersion((v) => v + 1);
   }
 
-  async function applyEntityPatch(id: string, patch: Record<string, string | number>) {
+  // What updateEntity accepts: numbers and strings, plus null for the one
+  // clearable field (a zone's colour).
+  type EntityPatch = Record<string, string | number | null>;
+
+  async function applyEntityPatch(id: string, patch: EntityPatch) {
     await updateEntity(id, patch);
     await reload();
     setSelectedId(id);
@@ -753,13 +760,13 @@ export function BlueprintCanvas({
     paletteArmRef.current = { kind, clientX: ev.clientX, clientY: ev.clientY, shift: ev.shiftKey };
   }
 
-  async function commit(patch: Record<string, string | number>) {
+  async function commit(patch: EntityPatch) {
     if (!selected) return;
     const id = selected.id;
-    const prevPatch: Record<string, string | number> = {};
+    const prevPatch: EntityPatch = {};
     for (const key of Object.keys(patch)) {
       const v = (selected as unknown as Record<string, unknown>)[key];
-      if (typeof v === "string" || typeof v === "number") prevPatch[key] = v;
+      if (typeof v === "string" || typeof v === "number" || v === null) prevPatch[key] = v;
     }
     setBusy(true);
     try {
@@ -958,10 +965,20 @@ export function BlueprintCanvas({
     return { x: (ev.clientX - r.left) / z, y: (ev.clientY - r.top) / z };
   }
 
-  function computeDragBox(d: Drag, ev: { clientX: number; clientY: number }): Box {
+  // Threshold for smart guides: about 6 screen pixels, whatever the zoom.
+  const ALIGN_PX = 6;
+
+  function computeDrag(d: Drag, ev: { clientX: number; clientY: number }): { box: Box; guides: Guides } {
     const p = pointFromEvent(ev);
     const deltaX = p.x - d.pointerStart.x;
     const deltaY = p.y - d.pointerStart.y;
+    const rows = locationsRef.current;
+    const entity = rows.find((l) => l.id === d.id);
+    // Guides come from the other top-level objects: not the dragged one, and
+    // not its own bay children (which move with it).
+    const others = rows.filter((l) => l.id !== d.id && l.parentId !== d.id && (!l.parentId || rows.find((z) => z.id === l.parentId)?.kind === "zone"));
+    const thresholdM = ALIGN_PX / z;
+
     if (d.kind === "move") {
       const moved = {
         xM: Math.max(0, snap(d.origin.xM + deltaX)),
@@ -971,20 +988,23 @@ export function BlueprintCanvas({
       };
       // An opening shows where it will settle while it's still being dragged,
       // so the drop holds no surprise; the server applies the same rule.
-      const rows = locationsRef.current;
-      const entity = rows.find((l) => l.id === d.id);
       if (entity && isOpening(entity.kind as LocationKind)) {
         const settled = snapToWall(moved, rows.filter((l) => l.kind === "wall"));
-        if (settled) return settled.box;
+        if (settled) return { box: settled.box, guides: {} };
       }
-      return moved;
+      return alignSnap(moved, others, thresholdM, "move");
     }
-    return {
+    const resized = {
       xM: d.origin.xM,
       yM: d.origin.yM,
       widthM: Math.max(0.3, snap(d.origin.widthM + deltaX)),
       heightM: Math.max(0.3, snap(d.origin.heightM + deltaY)),
     };
+    return alignSnap(resized, others, thresholdM, "resize");
+  }
+
+  function computeDragBox(d: Drag, ev: { clientX: number; clientY: number }): Box {
+    return computeDrag(d, ev).box;
   }
 
   function startDrag(kind: Drag["kind"], ev: React.MouseEvent, entity: LocationRow) {
@@ -1008,6 +1028,7 @@ export function BlueprintCanvas({
     if (!d) return;
     dragRef.current = null;
     dragArmRef.current = null;
+    setGuides({});
     setLocalOverride((o) => { const next = { ...o }; delete next[d.id]; return next; });
   }
 
@@ -1021,7 +1042,9 @@ export function BlueprintCanvas({
         if (Math.hypot(ev.clientX - arm.clientX, ev.clientY - arm.clientY) < DRAG_THRESHOLD_PX) return;
         arm.live = true;
       }
-      setLocalOverride((o) => ({ ...o, [d.id]: computeDragBox(d, ev) }));
+      const result = computeDrag(d, ev);
+      setLocalOverride((o) => ({ ...o, [d.id]: result.box }));
+      setGuides(result.guides);
     }
     function onUp(ev: MouseEvent) {
       const d = dragRef.current;
@@ -1031,6 +1054,7 @@ export function BlueprintCanvas({
       dragArmRef.current = null;
       if (!arm?.live) return; // a click: selected, nothing to save
       const box = computeDragBox(d, ev);
+      setGuides({});
       setLocalOverride((o) => {
         const next = { ...o };
         delete next[d.id];
@@ -1432,6 +1456,12 @@ export function BlueprintCanvas({
                   )}
                 </div>
               )}
+              {guides.x !== undefined && (
+                <div aria-hidden style={{ position: "absolute", left: guides.x * z, top: 0, bottom: 0, width: 0, borderLeft: "1px dashed var(--color-danger-500)", zIndex: 8, pointerEvents: "none" }} />
+              )}
+              {guides.y !== undefined && (
+                <div aria-hidden style={{ position: "absolute", top: guides.y * z, left: 0, right: 0, height: 0, borderTop: "1px dashed var(--color-danger-500)", zIndex: 8, pointerEvents: "none" }} />
+              )}
               {placing && (() => {
                 const g = ghostBox(placing);
                 if (!g) return null;
@@ -1466,6 +1496,12 @@ export function BlueprintCanvas({
                   zIndex: type.spatial === "area" ? 1 : type.spatial === "fixture" ? 2 : 3,
                   ...kindAppearance(e.kind as LocationKind, e.rotation),
                 };
+                // A zone with its own colour: its dashed outline and a faint wash
+                // in that colour, so A/B/C read apart across the whole floor.
+                if (e.kind === "zone" && e.color) {
+                  box.border = `1px dashed ${e.color}`;
+                  box.background = `color-mix(in srgb,${e.color} 6%,transparent)`;
+                }
                 if (isSel) { box.outline = "1.5px solid var(--color-accent)"; box.outlineOffset = 1; box.zIndex = 6; }
 
                 const rowUpright = type.spatial === "store" && e.bays * e.levels > 1 ? levelRow(e, locations, selectedLevel) : [];
@@ -1536,7 +1572,7 @@ export function BlueprintCanvas({
                         display: "flex", alignItems: "baseline", gap: 3,
                         fontFamily: "var(--font-heading)", fontSize: type.spatial === "area" ? 11 : 9,
                         letterSpacing: type.spatial === "area" ? ".14em" : ".1em", whiteSpace: "nowrap",
-                        color: kindLabelColor(e.kind as LocationKind),
+                        color: e.kind === "zone" && e.color ? `color-mix(in srgb,${e.color} 80%,var(--color-text))` : kindLabelColor(e.kind as LocationKind),
                         cursor: "pointer",
                       }}
                     >
@@ -1657,10 +1693,19 @@ export function BlueprintCanvas({
             }}
           >
             {composition.map((c) => (
-              <div key={c.kind} style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                <span style={{ width: 18, height: 12, flex: "none", ...KIND_APPEARANCE[c.kind] }} />
-                <span style={{ color: kindLabelColor(c.kind), fontFamily: "var(--font-heading)", letterSpacing: ".06em" }}>{t(`kind.${c.kind}`).toUpperCase()}</span>
-                <span style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>{c.n}</span>
+              <div key={c.kind} style={{ display: "contents" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <span style={{ width: 18, height: 12, flex: "none", ...KIND_APPEARANCE[c.kind] }} />
+                  <span style={{ color: kindLabelColor(c.kind), fontFamily: "var(--font-heading)", letterSpacing: ".06em" }}>{t(`kind.${c.kind}`).toUpperCase()}</span>
+                  <span style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>{c.n}</span>
+                </div>
+                {/* Zones given their own colour are listed by code under the kind. */}
+                {c.kind === "zone" && topLevel.filter((l) => l.kind === "zone" && l.color).map((zn) => (
+                  <div key={zn.id} style={{ display: "flex", alignItems: "center", gap: 7, paddingLeft: 12 }}>
+                    <span style={{ width: 14, height: 10, flex: "none", border: `1px dashed ${zn.color}`, background: `color-mix(in srgb,${zn.color} 12%,#fff)` }} />
+                    <span style={{ color: `color-mix(in srgb,${zn.color} 80%,var(--color-text))`, fontFamily: "var(--font-heading)", letterSpacing: ".06em" }}>{zn.code ?? zn.name}</span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -1729,6 +1774,35 @@ export function BlueprintCanvas({
                 )}
               </div>
             </div>
+
+            {selected.kind === "zone" && (
+              <div>
+                <div style={{ fontFamily: "var(--font-heading)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)", marginBottom: 7 }}>
+                  {t("zoneColor")}
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={() => commit({ color: null })}
+                    disabled={busy}
+                    title={t("zoneColorDefault")}
+                    aria-pressed={!selected.color}
+                    style={{ width: 24, height: 24, padding: 0, cursor: "pointer", background: "#fff", border: `1px dashed ${KIND_COLOR.zone}`, outline: !selected.color ? "2px solid var(--color-accent)" : undefined, outlineOffset: 1 }}
+                  />
+                  {ZONE_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => commit({ color: c })}
+                      disabled={busy}
+                      title={c}
+                      aria-pressed={selected.color === c}
+                      style={{ width: 24, height: 24, padding: 0, cursor: "pointer", background: `color-mix(in srgb,${c} 18%,#fff)`, border: `1px dashed ${c}`, outline: selected.color === c ? "2px solid var(--color-accent)" : undefined, outlineOffset: 1 }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {LOCATION_TYPES[selected.kind as LocationKind].spatial === "store" && (
               <div>

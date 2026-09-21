@@ -773,6 +773,30 @@ inflating the count and skipping codes (a zone's second rack came out `"A-08"` i
 `"A-02"`). Templates create multiple racks in one zone in quick succession, which surfaced it
 immediately; fixed by requiring the remainder after the stem to be pure digits.
 
+### Zone colours, and smart guides
+
+**Zone colours.** `locations.color` (nullable `#rrggbb`, migration `0014`) lets a zone carry
+its own colour the way WMS heat-maps tint A/B/C differently: the zone's dashed outline, a 6%
+wash of its floor and its label all take the colour, and the legend lists coloured zones by
+code under the ZONE row. Zones only — the server rejects the field on any other kind and
+accepts only one of the eight `ZONE_COLORS` presets (the kind hues plus a few, all dark enough
+to carry a label; a free colour picker would produce unreadable labels and clash with the kind
+palette). The inspector shows the presets as swatches plus a "default" swatch that writes
+`null`; `commit()`'s patch type gained `null` for exactly this. Duplicate and undo-restore carry
+the colour. Storage and fixtures keep their kind colours — the whole point of the kind palette
+is that a rack is always rack-blue wherever it stands.
+
+**Smart guides.** Grid snap alone leaves racks a quarter-metre off each other; `alignSnap()`
+in `blueprint-types.ts` adds Figma-style alignment on top of it: while an object is moved, its
+left/centre/right and top/centre/bottom are compared with the edges and centres of every other
+top-level object, and the nearest within ~6 screen px (`ALIGN_PX / z`, so the feel is constant
+across zoom) pulls the whole box onto that line; while resizing, only the far edges snap and
+the size changes. The lines that made it snap are returned as `guides` and drawn as red dashed
+hairlines across the floor for the duration of the drag (`computeDrag()` now returns
+`{ box, guides }`; the old `computeDragBox()` is a thin wrapper). Excluded from the candidates:
+the dragged object and its own bay children. An opening's wall snap takes precedence and
+shows no guides — the wall *is* the guide.
+
 ### "Build from your building": the parametric layout wizard
 
 The fixed starter templates are one drawing each; the pilot customer's ask was that the

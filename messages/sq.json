@@ -687,7 +687,9 @@
       "couldntUndo": "Nuk u zhbë dot",
       "couldntRedo": "Nuk u ribë dot",
       "couldntSaveFloor": "Planimetria nuk u ruajt dot",
-      "couldntApplyTemplate": "Shablloni nuk u aplikua dot"
+      "couldntApplyTemplate": "Shablloni nuk u aplikua dot",
+      "colorZonesOnly": "Vetëm zonat mund të ngjyrosen",
+      "badColor": "Zgjidh një nga ngjyrat e ofruara"
     },
     "viewOnly": "Vetëm shikim",
     "viewOnlyHint": "Punëtorët mund të kërkojnë dhe lëvizin stokun, por jo të ndryshojnë planimetrinë. Pyet një menaxher ose administrator nëse diçka duhet ndryshuar.",
@@ -773,7 +775,9 @@
         "generate": "Gjenero",
         "replace": "Zëvendëso skemën"
       }
-    }
+    },
+    "zoneColor": "Ngjyra e zonës",
+    "zoneColorDefault": "Parazgjedhur"
   },
   "bin": {
     "kicker": "Kuti",

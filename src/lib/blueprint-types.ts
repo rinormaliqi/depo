@@ -133,6 +133,70 @@ export function bayCode(parentCode: string, level: number, bay: number, totalLev
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Smart guides
+// ─────────────────────────────────────────────────────────────────────────
+
+// Zone colours a user can pick from: the kind hues plus a few more, all
+// dark enough to carry a label. Stored as hex so the map is self-contained.
+export const ZONE_COLORS = ["#5980a6", "#14877a", "#2f7a4f", "#b08a2e", "#d9822b", "#c23b2e", "#7b4fb0", "#5d5d60"] as const;
+
+export function isZoneColor(v: string) {
+  return /^#[0-9a-f]{6}$/i.test(v);
+}
+
+export type Guides = { x?: number; y?: number };
+
+// Figma-style alignment: a box being moved or resized snaps its edges and
+// centre to the edges and centres of the other objects when they come
+// within `thresholdM`, on top of the plain grid snap — so racks line up
+// with each other and with the walls, not just with the 0.25 m grid. Returns
+// the adjusted box and the lines that made it snap, for the canvas to draw.
+// Moving snaps left/centre/right (and top/centre/bottom) and shifts the
+// whole box; resizing only snaps the far edges and changes the size.
+export function alignSnap(box: Box, others: Box[], thresholdM: number, mode: "move" | "resize"): { box: Box; guides: Guides } {
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (const o of others) {
+    xs.push(o.xM, o.xM + o.widthM, o.xM + o.widthM / 2);
+    ys.push(o.yM, o.yM + o.heightM, o.yM + o.heightM / 2);
+  }
+  const nearest = (value: number, candidates: number[]) => {
+    let best: { c: number; d: number } | null = null;
+    for (const c of candidates) {
+      const d = Math.abs(c - value);
+      if (d <= thresholdM && (!best || d < best.d)) best = { c, d };
+    }
+    return best;
+  };
+
+  const out: Box = { ...box };
+  const guides: Guides = {};
+
+  if (mode === "move") {
+    const probesX = [box.xM, box.xM + box.widthM / 2, box.xM + box.widthM];
+    let bestX: { c: number; d: number; shift: number } | null = null;
+    for (const p of probesX) {
+      const n = nearest(p, xs);
+      if (n && (!bestX || n.d < bestX.d)) bestX = { ...n, shift: n.c - p };
+    }
+    if (bestX) { out.xM = round2(box.xM + bestX.shift); guides.x = bestX.c; }
+    const probesY = [box.yM, box.yM + box.heightM / 2, box.yM + box.heightM];
+    let bestY: { c: number; d: number; shift: number } | null = null;
+    for (const p of probesY) {
+      const n = nearest(p, ys);
+      if (n && (!bestY || n.d < bestY.d)) bestY = { ...n, shift: n.c - p };
+    }
+    if (bestY) { out.yM = round2(box.yM + bestY.shift); guides.y = bestY.c; }
+  } else {
+    const nx = nearest(box.xM + box.widthM, xs);
+    if (nx && nx.c - box.xM >= 0.3) { out.widthM = round2(nx.c - box.xM); guides.x = nx.c; }
+    const ny = nearest(box.yM + box.heightM, ys);
+    if (ny && ny.c - box.yM >= 0.3) { out.heightM = round2(ny.c - box.yM); guides.y = ny.c; }
+  }
+  return { box: out, guides };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Openings sit in walls
 // ─────────────────────────────────────────────────────────────────────────
 

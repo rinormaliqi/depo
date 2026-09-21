@@ -773,6 +773,38 @@ inflating the count and skipping codes (a zone's second rack came out `"A-08"` i
 `"A-02"`). Templates create multiple racks in one zone in quick succession, which surfaced it
 immediately; fixed by requiring the remainder after the stem to be pure digits.
 
+### The underlay: tracing over the real drawing
+
+The most direct way from a real building to a digital plan, and what every floor-plan editor
+offers: put the existing drawing under the canvas and draw over it. `facility_underlays`
+(migration `0015`) holds one image per facility — the bytes themselves, as `bytea` in Postgres
+rather than in a blob store: a depot's plan is ~0.3–1 MB, there's one of them, and it should
+have no second vendor (token, billing, lifecycle) to outlive. Capped at 4 MB. The bytes are
+served by `GET /api/builder/underlay/[facilityId]` (same ownership check as the builder's
+actions, `private, immutable` cache keyed on the `updatedAt` version in the URL) and uploaded
+by `POST` on the same route as `FormData` — a route handler, not a server action, because an
+`<img>` fetches the former and the latter's body limit is 1 MB. `getBlueprint()` carries only
+the metadata (`UnderlayMeta`: pixel size, scale, offset, opacity, visibility, version), so a
+reload never ships the image. The client-safe half (types, limits, URL, calibration maths)
+lives in `src/lib/underlay-shared.ts`; `src/lib/underlay.ts` is server-only.
+
+Files are normalised in the browser before upload (`toUploadable()` in `underlay-panel.tsx`):
+a PDF's first page is rasterised with pdf.js to ≤ 2500 px on its long side (so the server never
+parses PDFs), an oversized photo or scan is downscaled to the same, a small PNG/JPEG/WebP goes
+as-is. A new upload lands fitted to the floor's width at the top-left — a sensible first
+guess — keeping the previous opacity and visibility.
+
+**Two-point calibration.** `scale` is metres per image pixel. "Calibrate scale" puts the
+canvas in a capture-phase click mode (crosshair, `Esc` cancels): two clicks on the drawing —
+a wall length, a door width, anything the user knows the real size of — then the real distance
+in metres. `calibrateUnderlay()` computes the new scale from the pixel distance between the two
+points and moves the offset so the **first** clicked point stays exactly where it was (the user
+pinned it; only the rest of the drawing stretches). After calibration the drawing usually
+reaches past the envelope (margins, title block), so it renders inside a clipping box the size
+of the floor, at `zIndex 0` under the grid objects, `pointer-events: none`. The panel also has
+an opacity slider, a show/hide toggle, numeric offsets and "remove"; read-only viewers see the
+drawing if it's visible but none of the controls.
+
 ### Zone colours, and smart guides
 
 **Zone colours.** `locations.color` (nullable `#rrggbb`, migration `0014`) lets a zone carry

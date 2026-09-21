@@ -10,6 +10,7 @@ import {
   index,
   jsonb,
   type AnyPgColumn,
+  customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -426,3 +427,32 @@ export const rateLimitEvents = pgTable(
   },
   (table) => [index("rate_limit_events_key_idx").on(table.key, table.createdAt)],
 );
+
+// Raw bytes — drizzle 0.45 has no built-in bytea; postgres.js maps Buffer ↔ bytea.
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
+// The real building's drawing, traced over in the builder: one image per
+// facility (a PDF is rasterised to PNG client-side before upload), stored
+// here rather than in a blob store so a depot's plan has no second vendor
+// to outlive. `scale` is metres per image pixel and the offset is where the
+// image's top-left sits on the floor — both set by the two-point
+// calibration in the builder, defaulting to "fit the floor's width".
+export const facilityUnderlays = pgTable("facility_underlays", {
+  facilityId: uuid("facility_id")
+    .primaryKey()
+    .references(() => facilities.id, { onDelete: "cascade" }),
+  mimeType: text("mime_type").notNull(),
+  data: bytea("data").notNull(),
+  widthPx: integer("width_px").notNull(),
+  heightPx: integer("height_px").notNull(),
+  scale: real("scale").notNull(),
+  offsetXM: real("offset_x_m").notNull().default(0),
+  offsetYM: real("offset_y_m").notNull().default(0),
+  opacity: real("opacity").notNull().default(0.6),
+  visible: boolean("visible").notNull().default(true),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});

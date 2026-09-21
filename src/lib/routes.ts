@@ -24,8 +24,12 @@ export const publicPrefixes = [
 // Every top-level app route. src/tests/routes.test.ts checks that each
 // directory under src/app with a page is either public or listed here,
 // so a new route can't ship unprotected by forgetting this list.
+// /api/builder is the underlay image route: it checks ownership itself, but
+// an unsigned request should still be bounced rather than 404 — nothing
+// under it is ever meant to be reached without a session.
 export const protectedPrefixes = [
   "/billing", "/builder", "/internal", "/items", "/labels", "/metrics", "/scanner", "/stock", "/team", "/verify-email", "/welcome", "/start", "/account",
+  "/api/builder",
 ];
 
 export function routeAccess(pathname: string): "public" | "protected" | "unknown" {

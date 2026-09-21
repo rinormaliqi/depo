@@ -19,9 +19,14 @@ test("every top-level route under src/app is either public or protected — neve
     if (publicPaths.has(path)) return false;
     if (publicPrefixes.some((p) => path.startsWith(p.replace(/\/$/, "")))) return false;
     if (protectedPrefixes.includes(path)) return false;
-    // /api/* is classified per sub-route (auth and Paysera public, the rest
-    // would be protected) — nothing else exists under it today.
-    if (path === "/api") return readdirSync(join(appDir, "api")).some((n) => !["auth", "billing"].includes(n));
+    // /api/* is classified per sub-route: each directory under it must be a
+    // public prefix (auth, Paysera) or a protected one (builder's underlay).
+    if (path === "/api") {
+      return readdirSync(join(appDir, "api")).some((n) => {
+        const sub = `/api/${n}`;
+        return !publicPrefixes.some((p) => p.startsWith(sub)) && !protectedPrefixes.includes(sub);
+      });
+    }
     return true;
   });
   assert.deepEqual(unclassified, [], `add these to src/lib/routes.ts: ${unclassified.join(", ")}`);
@@ -32,6 +37,7 @@ test("routeAccess classifies the cases the middleware relies on", () => {
   assert.equal(routeAccess("/robots.txt"), "public");
   assert.equal(routeAccess("/invite/abc"), "public");
   assert.equal(routeAccess("/api/auth/session"), "public");
+  assert.equal(routeAccess("/api/builder/underlay/abc"), "protected");
   assert.equal(routeAccess("/builder"), "protected");
   assert.equal(routeAccess("/builder/bin/123"), "protected");
   assert.equal(routeAccess("/builderx"), "unknown");

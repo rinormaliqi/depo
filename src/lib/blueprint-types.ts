@@ -352,9 +352,15 @@ export interface TemplateEntitySpec {
   heightM: number;
   bays: number;
   levels: number;
+  // A functional zone's own label and colour ("RECEIVING", green) — the
+  // flow templates name what each area is for, not just where it is.
+  name?: string;
+  color?: string;
 }
 
-export const TEMPLATE_KEYS = ["simple", "depotVertical", "depotHorizontal"] as const;
+// blank clears the scheme; the two flow layouts are the standard shapes a
+// depot takes around its inbound → storage → outbound flow.
+export const TEMPLATE_KEYS = ["blank", "flowI", "flowU"] as const;
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
 // Realistic picking-aisle clearance between rack rows/columns, and the
@@ -466,13 +472,6 @@ function zonesInArea(
 
 function floorMargin(floorW: number, floorH: number) {
   return Math.max(0.6, round2(Math.min(floorW, floorH) * 0.03));
-}
-
-// The fixed starter depots: walled perimeter, 4 zones of two-level, 6-bay racking.
-function buildDepot(floorW: number, floorH: number, orientation: "vertical" | "horizontal"): TemplateEntitySpec[] {
-  const margin = floorMargin(floorW, floorH);
-  const area: Box = { xM: margin, yM: margin, widthM: round2(floorW - 2 * margin), heightM: round2(floorH - 2 * margin) };
-  return [...perimeterWalls(floorW, floorH), ...zonesInArea(area, orientation, 4, 2, 6)];
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -588,28 +587,127 @@ export interface TemplateOptions {
   // out when walls already exist so it doesn't draw a second set.
   obstacles?: Box[];
   hasWalls?: boolean;
+  labels?: TemplateLabels;
 }
 
 export function buildTemplate(key: TemplateKey, floorW: number, floorH: number, opts: TemplateOptions = {}): TemplateEntitySpec[] {
-  let specs = buildTemplateSpecs(key, floorW, floorH);
+  let specs = buildTemplateSpecs(key, floorW, floorH, opts.labels ?? DEFAULT_LABELS);
   if (opts.hasWalls) specs = specs.filter((s) => s.kind !== "wall");
-  return avoidObstacles(specs, opts.obstacles ?? []);
+  // The template's own docks and doors are obstacles to its own racks too.
+  const own = specs.filter((s) => LOCATION_TYPES[s.kind].spatial === "fixture" && s.kind !== "wall");
+  return avoidObstacles(specs, [...own, ...(opts.obstacles ?? [])]);
 }
 
-function buildTemplateSpecs(key: TemplateKey, floorW: number, floorH: number): TemplateEntitySpec[] {
-  if (key === "depotVertical") return buildDepot(floorW, floorH, "vertical");
-  if (key === "depotHorizontal") return buildDepot(floorW, floorH, "horizontal");
+// Labels for the functional zones a flow template draws; the server passes
+// the user's language, the seed and tests take the English defaults.
+export type TemplateLabels = { receiving: string; dispatch: string; office: string };
+const DEFAULT_LABELS: TemplateLabels = { receiving: "RECEIVING", dispatch: "DISPATCH", office: "OFFICE" };
 
-  const rackH = LOCATION_TYPES.rack.h;
-  const zone = { xM: round2(0.05 * floorW), yM: round2(0.08 * floorH), widthM: round2(0.9 * floorW), heightM: round2(0.84 * floorH) };
-  const rackW = round2(0.35 * floorW);
-  const rackX = round2(zone.xM + 0.08 * floorW);
-  const gapY = Math.max(0.6, round2(0.1 * floorH));
-  return [
-    { kind: "zone", ...zone, bays: 1, levels: 1 },
-    { kind: "rack", xM: rackX, yM: round2(zone.yM + gapY), widthM: rackW, heightM: rackH, bays: 6, levels: 1 },
-    { kind: "rack", xM: rackX, yM: round2(zone.yM + gapY * 2 + rackH), widthM: rackW, heightM: rackH, bays: 6, levels: 1 },
-  ];
+const RECEIVING_COLOR = "#2f7a4f";
+const DISPATCH_COLOR = "#d9822b";
+const OFFICE_COLOR = "#5d5d60";
+
+const fixtureSpec = (kind: LocationKind, box: Box): TemplateEntitySpec => ({ kind, ...box, bays: 1, levels: 1 });
+const zoneSpec = (box: Box, name: string, color: string): TemplateEntitySpec => ({ kind: "zone", ...box, bays: 1, levels: 1, name, color });
+
+// How deep the inbound / outbound staging strip is: room to set pallets
+// down off a truck, scaled to the hall but never a corridor nor half the floor.
+function stagingDepth(along: number) {
+  return round2(Math.min(6, Math.max(2.6, along * 0.13)));
+}
+function officeSize(floorW: number, floorH: number) {
+  return { widthM: round2(Math.min(8, Math.max(4, floorW * 0.16))), heightM: round2(Math.min(5, Math.max(3, floorH * 0.18))) };
+}
+// Storage zones are horizontal bands, one rack row each: as many as fit at
+// a realistic row pitch, at least one.
+function bandCount(heightM: number) {
+  return Math.max(1, Math.min(8, Math.round(heightM / 4.5)));
+}
+function columnCount(widthM: number) {
+  return Math.max(1, Math.min(8, Math.round(widthM / 7)));
+}
+
+// I-flow (straight-through): trucks unload on one wall and load on the
+// opposite one, goods cross the hall once. Receiving docks + staging on the
+// left, storage bands in the middle, dispatch staging + docks on the right,
+// office above the receiving staging with the personnel entrance beside it.
+function buildFlowI(floorW: number, floorH: number, labels: TemplateLabels): TemplateEntitySpec[] {
+  const t = LOCATION_TYPES.wall.h;
+  const m = floorMargin(floorW, floorH);
+  const dock = LOCATION_TYPES.dock;
+  const docks = Math.max(1, Math.min(4, Math.round(floorH / 8)));
+  const staging = stagingDepth(floorW);
+  const office = officeSize(floorW, floorH);
+  const specs: TemplateEntitySpec[] = [...perimeterWalls(floorW, floorH)];
+
+  // Docks sit just inside the wall; the staging strip starts past them.
+  specs.push(...alongWall(floorW, floorH, "left", docks, dock.w, dock.h).map((b) => fixtureSpec("dock", b)));
+  specs.push(...alongWall(floorW, floorH, "right", docks, dock.w, dock.h).map((b) => fixtureSpec("dock", b)));
+
+  const inX = round2(t + dock.h + DOCK_STAGING / 2);
+  const outX = round2(floorW - t - dock.h - DOCK_STAGING / 2 - staging);
+  // The office shares the receiving column's width so the storage starts on one clean line.
+  const officeBox: Box = { xM: inX, yM: m, widthM: staging, heightM: office.heightM };
+  specs.push(zoneSpec(officeBox, labels.office, OFFICE_COLOR));
+  const [door] = alongWall(floorW, floorH, "top", 1, LOCATION_TYPES.door.w, t, [(officeBox.xM + officeBox.widthM + 0.8) / floorW]);
+  specs.push(fixtureSpec("door", door));
+
+  const stagingTop = round2(officeBox.yM + officeBox.heightM + 1.2);
+  specs.push(zoneSpec({ xM: inX, yM: stagingTop, widthM: staging, heightM: round2(floorH - m - stagingTop) }, labels.receiving, RECEIVING_COLOR));
+  specs.push(zoneSpec({ xM: outX, yM: m, widthM: staging, heightM: round2(floorH - 2 * m) }, labels.dispatch, DISPATCH_COLOR));
+
+  const aisle = 1.8;
+  const storage: Box = {
+    xM: round2(inX + staging + aisle),
+    yM: m,
+    widthM: 0,
+    heightM: round2(floorH - 2 * m),
+  };
+  storage.widthM = round2(outX - aisle - storage.xM);
+  if (storage.widthM > 3) specs.push(...zonesInArea(storage, "horizontal", bandCount(storage.heightM), 2, 6));
+  return specs;
+}
+
+// U-flow: trucks unload and load on the same wall (the most common real
+// layout — one yard, one set of doors). Receiving staging on the left half
+// above its docks, dispatch staging on the right half, storage in columns
+// across the rest of the hall, office in the far corner with the entrance.
+function buildFlowU(floorW: number, floorH: number, labels: TemplateLabels): TemplateEntitySpec[] {
+  const t = LOCATION_TYPES.wall.h;
+  const m = floorMargin(floorW, floorH);
+  const dock = LOCATION_TYPES.dock;
+  const perSide = Math.max(1, Math.min(3, Math.round(floorW / 16)));
+  const staging = stagingDepth(floorH);
+  const office = officeSize(floorW, floorH);
+  const specs: TemplateEntitySpec[] = [...perimeterWalls(floorW, floorH)];
+
+  // Inbound docks along the left half of the bottom wall, outbound along the right half.
+  const half = floorW / 2;
+  const inbound = Array.from({ length: perSide }, (_, i) => ((i + 1) / (perSide + 1)) * (half / floorW));
+  const outbound = inbound.map((f) => 0.5 + f);
+  specs.push(...alongWall(floorW, floorH, "bottom", perSide, dock.w, dock.h, inbound).map((b) => fixtureSpec("dock", b)));
+  specs.push(...alongWall(floorW, floorH, "bottom", perSide, dock.w, dock.h, outbound).map((b) => fixtureSpec("dock", b)));
+
+  const stagingY = round2(floorH - t - dock.h - DOCK_STAGING / 2 - staging);
+  const gap = 1.2;
+  specs.push(zoneSpec({ xM: m, yM: stagingY, widthM: round2(half - m - gap / 2), heightM: staging }, labels.receiving, RECEIVING_COLOR));
+  specs.push(zoneSpec({ xM: round2(half + gap / 2), yM: stagingY, widthM: round2(half - m - gap / 2), heightM: staging }, labels.dispatch, DISPATCH_COLOR));
+
+  const officeBox: Box = { xM: round2(floorW - m - office.widthM), yM: m, widthM: office.widthM, heightM: office.heightM };
+  specs.push(zoneSpec(officeBox, labels.office, OFFICE_COLOR));
+  const [door] = alongWall(floorW, floorH, "right", 1, LOCATION_TYPES.door.w, t, [(officeBox.yM + officeBox.heightM + 0.8) / floorH]);
+  specs.push(fixtureSpec("door", door));
+
+  const aisle = 1.8;
+  const storage: Box = { xM: m, yM: m, widthM: round2(officeBox.xM - aisle - m), heightM: round2(stagingY - aisle - m) };
+  if (storage.widthM > 3 && storage.heightM > 3) specs.push(...zonesInArea(storage, "vertical", columnCount(storage.widthM), 2, 6));
+  return specs;
+}
+
+function buildTemplateSpecs(key: TemplateKey, floorW: number, floorH: number, labels: TemplateLabels): TemplateEntitySpec[] {
+  if (key === "flowI") return buildFlowI(floorW, floorH, labels);
+  if (key === "flowU") return buildFlowU(floorW, floorH, labels);
+  return [];
 }
 
 // ─────────────────────────────────────────────────────────────────────────

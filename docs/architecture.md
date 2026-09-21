@@ -852,6 +852,34 @@ hairlines across the floor for the duration of the drag (`computeDrag()` now ret
 the dragged object and its own bay children. An opening's wall snap takes precedence and
 shows no guides — the wall *is* the guide.
 
+### Standard layouts: Blank, I-flow, U-flow
+
+The three original starters (*simple*, *depotVertical*, *depotHorizontal*) were rack grids in
+a box — once the wizard existed they added nothing, and a pilot customer's own reference
+drawing (an EdrawMax warehouse layout: RECEIVING docks → receiving staging → racking →
+completed-order staging → DISPATCH docks, OFFICE in a corner, ENTRY/EXIT doors) made the
+point that a real depot is organised around **flow**, not around a grid. `TEMPLATE_KEYS` is
+now `blank | flowI | flowU`:
+
+- **Blank** builds nothing — through the normal `applyGenerated()` pipeline, so it clears the
+  scheme and keeps the building like every template. Hidden on an already-empty floor.
+- **I-flow** (`buildFlowI`, straight-through): docks on the left and right walls, a
+  *RECEIVING* staging column past the inbound docks, storage bands (one rack row each,
+  `bandCount()`) across the middle, a *DISPATCH* staging column before the outbound docks;
+  office above the receiving column with the personnel door beside it. Goods cross the hall
+  once.
+- **U-flow** (`buildFlowU`): inbound docks on the left half of the bottom wall, outbound on
+  the right half, each with its staging strip above; storage in columns (`columnCount()`)
+  across the rest; office in the far top-right corner with the door on the right wall. The
+  most common real layout — one yard, one set of doors.
+
+Both scale with the floor (`stagingDepth()`, `officeSize()` clamped to sane metres), reuse
+`zonesInArea()`/`alongWall()` from the wizard so the three generators can't drift, and treat
+their own docks and doors as obstacles to their own racks. Functional zones carry a **name and
+colour** (`TemplateEntitySpec.name/color`, new; `createEntityAt` takes `override.name`), with
+the labels passed in from the server in the user's language (`builder.templateZone`) and
+English defaults for the seed and tests. The wizard is untouched and stays first in the dialog.
+
 ### "Build from your building": the parametric layout wizard
 
 The fixed starter templates are one drawing each; the pilot customer's ask was that the

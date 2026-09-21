@@ -571,23 +571,23 @@
     },
     "emptyFloorTitle": "PLANIMETRI BOSHE",
     "emptyFloorBody": "Shto një zonë nga paleta për të përcaktuar seksionin tënd të parë, pastaj mbushe me rafte, platforma dhe pozicione paletash.",
-    "templatePrompt": "ose fillo nga një shabllon:",
+    "templatePrompt": "ose nis nga një planimetri standarde:",
     "template": {
-      "simple": {
-        "name": "Dhomë e thjeshtë ruajtjeje",
-        "description": "Një zonë, dy rafte — e mirë për një dhomë të vetme ose një oborr të vogël."
+      "blank": {
+        "name": "Planimetri bosh",
+        "description": "Fshin zonat, korridoret dhe ruajtjen. Muret, doket, dyert dhe shtyllat mbeten."
       },
-      "depotVertical": {
-        "name": "Depo e plotë — zona vertikale",
-        "description": "4 zona të muruara njëra pranë tjetrës, secila me 3 rafte paletash me 2 nivele, të ndara nga korridore."
+      "flowI": {
+        "name": "Opsioni 1 · Rrjedhë e drejtë (I)",
+        "description": "Kamionët shkarkojnë në një mur dhe ngarkojnë në murin përballë; malli e kalon hallën një herë. Pranim → rreshta raftesh → dërgesë, zyra pranë hyrjes."
       },
-      "depotHorizontal": {
-        "name": "Depo e plotë — zona horizontale",
-        "description": "E njëjta depo me 4 zona me rafte, e vendosur në breza horizontalë në vend të shiritave vertikalë."
+      "flowU": {
+        "name": "Opsioni 2 · Rrjedhë U",
+        "description": "Doket e pranimit dhe të dërgesës në të njëjtin mur, secila me brezin e vet; ruajtja në kolona përmes hallës, zyra në qoshen e largët. Planimetria reale më e zakonshme."
       }
     },
     "templatesButton": "Shabllone",
-    "templatesReplaceHint": "Zgjedhja e një shablloni zëvendëson gjithçka që ndodhet aktualisht në këtë planimetri.",
+    "templatesReplaceHint": "Zgjedhja e një planimetrie zëvendëson zonat, korridoret dhe ruajtjen në këtë planimetri. Objekti — mure, doke, dyer, shtylla — mbetet.",
     "addSector": "+ Shto sektor",
     "addSectorHint": "Shton edhe një zonë, duke zvogëluar ato ekzistueset për t'i bërë vend.",
     "level": "Niveli",
@@ -853,7 +853,12 @@
       },
       "done": "{rows} objekte u vizatuan, {bins} kuti u krijuan"
     },
-    "importLink": "Importo listë lokacionesh (Excel / CSV)"
+    "importLink": "Importo listë lokacionesh (Excel / CSV)",
+    "templateZone": {
+      "receiving": "PRANIM",
+      "dispatch": "DËRGESË",
+      "office": "ZYRA"
+    }
   },
   "bin": {
     "kicker": "Kuti",

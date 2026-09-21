@@ -278,7 +278,7 @@ async function createEntityAt(
   color: string | null = null,
   // An import supplies the code and (optionally) the parent zone itself
   // instead of deriving them from the floor.
-  override: { code?: string; parentId?: string | null } = {},
+  override: { code?: string; parentId?: string | null; name?: string } = {},
 ) {
   const type = LOCATION_TYPES[kind];
   const existing = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
@@ -299,7 +299,7 @@ async function createEntityAt(
       facilityId,
       parentId: containingZone?.id ?? null,
       kind,
-      name: tKind(kind).toUpperCase(),
+      name: override.name ?? tKind(kind).toUpperCase(),
       code,
       isBin: isLeaf,
       xM: box.xM,
@@ -351,7 +351,9 @@ async function createEntityImpl(
 }
 
 async function applyTemplateImpl(facilityId: string, templateKey: TemplateKey, replace: boolean) {
-  await applyGenerated(facilityId, replace, (w, h, opts) => buildTemplate(templateKey, w, h, opts));
+  const t = await getTranslations("builder.templateZone");
+  const labels = { receiving: t("receiving"), dispatch: t("dispatch"), office: t("office") };
+  await applyGenerated(facilityId, replace, (w, h, opts) => buildTemplate(templateKey, w, h, { ...opts, labels }));
 }
 
 // The wizard: same pipeline as a fixed template — keep the building, replace
@@ -437,6 +439,9 @@ async function applyGenerated(
       { xM: spec.xM, yM: spec.yM, widthM: spec.widthM, heightM: spec.heightM },
       spec.bays,
       spec.levels,
+      0,
+      spec.color ?? null,
+      spec.name ? { name: spec.name } : {},
     );
     if (created.kind === "zone") newZones.push(created);
   }

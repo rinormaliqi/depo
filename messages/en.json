@@ -571,23 +571,23 @@
     },
     "emptyFloorTitle": "EMPTY FLOOR",
     "emptyFloorBody": "Add a zone from the palette to block out your first section, then fill it with racks, platforms and pallet positions.",
-    "templatePrompt": "or start from a template:",
+    "templatePrompt": "or start from a standard layout:",
     "template": {
-      "simple": {
-        "name": "Simple storage room",
-        "description": "One zone, two racks — good for a single room or small yard."
+      "blank": {
+        "name": "Blank floor",
+        "description": "Clears the zones, aisles and storage. Walls, docks, doors and columns stay."
       },
-      "depotVertical": {
-        "name": "Full depot — vertical zones",
-        "description": "4 walled zones side by side, each with 3 two-level pallet racks, separated by aisles."
+      "flowI": {
+        "name": "Option 1 · Straight-through (I-flow)",
+        "description": "Trucks unload on one wall and load on the opposite one; goods cross the hall once. Receiving staging → rack rows → dispatch staging, office by the entrance."
       },
-      "depotHorizontal": {
-        "name": "Full depot — horizontal zones",
-        "description": "The same 4-zone racked depot, laid out in horizontal bands instead of vertical strips."
+      "flowU": {
+        "name": "Option 2 · U-flow",
+        "description": "Receiving and dispatch docks on the same wall, each with its staging strip; storage in columns across the hall, office in the far corner. The most common real layout."
       }
     },
     "templatesButton": "Templates",
-    "templatesReplaceHint": "Choosing a template replaces everything currently on this floor.",
+    "templatesReplaceHint": "Choosing a layout replaces the zones, aisles and storage on this floor. The building — walls, docks, doors, columns — stays.",
     "addSector": "+ Add sector",
     "addSectorHint": "Adds one more zone, shrinking the existing ones to make room.",
     "level": "Level",
@@ -853,7 +853,12 @@
       },
       "done": "{rows} objects drawn, {bins} bins created"
     },
-    "importLink": "Import a location list (Excel / CSV)"
+    "importLink": "Import a location list (Excel / CSV)",
+    "templateZone": {
+      "receiving": "RECEIVING",
+      "dispatch": "DISPATCH",
+      "office": "OFFICE"
+    }
   },
   "bin": {
     "kicker": "Bin",

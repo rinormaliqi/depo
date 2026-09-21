@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
+import { KIND_APPEARANCE, kindLabelColor } from "./kind-appearance";
 import { LOCATION_TYPES, TEMPLATE_KEYS, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
 import type { FacilityLevel } from "@/lib/levels";
@@ -44,6 +45,7 @@ type Facility = { id: string; name: string; widthM: number; heightM: number };
 // edit mode means a click never nudges an object; Esc drops a drag.
 export type CanvasMode = "navigate" | "edit" | "inspect";
 const MODE_STORAGE_KEY = "smartdepo.canvas.mode";
+const LEGEND_STORAGE_KEY = "smartdepo.canvas.legend";
 const DRAG_THRESHOLD_PX = 4;
 type Box = { xM: number; yM: number; widthM: number; heightM: number };
 
@@ -75,65 +77,6 @@ const PALETTE_KINDS: LocationKind[] = [
   "dock",
   "wall",
 ];
-
-// A distinct look per kind, styled after architectural drafting conventions
-// (different hatch/fill per material or fixture type, solid poché for
-// walls) rather than one generic box — so the floor plan reads as an actual
-// depot layout, not an undifferentiated grid of rectangles. Shared between
-// the palette swatches and the canvas so the palette doubles as a legend.
-const KIND_APPEARANCE: Record<LocationKind, React.CSSProperties> = {
-  zone: {
-    border: "1px dashed var(--color-accent-500)",
-    background: "transparent",
-  },
-  aisle: {
-    border: "1px dashed var(--color-accent-500)",
-    background:
-      "repeating-linear-gradient(45deg,transparent 0 7px,color-mix(in srgb,var(--color-text) 5%,transparent) 7px 8px)",
-  },
-  // Shelving frame: a light tint with heavy end-posts (the vertical steel
-  // uprights a real pallet rack is bolted to), thin top/bottom rails.
-  rack: {
-    borderTop: "1px solid var(--color-accent-700)",
-    borderBottom: "1px solid var(--color-accent-700)",
-    borderLeft: "4px solid var(--color-accent-700)",
-    borderRight: "4px solid var(--color-accent-700)",
-    background: "var(--color-neutral-100)",
-  },
-  // Raised deck: a fine crosshatch suggesting a grated/plated platform
-  // surface, distinct from a rack's solid shelf tint.
-  platform: {
-    border: "1px solid var(--color-accent-600)",
-    background:
-      "repeating-linear-gradient(0deg,transparent 0 5px,color-mix(in srgb,var(--color-accent-600) 9%,transparent) 5px 6px)," +
-      "repeating-linear-gradient(90deg,transparent 0 5px,color-mix(in srgb,var(--color-accent-600) 9%,transparent) 5px 6px)",
-  },
-  // Three deck boards, top-down — the classic pallet silhouette.
-  pallet: {
-    border: "1px solid var(--color-accent-500)",
-    backgroundColor: "var(--color-neutral-100)",
-    backgroundImage:
-      "linear-gradient(var(--color-neutral-400) 0 18%,transparent 18% 41%,var(--color-neutral-400) 41% 59%,transparent 59% 82%,var(--color-neutral-400) 82% 100%)",
-  },
-  // A small container: a nested inset border, like a tote sitting in its slot.
-  bin: {
-    border: "1px solid var(--color-accent-400)",
-    background: "#fff",
-    boxShadow: "inset 0 0 0 3px var(--color-bg), inset 0 0 0 4px var(--color-accent-300)",
-  },
-  // Fixture, accent-tinted hatch — a loading door, not a structural wall.
-  dock: {
-    border: "1px solid var(--color-accent-600)",
-    background:
-      "repeating-linear-gradient(-45deg,transparent 0 5px,color-mix(in srgb,var(--color-accent-600) 16%,transparent) 5px 6px)",
-  },
-  // Structural walls are drawn solid (poché), same as on a real blueprint —
-  // the one kind that's genuinely impassable, so it reads as solid, not hollow.
-  wall: {
-    border: "1px solid var(--color-neutral-900)",
-    background: "var(--color-neutral-800)",
-  },
-};
 
 function snap(v: number) {
   return Math.round(v / SNAP) * SNAP;
@@ -219,6 +162,9 @@ export function BlueprintCanvas({
   const [selectedLevel, setSelectedLevel] = useState<number | "all">("all");
   const [zoom, setZoom] = useState(0.8);
   const [grid, setGrid] = useState(true);
+  // The floating legend over the canvas. Open by default: it's the one
+  // place a read-only viewer (no palette) learns what the colours mean.
+  const [legendOpen, setLegendOpen] = useState(true);
   const [busy, setBusy] = useState(false);
   const notify = useNotify();
   const [status, setStatus] = useState<string | null>(null);
@@ -436,6 +382,18 @@ export function BlueprintCanvas({
   }
 
   // ── Mouse modes ────────────────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(LEGEND_STORAGE_KEY) === "closed") setLegendOpen(false);
+    } catch { /* storage unavailable: legend just stays open */ }
+  }, []);
+  function toggleLegend() {
+    setLegendOpen((open) => {
+      try { window.localStorage.setItem(LEGEND_STORAGE_KEY, open ? "closed" : "open"); } catch { /* ignore */ }
+      return !open;
+    });
+  }
+
   const setMode = (m: CanvasMode) => {
     if ((readOnly || narrow) && m === "edit") return;
     setModeState(m);
@@ -1231,6 +1189,7 @@ export function BlueprintCanvas({
           <button className="btn btn-secondary" onClick={() => zoomAt(zoom + 0.1)} style={{ minWidth: 26, padding: "1px 7px" }}>+</button>
           <button className="btn btn-secondary" onClick={fit} style={{ padding: "1px 8px", fontSize: 11, letterSpacing: ".08em" }}>{t("zoomFit")}</button>
           {!mapOnly && <button className="btn btn-ghost" onClick={() => setGrid((g) => !g)} style={{ fontSize: 11, letterSpacing: ".08em" }}>{grid ? t("gridOn") : t("gridOff")}</button>}
+          <button className="btn btn-ghost" onClick={toggleLegend} aria-pressed={legendOpen} style={{ fontSize: 11, letterSpacing: ".08em" }}>{t("legend")}</button>
 
           <div style={{ width: 1, height: 17, background: "var(--color-divider)" }} />
           {!mapOnly && (
@@ -1396,7 +1355,7 @@ export function BlueprintCanvas({
                         display: "flex", alignItems: "baseline", gap: 3,
                         fontFamily: "var(--font-heading)", fontSize: type.spatial === "area" ? 11 : 9,
                         letterSpacing: type.spatial === "area" ? ".14em" : ".1em", whiteSpace: "nowrap",
-                        color: type.spatial === "area" ? "var(--color-accent-700)" : "color-mix(in srgb,var(--color-text) 62%,transparent)",
+                        color: kindLabelColor(e.kind as LocationKind),
                         cursor: "pointer",
                       }}
                     >
@@ -1499,6 +1458,26 @@ export function BlueprintCanvas({
                 </Link>
               </Gate>
             </div>
+          </div>
+        )}
+
+        {legendOpen && composition.length > 0 && (
+          <div
+            aria-label={t("legend")}
+            style={{
+              position: "absolute", left: 10, bottom: 10, zIndex: 8,
+              display: "flex", flexDirection: "column", gap: 4, padding: "7px 9px",
+              background: "color-mix(in srgb,#fff 92%,transparent)", border: "1px solid var(--color-divider)",
+              boxShadow: "var(--shadow-md)", fontSize: 11, pointerEvents: "none",
+            }}
+          >
+            {composition.map((c) => (
+              <div key={c.kind} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <span style={{ width: 18, height: 12, flex: "none", ...KIND_APPEARANCE[c.kind] }} />
+                <span style={{ color: kindLabelColor(c.kind), fontFamily: "var(--font-heading)", letterSpacing: ".06em" }}>{t(`kind.${c.kind}`).toUpperCase()}</span>
+                <span style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums", color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>{c.n}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -1609,8 +1588,11 @@ export function BlueprintCanvas({
             </div>
             {composition.map((c) => (
               <div key={c.kind} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, paddingBottom: 6, borderBottom: "1px solid color-mix(in srgb,var(--color-text) 8%,transparent)" }}>
-                <span style={{ fontSize: 13 }}>{c.label}</span>
-                <span style={{ fontFamily: "var(--font-heading)", fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{c.n}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                  <span style={{ width: 14, height: 10, flex: "none", ...KIND_APPEARANCE[c.kind] }} />
+                  {c.label}
+                </span>
+                <span style={{ fontFamily: "var(--font-heading)", fontSize: 16, fontVariantNumeric: "tabular-nums", color: kindLabelColor(c.kind) }}>{c.n}</span>
               </div>
             ))}
           </div>

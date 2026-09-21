@@ -2,11 +2,12 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import { KIND_APPEARANCE, KIND_COLOR } from "@/app/builder/kind-appearance";
 
 // The landing page's hero is the product's core loop, live: type an item,
 // the bin lights up on a small floor plan. A fixed, hand-drawn depot —
 // two racks, a pallet row, a dock — drawn with the same kind styles the
-// real builder uses (blueprint-canvas.tsx KIND_APPEARANCE), so what a
+// real builder uses (builder/kind-appearance.ts), so what a
 // visitor sees here is what they'd get. Cycles through the catalog on its
 // own until the visitor types, then it's theirs.
 
@@ -43,23 +44,18 @@ const CATALOG: Record<string, Item[]> = {
   ],
 };
 
+// The real builder's kind styles (one colour per kind, see kind-appearance.ts),
+// so the hero's depot is coloured exactly like a customer's own floor plan.
 const KIND_STYLE: Record<Kind, React.CSSProperties> = {
-  zone: { border: "1px dashed var(--color-accent-500)" },
-  rack: {
-    borderTop: "1px solid var(--color-accent-700)", borderBottom: "1px solid var(--color-accent-700)",
-    borderLeft: "4px solid var(--color-accent-700)", borderRight: "4px solid var(--color-accent-700)",
-    background: "var(--color-neutral-100)",
-  },
-  pallets: { border: "1px dashed var(--color-accent-500)" },
-  dock: {
-    border: "1px solid var(--color-accent-600)",
-    background: "repeating-linear-gradient(-45deg,transparent 0 5px,color-mix(in srgb,var(--color-accent-600) 16%,transparent) 5px 6px)",
-  },
+  zone: KIND_APPEARANCE.zone,
+  rack: KIND_APPEARANCE.rack,
+  pallets: { border: `1px dashed ${KIND_COLOR.pallet}` },
+  dock: KIND_APPEARANCE.dock,
 };
 
 const PALLET_BG = {
-  backgroundColor: "var(--color-neutral-100)",
-  backgroundImage: "linear-gradient(var(--color-neutral-400) 0 18%,transparent 18% 41%,var(--color-neutral-400) 41% 59%,transparent 59% 82%,var(--color-neutral-400) 82% 100%)",
+  backgroundColor: KIND_APPEARANCE.pallet.backgroundColor,
+  backgroundImage: KIND_APPEARANCE.pallet.backgroundImage,
 };
 
 export function DemoBlueprint() {

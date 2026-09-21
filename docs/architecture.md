@@ -1015,6 +1015,24 @@ that's genuinely impassable, so it's the one drawn solid instead of hollow. All 
 nothing extra to render and needs no new dependency. The same table drives the palette
 swatches, so the palette doubles as a legend a new user learns while placing objects.
 
+**One colour per kind, and a legend.** The patterns alone weren't enough: every kind sat on
+the same accent-blue ramp, and a pilot customer's verdict was "dock, bin… they all look the
+same". Each kind now owns a hue (`--kind-*` tokens in `ds.css`; `KIND_COLOR` in
+`src/app/builder/kind-appearance.ts`, which also now holds `KIND_APPEARANCE` so the canvas,
+palette, legend and the landing-page demo all draw from one table): zone keeps the structural
+blue and aisle goes neutral — areas stay quiet — while storage and fixtures carry the colour
+(rack indigo, platform violet, pallet timber, bin teal, dock orange, wall near-black). Picked to
+stay apart under deuteranopia; the hatch patterns are kept so a greyscale print still tells them
+apart. An object's on-canvas label is set in a dark shade of its kind's colour
+(`kindLabelColor()`), and the "stocked" fill of a bay cell deliberately stays the one accent
+colour across every kind — "has stock" is a single signal, not a per-kind one.
+
+A floating **legend** (bottom-left of the canvas, toggled from the toolbar, remembered in
+`localStorage`) lists the kinds actually present on the floor with swatch, name and count. It
+exists mainly for the viewers who never see the palette — workers and the phone map — since for
+an editor the palette already is the legend; the inspector's composition rows gained the same
+swatches for the same reason.
+
 One follow-on fix this surfaced: a subdivided rack/platform's bay-grid cells painted opaque
 white, which fully hid the kind's own pattern in exactly the case (multi-bay racks) where it
 mattered most. Unoccupied bay cells now use a translucent wash instead of solid white so the

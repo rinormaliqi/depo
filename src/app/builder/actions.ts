@@ -14,6 +14,7 @@ import {
   intersects,
   isOpening,
   isRotation,
+  isZoneColor,
   LOCATION_TYPES,
   nextCode,
   pillarGridPositions,
@@ -232,6 +233,7 @@ async function createEntityAt(
   bays: number,
   levels: number,
   rotation: Rotation = 0,
+  color: string | null = null,
 ) {
   const type = LOCATION_TYPES[kind];
   const existing = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
@@ -259,6 +261,7 @@ async function createEntityAt(
       widthM: box.widthM,
       heightM: box.heightM,
       rotation,
+      color: kind === "zone" ? color : null,
       bays: type.spatial === "store" ? bays : 1,
       levels: type.spatial === "store" ? levels : 1,
     })
@@ -558,6 +561,7 @@ async function updateEntityImpl(
     bays?: number;
     levels?: number;
     rotation?: number;
+    color?: string | null;
   },
 ) {
   await requirePermission("editLayout");
@@ -590,6 +594,12 @@ async function updateEntityImpl(
   if (patch.rotation !== undefined) {
     if (!isRotation(patch.rotation)) throw new UserError(t("badRotation"));
     values.rotation = patch.rotation;
+  }
+  if (patch.color !== undefined) {
+    // Zones only, a strict #rrggbb or null (back to the kind's default).
+    if (location.kind !== "zone") throw new UserError(t("colorZonesOnly"));
+    if (patch.color !== null && !isZoneColor(patch.color)) throw new UserError(t("badColor"));
+    values.color = patch.color ? patch.color.toLowerCase() : null;
   }
 
   if (
@@ -698,6 +708,7 @@ async function duplicateEntityImpl(id: string) {
     location.bays,
     location.levels,
     isRotation(location.rotation) ? location.rotation : 0,
+    location.color,
   );
   revalidatePath("/builder");
   return created;
@@ -710,7 +721,7 @@ async function duplicateEntityImpl(id: string) {
 // spec instead of an existing row.
 async function restoreEntityImpl(
   facilityId: string,
-  spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number; rotation?: number },
+  spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number; rotation?: number; color?: string | null },
 ) {
   await requirePermission("editLayout");
   const facility = await requireOwnedFacility(facilityId);
@@ -724,6 +735,7 @@ async function restoreEntityImpl(
     spec.bays,
     spec.levels,
     spec.rotation !== undefined && isRotation(spec.rotation) ? spec.rotation : 0,
+    spec.color && isZoneColor(spec.color) ? spec.color : null,
   );
   revalidatePath("/builder");
   return created;
@@ -778,6 +790,7 @@ export async function updateEntity(
     bays?: number;
     levels?: number;
     rotation?: number;
+    color?: string | null;
   },
 ) {
   return attempt(() => updateEntityImpl(id, patch), "updateEntity");
@@ -793,7 +806,7 @@ export async function duplicateEntity(id: string) {
 
 export async function restoreEntity(
   facilityId: string,
-  spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number; rotation?: number },
+  spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number; rotation?: number; color?: string | null },
 ) {
   return attempt(() => restoreEntityImpl(facilityId, spec), "restoreEntity");
 }

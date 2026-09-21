@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { avoidObstacles, bayLayout, buildParametric, buildTemplate, DEFAULT_PARAMETRIC, flip, intersects, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise } from "./blueprint-types";
+import { alignSnap, avoidObstacles, bayLayout, buildParametric, buildTemplate, DEFAULT_PARAMETRIC, flip, intersects, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise } from "./blueprint-types";
 
 describe("rotation", () => {
   it("a quarter turn swaps width and depth about the same centre, on the grid", () => {
@@ -174,5 +174,31 @@ describe("buildParametric", () => {
   it("leaves its perimeter out when the floor already has walls", () => {
     assert.equal(buildParametric(base, 40, 24, { hasWalls: true }).filter((s) => s.kind === "wall").length, 0);
     assert.equal(buildParametric({ ...base, walls: false }, 40, 24).filter((s) => s.kind === "wall").length, 0);
+  });
+});
+
+describe("alignSnap", () => {
+  const rack = { xM: 2, yM: 6, widthM: 8, heightM: 1.2 };
+
+  it("moving snaps a near edge onto another object's edge and reports the line", () => {
+    const r = alignSnap({ xM: 2.15, yM: 3, widthM: 4, heightM: 1.2 }, [rack], 0.2, "move");
+    assert.deepEqual([r.box.xM, r.guides.x], [2, 2]);
+    assert.equal(r.guides.y, undefined);
+  });
+
+  it("centres count too, and the nearest candidate wins", () => {
+    // centre 6.1 vs the rack's centre 6 (d=0.1); left 4.1 vs rack left 2 (too far).
+    const r = alignSnap({ xM: 4.1, yM: 3, widthM: 4, heightM: 1.2 }, [rack], 0.2, "move");
+    assert.deepEqual([r.box.xM, r.guides.x], [4, 6]);
+  });
+
+  it("does nothing outside the threshold", () => {
+    const r = alignSnap({ xM: 2.5, yM: 3, widthM: 4, heightM: 1.2 }, [rack], 0.2, "move");
+    assert.deepEqual(r, { box: { xM: 2.5, yM: 3, widthM: 4, heightM: 1.2 }, guides: {} });
+  });
+
+  it("resizing snaps only the far edges and changes the size, not the position", () => {
+    const r = alignSnap({ xM: 2, yM: 3, widthM: 7.9, heightM: 1.2 }, [rack], 0.2, "resize");
+    assert.deepEqual([r.box.xM, r.box.widthM, r.guides.x], [2, 8, 10]);
   });
 });

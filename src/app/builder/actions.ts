@@ -39,6 +39,8 @@ import { getMyOrgId, getMySession, requireOrgId } from "@/lib/session";
 import { attempt } from "@/lib/action-result";
 import { UserError } from "@/lib/user-error";
 import { deleteUnderlay, getUnderlayMeta, patchUnderlay } from "@/lib/underlay";
+import { autoLayout, parseLocationsText, type LocationImportError, type LocationRowImport } from "@/lib/import-locations";
+import { MAX_IMPORT_CHARS } from "@/lib/import-table";
 
 export type LocationRow = typeof locations.$inferSelect;
 
@@ -274,15 +276,19 @@ async function createEntityAt(
   levels: number,
   rotation: Rotation = 0,
   color: string | null = null,
+  // An import supplies the code and (optionally) the parent zone itself
+  // instead of deriving them from the floor.
+  override: { code?: string; parentId?: string | null } = {},
 ) {
   const type = LOCATION_TYPES[kind];
   const existing = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
   const zones = existing.filter((l) => l.kind === "zone");
 
-  const containingZone = kind === "zone" ? null : findContainingZone(zones, box);
+  const containingZone =
+    kind === "zone" ? null : override.parentId !== undefined ? (zones.find((z) => z.id === override.parentId) ?? null) : findContainingZone(zones, box);
 
   const existingCodes = existing.map((l) => l.code).filter((c): c is string => !!c);
-  const code = nextCode(kind, containingZone?.code ?? null, existingCodes);
+  const code = override.code ?? nextCode(kind, containingZone?.code ?? null, existingCodes);
   const isLeaf = type.spatial === "store" && bays <= 1 && levels <= 1;
 
   const tKind = await getTranslations("builder.kind");
@@ -849,6 +855,139 @@ export async function restoreEntity(
   spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number; rotation?: number; color?: string | null },
 ) {
   return attempt(() => restoreEntityImpl(facilityId, spec), "restoreEntity");
+}
+
+// ── Locations import (src/lib/import-locations.ts) ──────────────────────
+// Same preview-then-commit shape as the items and stock imports: the
+// preview resolves every row against the floor and writes nothing; the
+// commit re-resolves the same text and refuses if any line is wrong.
+// Zones land first (so a rack's parent exists), then everything else;
+// rows without a position are auto-laid out inside their parent.
+
+export type LocationsImportPreview = {
+  counts: { rows: number; zones: number; storage: number; bins: number; placed: number };
+  errors: LocationImportError[];
+  sample: string[][];
+  hasHeader: boolean;
+};
+
+type PlannedRow = LocationRowImport & { box: Box; parentCode: string | null };
+
+async function resolveLocations(facilityId: string, text: string) {
+  if (text.length > MAX_IMPORT_CHARS) {
+    const t = await getTranslations("builder.import");
+    throw new UserError(t("errorTooLarge"));
+  }
+  const parsed = parseLocationsText(text);
+  const errors: LocationImportError[] = [...parsed.errors];
+
+  const facility = await requireOwnedFacility(facilityId);
+  const existing = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
+  const existingCodes = new Set(existing.map((l) => l.code).filter((c): c is string => !!c));
+  const existingZones = new Map(existing.filter((l) => l.kind === "zone" && l.code).map((z) => [z.code as string, z]));
+  const fileZones = new Map(parsed.rows.filter((r) => r.kind === "zone").map((r) => [r.code, r]));
+  const facilityLevelCount = (await ensureLevels(facilityId)).length;
+
+  const accepted: LocationRowImport[] = [];
+  for (const row of parsed.rows) {
+    let ok = true;
+    if (existingCodes.has(row.code)) { errors.push({ line: row.line, code: "codeExists", value: row.code }); ok = false; }
+    if (row.parent) {
+      const inFile = fileZones.get(row.parent);
+      const onFloor = existingZones.get(row.parent);
+      const notZone = parsed.rows.find((r) => r.code === row.parent && r.kind !== "zone") || existing.find((l) => l.code === row.parent && l.kind !== "zone");
+      if (!inFile && !onFloor) {
+        errors.push({ line: row.line, code: notZone ? "parentNotZone" : "parentUnknown", field: "parent", value: row.parent });
+        ok = false;
+      }
+    }
+    if (row.levels > facilityLevelCount) { errors.push({ line: row.line, code: "levelsBeyondFacility", value: String(row.levels) }); ok = false; }
+    if (ok) accepted.push(row);
+  }
+
+  // Zones first, positioned zones before unpositioned ones so an
+  // auto-laid-out zone never lands on top of a placed one.
+  const zonesFirst = [...accepted].sort((a, b) => Number(b.kind === "zone") - Number(a.kind === "zone"));
+  const planned: PlannedRow[] = [];
+  const zoneBoxes = new Map<string, Box>(
+    [...existingZones.entries()].map(([code, z]) => [code, { xM: z.xM, yM: z.yM, widthM: z.widthM, heightM: z.heightM }]),
+  );
+  const floor: Box = { xM: 0, yM: 0, widthM: facility.widthM, heightM: facility.heightM };
+
+  const positionedZones = zonesFirst.filter((r) => r.kind === "zone" && r.box);
+  for (const r of positionedZones) { planned.push({ ...r, box: r.box!, parentCode: null }); zoneBoxes.set(r.code, r.box!); }
+  const looseZones = zonesFirst.filter((r) => r.kind === "zone" && !r.box);
+  for (const r of autoLayout(looseZones, floor)) { planned.push({ ...r, parentCode: null }); zoneBoxes.set(r.code, r.box); }
+
+  const rest = zonesFirst.filter((r) => r.kind !== "zone");
+  for (const r of rest.filter((r) => r.box)) planned.push({ ...r, box: r.box!, parentCode: r.parent });
+  // Unpositioned objects are laid out per container, in file order.
+  const byContainer = new Map<string | null, LocationRowImport[]>();
+  for (const r of rest.filter((r) => !r.box)) byContainer.set(r.parent, [...(byContainer.get(r.parent) ?? []), r]);
+  for (const [parentCode, rows] of byContainer) {
+    const container = (parentCode && zoneBoxes.get(parentCode)) || floor;
+    for (const r of autoLayout(rows, container)) planned.push({ ...r, parentCode });
+  }
+
+  errors.sort((a, b) => a.line - b.line);
+  return { parsed, planned, errors, facility, existingZones };
+}
+
+async function previewLocationsImportImpl(facilityId: string, text: string): Promise<LocationsImportPreview> {
+  await requirePermission("editLayout");
+  const { parsed, planned, errors } = await resolveLocations(facilityId, text);
+  const storage = planned.filter((r) => LOCATION_TYPES[r.kind].spatial === "store");
+  return {
+    counts: {
+      rows: planned.length,
+      zones: planned.filter((r) => r.kind === "zone").length,
+      storage: storage.length,
+      bins: storage.reduce((n, r) => n + r.bays * r.levels, 0),
+      placed: planned.filter((r) => parsed.rows.find((p) => p.line === r.line)?.box).length,
+    },
+    errors,
+    sample: planned.slice(0, 5).map((r) => [
+      r.code, r.kind, r.parentCode ?? "", String(r.box.xM), String(r.box.yM), String(r.box.widthM), String(r.box.heightM),
+      LOCATION_TYPES[r.kind].spatial === "store" ? String(r.bays) : "", LOCATION_TYPES[r.kind].spatial === "store" ? String(r.levels) : "",
+    ]),
+    hasHeader: parsed.hasHeader,
+  };
+}
+
+async function commitLocationsImportImpl(facilityId: string, text: string) {
+  await requirePermission("editLayout");
+  const { planned, errors, facility, existingZones } = await resolveLocations(facilityId, text);
+  const t = await getTranslations("builder.import");
+  if (errors.length > 0) throw new UserError(t("errorFixFirst", { n: errors.length }));
+
+  const totalBins = planned.reduce((n, r) => n + (LOCATION_TYPES[r.kind].spatial === "store" ? r.bays * r.levels : 0), 0);
+  await assertCanAddBins(facility.organizationId, totalBins);
+
+  // Not one transaction: createEntityAt re-reads the floor for each row
+  // (containment, codes), and a few hundred rows in one transaction would
+  // hold locks across all of that. Each row is its own small write; the
+  // preview has already proven every one of them will succeed.
+  const zoneIds = new Map<string, string>([...existingZones.entries()].map(([code, z]) => [code, z.id]));
+  let created = 0;
+  for (const r of planned) {
+    const parentId = r.kind === "zone" ? null : r.parentCode ? (zoneIds.get(r.parentCode) ?? null) : undefined;
+    const row = await createEntityAt(facilityId, r.kind, r.box, r.bays, r.levels, 0, null, {
+      code: r.code,
+      ...(parentId !== undefined ? { parentId } : {}),
+    });
+    if (r.kind === "zone") zoneIds.set(r.code, row.id);
+    created++;
+  }
+  revalidatePath("/builder");
+  return { rows: created, bins: totalBins };
+}
+
+export async function previewLocationsImport(facilityId: string, text: string) {
+  return attempt(() => previewLocationsImportImpl(facilityId, text), "previewLocationsImport");
+}
+
+export async function commitLocationsImport(facilityId: string, text: string) {
+  return attempt(() => commitLocationsImportImpl(facilityId, text), "commitLocationsImport");
 }
 
 // ── Facility levels (src/lib/levels.ts) ─────────────────────────────────

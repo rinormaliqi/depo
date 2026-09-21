@@ -51,6 +51,20 @@ type Drag =
   | { kind: "move"; id: string; pointerStart: { x: number; y: number }; origin: Box }
   | { kind: "resize"; id: string; pointerStart: { x: number; y: number }; origin: Box };
 
+// A kind picked up from the palette and not yet put down. Entered either by
+// clicking a palette entry ("click": the cursor carries a real-scale ghost of
+// the object until the floor is clicked — Esc puts it back) or by dragging
+// one straight off the palette ("drag": mouseup over the floor places it,
+// anywhere else cancels). `pointer` is the last mouse position in client px;
+// the ghost is drawn from it every move. `sticky` (Shift) keeps the kind
+// armed after each placement, for laying out a row of the same thing.
+type Placing = {
+  kind: LocationKind;
+  source: "click" | "drag";
+  pointer: { clientX: number; clientY: number } | null;
+  sticky: boolean;
+};
+
 const PALETTE_KINDS: LocationKind[] = [
   "zone",
   "aisle",
@@ -140,10 +154,6 @@ function specOf(e: LocationRow): EntitySpec {
 }
 
 type UndoEntry = { undo: () => Promise<void>; redo: () => Promise<void> };
-
-function defaultPosition(count: number) {
-  return { x: 1 + (count % 8) * 1.5, y: 1 + Math.floor(count / 8) * 1.5 };
-}
 
 // Occupancy across every cell (every level × bay), regardless of which
 // level is currently being viewed — the inspector's aggregate stat.
@@ -253,6 +263,13 @@ export function BlueprintCanvas({
   const dragRef = useRef<Drag | null>(null);
   // Set at mousedown; the drag only becomes "live" past DRAG_THRESHOLD_PX.
   const dragArmRef = useRef<{ clientX: number; clientY: number; live: boolean } | null>(null);
+  const [placing, setPlacing] = useState<Placing | null>(null);
+  // Mirror of `placing` for the window-level mouse handlers, which are bound
+  // once and would otherwise close over a stale value.
+  const placingRef = useRef<Placing | null>(null);
+  // Mousedown on a palette entry arms this; it becomes a "drag" placement
+  // past DRAG_THRESHOLD_PX, or a "click" placement on mouseup if it never moved.
+  const paletteArmRef = useRef<{ kind: LocationKind; clientX: number; clientY: number; shift: boolean } | null>(null);
   const boxRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingHighlightRef = useRef<string | null>(initialHighlightBinId ?? null);
   const clipboardRef = useRef<{ liveId: string } | null>(null);
@@ -677,11 +694,10 @@ export function BlueprintCanvas({
     }
   }
 
-  async function handleAdd(kind: LocationKind) {
+  async function handleAdd(kind: LocationKind, xM: number, yM: number) {
     setBusy(true);
     try {
-      const pos = defaultPosition(locations.length);
-      const created = await createEntity(facility.id, kind, pos.x, pos.y);
+      const created = await createEntity(facility.id, kind, xM, yM);
       await reload();
       setSelectedId(created.id);
       pushUndo(makeCreateUndoEntry(specOf(created), created.id));
@@ -690,6 +706,64 @@ export function BlueprintCanvas({
     } finally {
       setBusy(false);
     }
+  }
+
+  function updatePlacing(next: Placing | null) {
+    placingRef.current = next;
+    setPlacing(next);
+  }
+
+  function armPlacing(kind: LocationKind, source: Placing["source"], sticky: boolean, pointer: Placing["pointer"]) {
+    if (readOnly) return;
+    // Clicking the already-armed kind puts it back down.
+    if (source === "click" && placingRef.current?.kind === kind) { updatePlacing(null); return; }
+    if (mode !== "edit") setMode("edit");
+    setSelectedId(null);
+    updatePlacing({ kind, source, sticky, pointer });
+  }
+
+  function cancelPlacing() {
+    paletteArmRef.current = null;
+    if (placingRef.current) updatePlacing(null);
+  }
+
+  // Where the carried object would land, in floor metres: centred on the
+  // cursor, snapped to the grid and kept inside the floor — or null when the
+  // cursor isn't over the floor at all.
+  function ghostBox(p: Placing): Box | null {
+    const el = canvasRef.current;
+    if (!p.pointer || !el) return null;
+    const r = el.getBoundingClientRect();
+    const { clientX, clientY } = p.pointer;
+    if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return null;
+    const type = LOCATION_TYPES[p.kind];
+    const widthM = type.w;
+    const heightM = type.h;
+    const cx = (clientX - r.left) / z;
+    const cy = (clientY - r.top) / z;
+    const maxX = Math.max(0, facility.widthM - widthM);
+    const maxY = Math.max(0, facility.heightM - heightM);
+    return {
+      xM: Math.min(maxX, Math.max(0, snap(cx - widthM / 2))),
+      yM: Math.min(maxY, Math.max(0, snap(cy - heightM / 2))),
+      widthM,
+      heightM,
+    };
+  }
+
+  function placeAt(p: Placing, pointer: { clientX: number; clientY: number }) {
+    const box = ghostBox({ ...p, pointer });
+    if (!box) return false;
+    void handleAdd(p.kind, box.xM, box.yM);
+    if (p.sticky) updatePlacing({ ...p, source: "click", pointer });
+    else updatePlacing(null);
+    return true;
+  }
+
+  function startPaletteDrag(kind: LocationKind, ev: React.MouseEvent) {
+    if (readOnly || busy) return;
+    ev.preventDefault();
+    paletteArmRef.current = { kind, clientX: ev.clientX, clientY: ev.clientY, shift: ev.shiftKey };
   }
 
   async function commit(patch: Record<string, string | number>) {
@@ -917,6 +991,53 @@ export function BlueprintCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [z]);
 
+  // Palette pick-up and placement. A palette mousedown is armed like an
+  // object drag: travel past the threshold turns it into a "drag" placement
+  // (ghost follows the cursor, mouseup over the floor places it); releasing
+  // without travel is a click, which arms a "click" placement instead (the
+  // ghost follows until the floor is clicked — see the wrapper's capture
+  // handler). Either way the cursor position is tracked here so the ghost
+  // re-renders every move.
+  useEffect(() => {
+    function onMove(ev: MouseEvent) {
+      const arm = paletteArmRef.current;
+      if (arm) {
+        if (Math.hypot(ev.clientX - arm.clientX, ev.clientY - arm.clientY) < DRAG_THRESHOLD_PX) return;
+        paletteArmRef.current = null;
+        armPlacing(arm.kind, "drag", arm.shift, { clientX: ev.clientX, clientY: ev.clientY });
+        return;
+      }
+      const p = placingRef.current;
+      if (!p) return;
+      updatePlacing({ ...p, pointer: { clientX: ev.clientX, clientY: ev.clientY } });
+    }
+    function onUp(ev: MouseEvent) {
+      const arm = paletteArmRef.current;
+      if (arm) {
+        paletteArmRef.current = null;
+        armPlacing(arm.kind, "click", arm.shift, { clientX: ev.clientX, clientY: ev.clientY });
+        return;
+      }
+      const p = placingRef.current;
+      if (!p || p.source !== "drag") return;
+      // Dropped off the floor: nothing is created and the palette lets go.
+      if (!placeAt(p, { clientX: ev.clientX, clientY: ev.clientY })) updatePlacing(null);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [z, facility.widthM, facility.heightM, mode, readOnly]);
+
+  // Leaving edit mode (or losing edit rights) puts a carried object back.
+  useEffect(() => {
+    if (placingRef.current && (effectiveMode !== "edit" || readOnly)) cancelPlacing();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveMode, readOnly]);
+
   useEffect(() => {
     function isEditableTarget(el: EventTarget | null) {
       if (!(el instanceof HTMLElement)) return false;
@@ -933,7 +1054,7 @@ export function BlueprintCanvas({
         if (key === "v" && !readOnly) { setMode("edit"); return; }
         if (key === "i") { setMode("inspect"); return; }
         if (key === " ") { ev.preventDefault(); setSpacePan(true); return; }
-        if (key === "escape") { cancelDrag(); return; }
+        if (key === "escape") { cancelDrag(); cancelPlacing(); return; }
       }
       if (readOnly) return;
       if (meta && key === "z") {
@@ -1015,20 +1136,26 @@ export function BlueprintCanvas({
           )}
           {!readOnly && (
             <div style={{ fontSize: 11, lineHeight: 1.45, color: "color-mix(in srgb,var(--color-text) 60%,transparent)", marginBottom: 3 }}>
-              {t("entitiesHint")}
+              {placing ? t(placing.sticky ? "placingHintSticky" : "placingHint") : t("entitiesHint")}
             </div>
           )}
 
           {!readOnly && PALETTE_KINDS.map((kind) => {
             const type = LOCATION_TYPES[kind];
+            const armed = placing?.kind === kind;
             return (
               <button
                 key={kind}
-                onClick={() => handleAdd(kind)}
+                onMouseDown={(ev) => startPaletteDrag(kind, ev)}
+                // Keyboard activation (Enter/Space) — the mouse path is handled
+                // on mousedown/mouseup so a press can turn into a drag.
+                onKeyDown={(ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); armPlacing(kind, "click", ev.shiftKey, null); } }}
+                aria-pressed={armed}
                 disabled={busy}
                 style={{
                   display: "flex", alignItems: "center", gap: 10, padding: "7px 8px",
-                  border: "1px solid var(--color-divider)", background: "#fff", cursor: "pointer",
+                  border: `1px solid ${armed ? "var(--color-accent)" : "var(--color-divider)"}`,
+                  background: armed ? "var(--color-accent-100)" : "#fff", cursor: "grab",
                   textAlign: "left", font: "inherit",
                 }}
               >
@@ -1149,8 +1276,17 @@ export function BlueprintCanvas({
 
         <div
           ref={wrapRef}
-          className={`canvas-wrap canvas-mode-${panActive ? "navigate" : effectiveMode}${panning ? " is-panning" : ""}`}
+          className={`canvas-wrap canvas-mode-${panActive ? "navigate" : effectiveMode}${panning ? " is-panning" : ""}${placing ? " is-placing" : ""}`}
           style={{ flex: 1, minHeight: 0, position: "relative", overflow: "auto" }}
+          // Capture phase so a carried object lands where the mouse is even
+          // over an existing object, which would otherwise start a move drag.
+          onMouseDownCapture={(e) => {
+            const p = placingRef.current;
+            if (!p || p.source !== "click" || e.button !== 0 || busy) return;
+            e.stopPropagation();
+            e.preventDefault();
+            placeAt(p, { clientX: e.clientX, clientY: e.clientY });
+          }}
           onMouseDown={(e) => {
             if (panActive) { startPan(e); return; }
             if (e.target === e.currentTarget) setSelectedId(null);
@@ -1194,6 +1330,30 @@ export function BlueprintCanvas({
                   )}
                 </div>
               )}
+              {placing && (() => {
+                const g = ghostBox(placing);
+                if (!g) return null;
+                const type = LOCATION_TYPES[placing.kind];
+                return (
+                  <div
+                    aria-hidden
+                    style={{
+                      position: "absolute", left: g.xM * z, top: g.yM * z, width: g.widthM * z, height: g.heightM * z,
+                      pointerEvents: "none", zIndex: 7, opacity: 0.7,
+                      outline: "1.5px dashed var(--color-accent)", outlineOffset: 1,
+                      ...KIND_APPEARANCE[placing.kind],
+                    }}
+                  >
+                    <div style={{
+                      position: "absolute", left: 0, top: -3, transform: "translateY(-100%)", whiteSpace: "nowrap",
+                      fontFamily: "var(--font-heading)", fontSize: type.spatial === "area" ? 11 : 9, letterSpacing: ".1em",
+                      color: "var(--color-accent-700)",
+                    }}>
+                      {t(`kind.${placing.kind}`).toUpperCase()} · {g.xM.toFixed(2)}, {g.yM.toFixed(2)} m
+                    </div>
+                  </div>
+                );
+              })()}
               {topLevel.map((e) => {
                 const type = LOCATION_TYPES[e.kind as LocationKind];
                 const isSel = e.id === selectedId;

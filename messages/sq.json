@@ -563,6 +563,7 @@
     "undo": "Zhbëj (⌘Z)",
     "redo": "Ribëj (⌘⇧Z)",
     "status": {
+      "pillarsAdded": "U shtuan {n} shtylla",
       "copied": "U kopjua",
       "pasted": "U ngjit",
       "undone": "Ndryshimi i fundit u zhbë",
@@ -593,7 +594,7 @@
     "allLevels": "TË GJITHA",
     "levelsAbbrev": "N",
     "confirmReplaceTitle": "Të zëvendësohet skema aktuale?",
-    "confirmReplaceBody": "Abonimi yt i jep kësaj depoje një skemë të vetme. Aplikimi i një shablloni zëvendëson gjithçka në planimetri tani dhe nuk mund të kthehet mbrapsht — por gjithmonë mund të kthehesh këtu dhe të kalosh te një planimetri bosh ose një shabllon tjetër më vonë.",
+    "confirmReplaceBody": "Abonimi yt i jep kësaj depoje një skemë të vetme. Aplikimi i një shablloni zëvendëson zonat, korridoret dhe ruajtjen në planimetri tani dhe nuk mund të kthehet mbrapsht — vetë objekti (mure, shtylla, doke, dyer, dritare, ventilime) ruhet, dhe raftet e reja vendosen rreth tij. Gjithmonë mund të kthehesh këtu dhe të kalosh te një planimetri bosh ose një shabllon tjetër më vonë.",
     "confirmReplace": "Zëvendëso skemën",
     "stocked": "me stok",
     "empty": "bosh",
@@ -612,6 +613,20 @@
     "rotateHint": "Çerek rrotullimi në drejtim të orës (R). Gjerësia dhe thellësia ndërrohen; hapësirat rrjedhin në drejtimin tjetër.",
     "flip": "Kthe",
     "flipHint": "E njëjta gjurmë, hapësira 1 në skajin tjetër (F).",
+    "pillarGrid": "+ Rrjet shtyllash",
+    "pillarGridHint": "Vendos shtylla strukturore në rrjet të rregullt mbi planimetrinë ose zonën e zgjedhur",
+    "pillars": {
+      "body": "Objektet reale e mbajnë çatinë mbi shtylla çdo 6–12 m, dhe raftet duhet t’i shmangin. Vendos rrjetin siç është në objektin tënd; shtyllat që tashmë janë në planimetri ruhen.",
+      "wholeFloor": "Gjithë planimetria",
+      "thisZone": "Zona {code}",
+      "spacingX": "Hapësira horizontalisht (m)",
+      "spacingY": "Hapësira vertikalisht (m)",
+      "offsetX": "Shtylla e parë nga muri i majtë (m)",
+      "offsetY": "Shtylla e parë nga muri i sipërm (m)",
+      "size": "Madhësia e shtyllës (m)",
+      "preview": "{n} shtylla të reja",
+      "add": "Shto {n} shtylla"
+    },
     "subdivision": "Ndarja",
     "bays": "Hapësira",
     "levels": {
@@ -654,6 +669,9 @@
     "error": {
       "facilityNotFound": "Depo nuk u gjet",
       "locationNotFound": "Vendndodhja nuk u gjet",
+      "zoneNotFound": "Ajo zonë nuk ekziston më",
+      "pillarGridEmpty": "Asnjë shtyllë e re nuk hyn në atë rrjet — provo hapësirë ose zhvendosje më të vogël",
+      "pillarGridTooMany": "Ai rrjet do të shtonte më shumë se {max} shtylla — përdor hapësirë më të madhe",
       "badRotation": "Rrotullimi duhet të jetë 0, 90, 180 ose 270 gradë",
       "nameRequired": "Emri është i detyrueshëm",
       "codeRequired": "Kodi është i detyrueshëm",

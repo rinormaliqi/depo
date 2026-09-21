@@ -133,6 +133,91 @@ export function bayCode(parentCode: string, level: number, bay: number, totalLev
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Structural columns
+// ─────────────────────────────────────────────────────────────────────────
+
+export function intersects(a: Box, b: Box, clearance = 0) {
+  return (
+    a.xM < b.xM + b.widthM + clearance &&
+    a.xM + a.widthM > b.xM - clearance &&
+    a.yM < b.yM + b.heightM + clearance &&
+    a.yM + a.heightM > b.yM - clearance
+  );
+}
+
+export interface PillarGridSpec {
+  spacingX: number; // metres between column centres, along x
+  spacingY: number;
+  size: number; // column side, metres (columns are square)
+  offsetX: number; // first column centre, measured from the area's left edge
+  offsetY: number;
+}
+
+// Real buildings put columns on a regular structural grid, so there are
+// 20–60 of them and nobody places them one by one. Centres at offset +
+// n × spacing inside `area`, dropping any column that wouldn't fit wholly
+// inside it — the perimeter's own columns live inside the wall poché.
+export function pillarGridPositions(area: Box, g: PillarGridSpec): Box[] {
+  const out: Box[] = [];
+  if (g.spacingX < 1 || g.spacingY < 1 || g.size <= 0) return out;
+  const half = g.size / 2;
+  for (let cy = area.yM + g.offsetY; cy + half <= area.yM + area.heightM + 1e-9; cy += g.spacingY) {
+    for (let cx = area.xM + g.offsetX; cx + half <= area.xM + area.widthM + 1e-9; cx += g.spacingX) {
+      if (cx - half < area.xM - 1e-9 || cy - half < area.yM - 1e-9) continue;
+      out.push({ xM: round2(cx - half), yM: round2(cy - half), widthM: g.size, heightM: g.size });
+    }
+  }
+  return out;
+}
+
+// Storage can't sit on a column. A template rack that runs into one is cut
+// around it along its long axis, the way a real depot's racking breaks at a
+// column line: each surviving piece keeps the original bay pitch (so bays
+// stay realistic, not stretched), and pieces too short for two bays are
+// dropped rather than left as stubs. Anything that isn't storage — zones,
+// aisles, walls — passes through untouched; a column inside a zone is fine.
+export function avoidObstacles(
+  specs: TemplateEntitySpec[],
+  obstacles: Box[],
+  clearance = 0.3,
+  minLength = 2 * RACK_BAY_WIDTH,
+): TemplateEntitySpec[] {
+  if (obstacles.length === 0) return specs;
+  const out: TemplateEntitySpec[] = [];
+  for (const spec of specs) {
+    if (LOCATION_TYPES[spec.kind].spatial !== "store") { out.push(spec); continue; }
+    const horizontal = spec.widthM >= spec.heightM;
+    const pitch = (horizontal ? spec.widthM : spec.heightM) / Math.max(1, spec.bays);
+    let pieces: TemplateEntitySpec[] = [spec];
+    for (const ob of obstacles) {
+      const next: TemplateEntitySpec[] = [];
+      for (const piece of pieces) {
+        if (!intersects(piece, ob, clearance)) { next.push(piece); continue; }
+        if (horizontal) {
+          const leftEnd = ob.xM - clearance;
+          const rightStart = ob.xM + ob.widthM + clearance;
+          if (leftEnd - piece.xM >= minLength) next.push({ ...piece, widthM: round2(leftEnd - piece.xM) });
+          const pieceEnd = piece.xM + piece.widthM;
+          if (pieceEnd - rightStart >= minLength) next.push({ ...piece, xM: round2(rightStart), widthM: round2(pieceEnd - rightStart) });
+        } else {
+          const topEnd = ob.yM - clearance;
+          const bottomStart = ob.yM + ob.heightM + clearance;
+          if (topEnd - piece.yM >= minLength) next.push({ ...piece, heightM: round2(topEnd - piece.yM) });
+          const pieceEnd = piece.yM + piece.heightM;
+          if (pieceEnd - bottomStart >= minLength) next.push({ ...piece, yM: round2(bottomStart), heightM: round2(pieceEnd - bottomStart) });
+        }
+      }
+      pieces = next;
+    }
+    for (const piece of pieces) {
+      const length = horizontal ? piece.widthM : piece.heightM;
+      out.push({ ...piece, bays: Math.max(1, Math.round(length / pitch)) });
+    }
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Starter templates
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -262,7 +347,21 @@ function buildDepot(floorW: number, floorH: number, orientation: "vertical" | "h
 // each subsequent "store" entity's centre already falls inside its intended
 // zone, letting the normal containment/code-generation logic in
 // createEntityAt just work.
-export function buildTemplate(key: TemplateKey, floorW: number, floorH: number): TemplateEntitySpec[] {
+export interface TemplateOptions {
+  // Building structure already on the floor (columns, docks, doors…): racks
+  // are routed around it, and the template's own perimeter walls are left
+  // out when walls already exist so it doesn't draw a second set.
+  obstacles?: Box[];
+  hasWalls?: boolean;
+}
+
+export function buildTemplate(key: TemplateKey, floorW: number, floorH: number, opts: TemplateOptions = {}): TemplateEntitySpec[] {
+  let specs = buildTemplateSpecs(key, floorW, floorH);
+  if (opts.hasWalls) specs = specs.filter((s) => s.kind !== "wall");
+  return avoidObstacles(specs, opts.obstacles ?? []);
+}
+
+function buildTemplateSpecs(key: TemplateKey, floorW: number, floorH: number): TemplateEntitySpec[] {
   if (key === "depotVertical") return buildDepot(floorW, floorH, "vertical");
   if (key === "depotHorizontal") return buildDepot(floorW, floorH, "horizontal");
 

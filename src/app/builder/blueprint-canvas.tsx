@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
 import { KIND_APPEARANCE, kindAppearance, kindLabelColor } from "./kind-appearance";
-import { LOCATION_TYPES, TEMPLATE_KEYS, bayLayout, flip, isRotation, rotateBox, turnClockwise, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
+import { LOCATION_TYPES, TEMPLATE_KEYS, bayLayout, flip, intersects, isRotation, pillarGridPositions, rotateBox, turnClockwise, type Box as FloorBox, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
 import type { FacilityLevel } from "@/lib/levels";
 import { useConfirm } from "@/components/notifications";
@@ -16,6 +16,7 @@ import { useNotify } from "@/components/notifications";
 import { Gate } from "@/components/capabilities";
 
 const addSector = unwrap(rawActions.addSector);
+const addPillarGrid = unwrap(rawActions.addPillarGrid);
 const addLevel = unwrap(rawActions.addLevel);
 const renameLevel = unwrap(rawActions.renameLevel);
 const removeTopLevel = unwrap(rawActions.removeTopLevel);
@@ -174,6 +175,9 @@ export function BlueprintCanvas({
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [floorOpen, setFloorOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [pillarsOpen, setPillarsOpen] = useState(false);
+  // Metres, as typed; a real building's column grid is commonly 6–12 m.
+  const [pillarDraft, setPillarDraft] = useState({ spacingX: "8", spacingY: "8", size: "0.5", offsetX: "8", offsetY: "8", scope: "floor" as "floor" | "zone" });
   const [confirmTemplate, setConfirmTemplate] = useState<TemplateKey | null>(null);
   const [floorDraft, setFloorDraft] = useState({
     name: facility.name,
@@ -815,6 +819,56 @@ export function BlueprintCanvas({
     }
   }
 
+  const selectedZone = selected && selected.kind === "zone" ? selected : null;
+  const pillarGrid = {
+    spacingX: parseFloat(pillarDraft.spacingX) || 0,
+    spacingY: parseFloat(pillarDraft.spacingY) || 0,
+    size: parseFloat(pillarDraft.size) || 0,
+    offsetX: parseFloat(pillarDraft.offsetX) || 0,
+    offsetY: parseFloat(pillarDraft.offsetY) || 0,
+  };
+  const pillarArea: FloorBox =
+    pillarDraft.scope === "zone" && selectedZone
+      ? { xM: selectedZone.xM, yM: selectedZone.yM, widthM: selectedZone.widthM, heightM: selectedZone.heightM }
+      : { xM: 0, yM: 0, widthM: facility.widthM, heightM: facility.heightM };
+  // What the dialog would add — the same maths the server runs, so the count
+  // shown is the count that lands.
+  const pillarPreview = pillarsOpen
+    ? pillarGridPositions(pillarArea, pillarGrid).filter((b) => !locations.some((l) => l.kind === "pillar" && intersects(b, l)))
+    : [];
+
+  async function runPillarGrid() {
+    setBusy(true);
+    try {
+      const zoneId = pillarDraft.scope === "zone" && selectedZone ? selectedZone.id : null;
+      const created = await addPillarGrid(facility.id, zoneId, pillarGrid);
+      await reload();
+      setPillarsOpen(false);
+      // One undo step for the whole grid: the ids are re-learnt on each redo
+      // so repeated undo/redo keeps pointing at these columns.
+      let liveIds = created.map((c) => c.id);
+      const specs = created.map(specOf);
+      pushUndo({
+        undo: async () => {
+          for (const id of liveIds) await deleteEntity(id);
+          await reload();
+          setSelectedId(null);
+        },
+        redo: async () => {
+          const again = [];
+          for (const spec of specs) again.push(await restoreEntity(facility.id, spec));
+          liveIds = again.map((c) => c.id);
+          await reload();
+        },
+      });
+      setStatus(t("status.pillarsAdded", { n: created.length }));
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : t("error.couldntAdd"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function chooseTemplate(key: TemplateKey) {
     if (locations.length > 0) {
       setConfirmTemplate(key);
@@ -1021,7 +1075,7 @@ export function BlueprintCanvas({
     }
     function onKeyDown(ev: KeyboardEvent) {
       if (isEditableTarget(ev.target)) return;
-      if (floorOpen || templatesOpen || confirmTemplate || levelsOpen) return;
+      if (floorOpen || templatesOpen || confirmTemplate || levelsOpen || pillarsOpen) return;
       const meta = ev.metaKey || ev.ctrlKey;
       const key = ev.key.toLowerCase();
       if (!meta) {
@@ -1154,6 +1208,11 @@ export function BlueprintCanvas({
             </div>
           ))}
 
+          {!readOnly && (
+            <button className="btn btn-secondary btn-block" onClick={() => { setPillarDraft((d) => ({ ...d, scope: selectedZone ? "zone" : "floor" })); setPillarsOpen(true); }} disabled={busy} title={t("pillarGridHint")}>
+              {t("pillarGrid")}
+            </button>
+          )}
           {!readOnly && (
             <button className="btn btn-secondary btn-block" onClick={handleAddSector} disabled={busy} title={t("addSectorHint")}>
               {t("addSector")}
@@ -1700,6 +1759,40 @@ export function BlueprintCanvas({
             <div className="dialog-actions">
               <button className="btn btn-secondary" onClick={() => setLevelsOpen(false)} style={{ flex: 1 }}>{t("cancel")}</button>
               <button className="btn btn-primary" onClick={handleAddLevel} disabled={busy} style={{ flex: 1 }}>{t("levels.add")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pillarsOpen && (
+        <div className="dialog-backdrop" style={{ position: "fixed", zIndex: 60 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setPillarsOpen(false); }}>
+          <div className="dialog blueprint">
+            <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+            <div className="dialog-title">{t("pillarGrid")}</div>
+            <div className="dialog-body">{t("pillars.body")}</div>
+            {selectedZone && (
+              <div className="seg" role="radiogroup" style={{ alignSelf: "flex-start" }}>
+                {(["floor", "zone"] as const).map((scope) => (
+                  <button key={scope} type="button" className="seg-opt" role="radio" aria-checked={pillarDraft.scope === scope} onClick={() => setPillarDraft((d) => ({ ...d, scope }))}
+                    style={{ background: pillarDraft.scope === scope ? "var(--color-accent)" : undefined, color: pillarDraft.scope === scope ? "var(--color-bg)" : undefined, fontSize: 11 }}>
+                    {scope === "floor" ? t("pillars.wholeFloor") : t("pillars.thisZone", { code: selectedZone.code ?? selectedZone.name })}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <div className="field"><label>{t("pillars.spacingX")}</label><input className="input" type="number" step="0.5" min="1" value={pillarDraft.spacingX} onChange={(e) => setPillarDraft((d) => ({ ...d, spacingX: e.target.value }))} /></div>
+              <div className="field"><label>{t("pillars.spacingY")}</label><input className="input" type="number" step="0.5" min="1" value={pillarDraft.spacingY} onChange={(e) => setPillarDraft((d) => ({ ...d, spacingY: e.target.value }))} /></div>
+              <div className="field"><label>{t("pillars.offsetX")}</label><input className="input" type="number" step="0.5" min="0" value={pillarDraft.offsetX} onChange={(e) => setPillarDraft((d) => ({ ...d, offsetX: e.target.value }))} /></div>
+              <div className="field"><label>{t("pillars.offsetY")}</label><input className="input" type="number" step="0.5" min="0" value={pillarDraft.offsetY} onChange={(e) => setPillarDraft((d) => ({ ...d, offsetY: e.target.value }))} /></div>
+              <div className="field"><label>{t("pillars.size")}</label><input className="input" type="number" step="0.1" min="0.2" value={pillarDraft.size} onChange={(e) => setPillarDraft((d) => ({ ...d, size: e.target.value }))} /></div>
+            </div>
+            <div style={{ fontSize: 12, color: "color-mix(in srgb,var(--color-text) 65%,transparent)" }}>
+              {t("pillars.preview", { n: pillarPreview.length })}
+            </div>
+            <div className="dialog-actions">
+              <button className="btn btn-secondary" onClick={() => setPillarsOpen(false)} style={{ flex: 1 }}>{t("cancel")}</button>
+              <button className="btn btn-primary" onClick={runPillarGrid} disabled={busy || pillarPreview.length === 0} style={{ flex: 1 }}>{t("pillars.add", { n: pillarPreview.length })}</button>
             </div>
           </div>
         </div>

@@ -563,6 +563,7 @@
     "undo": "Undo (⌘Z)",
     "redo": "Redo (⌘⇧Z)",
     "status": {
+      "pillarsAdded": "{n} columns added",
       "copied": "Copied",
       "pasted": "Pasted",
       "undone": "Undid last change",
@@ -593,7 +594,7 @@
     "allLevels": "ALL",
     "levelsAbbrev": "L",
     "confirmReplaceTitle": "Replace the current scheme?",
-    "confirmReplaceBody": "Your subscription gives this facility one depot scheme. Applying a template replaces everything on the floor now and can't be undone — though you can always come back here and switch to a blank floor or another template later.",
+    "confirmReplaceBody": "Your subscription gives this facility one depot scheme. Applying a template replaces the zones, aisles and storage on the floor now and can't be undone — the building itself (walls, columns, docks, doors, windows, vents) stays, and the new racks are laid out around it. You can always come back and switch to a blank floor or another template later.",
     "confirmReplace": "Replace scheme",
     "stocked": "stocked",
     "empty": "empty",
@@ -612,6 +613,20 @@
     "rotateHint": "Quarter turn clockwise (R). Width and depth swap; bays run the other way.",
     "flip": "Flip",
     "flipHint": "Same footprint, bay 1 at the other end (F).",
+    "pillarGrid": "+ Column grid",
+    "pillarGridHint": "Lay structural columns on a regular grid over the floor or the selected zone",
+    "pillars": {
+      "body": "Real buildings carry their roof on columns every 6–12 m, and racking has to go around them. Set the grid as it stands in your building; columns already on the floor are kept.",
+      "wholeFloor": "Whole floor",
+      "thisZone": "Zone {code}",
+      "spacingX": "Spacing across (m)",
+      "spacingY": "Spacing down (m)",
+      "offsetX": "First column from left wall (m)",
+      "offsetY": "First column from top wall (m)",
+      "size": "Column size (m)",
+      "preview": "{n} new columns",
+      "add": "Add {n} columns"
+    },
     "subdivision": "Subdivision",
     "bays": "Bays",
     "levels": {
@@ -654,6 +669,9 @@
     "error": {
       "facilityNotFound": "Facility not found",
       "locationNotFound": "Location not found",
+      "zoneNotFound": "That zone no longer exists",
+      "pillarGridEmpty": "No new columns fit that grid — try a smaller spacing or offset",
+      "pillarGridTooMany": "That grid would add more than {max} columns — use a wider spacing",
       "badRotation": "Rotation must be 0, 90, 180 or 270 degrees",
       "nameRequired": "Name is required",
       "codeRequired": "Code is required",

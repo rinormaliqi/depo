@@ -773,6 +773,28 @@ inflating the count and skipping codes (a zone's second rack came out `"A-08"` i
 `"A-02"`). Templates create multiple racks in one zone in quick succession, which surfaced it
 immediately; fixed by requiring the remainder after the stem to be pure digits.
 
+### Column grid, and templates that respect the building
+
+A large building carries its roof on 20–60 columns on a regular structural grid, and racking
+has to break at every column line — nobody places those one by one. **"+ Column grid"** in the
+palette (`addPillarGrid()` in `actions.ts`, `pillarGridPositions()` in `blueprint-types.ts`)
+lays `pillar` fixtures at `offset + n × spacing` over the whole floor or the selected zone;
+the dialog previews the exact count with the same function the server runs, positions already
+holding a column are skipped (so re-running is idempotent and a denser grid only adds the new
+lines), and the whole grid is one undo step. Capped at 200 columns per run.
+
+The other half is that a template must not paper over the building. `applyTemplate()` used to
+delete every location; it now deletes only the **scheme** (areas and storage) and keeps every
+**fixture** — walls, columns, docks, doors, exits, windows, vents — detaching them from their
+zones first (a dock drawn inside zone A has `parentId = A`, and deleting A would cascade to it)
+and re-homing them into the new template's zones afterwards. `buildTemplate()` takes the kept
+structure as `obstacles`: `avoidObstacles()` cuts any store spec that would overlap one along
+its long axis, keeps each piece at the original bay pitch (bays stay realistic instead of
+being stretched), and drops pieces too short for two bays rather than leaving stubs — the way
+real racking breaks at a column. When walls already exist the template also leaves its own
+perimeter walls out, so it never draws a second envelope over a customer's. The
+replace-confirmation text says all this in one sentence. Tests: `blueprint-types.test.ts`.
+
 ### Rotation in quarter turns, and flipping a rack
 
 Nothing could be rotated: a rack always lay along the x-axis with bay 1 at the left. Pilot

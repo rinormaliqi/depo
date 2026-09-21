@@ -773,6 +773,32 @@ inflating the count and skipping codes (a zone's second rack came out `"A-08"` i
 `"A-02"`). Templates create multiple racks in one zone in quick succession, which surfaced it
 immediately; fixed by requiring the remainder after the stem to be pure digits.
 
+### Structural fixtures: door, exit, window, vent, pillar
+
+Only two fixtures existed (`dock`, `wall`), so a floor plan could show where storage was but
+not what building it was in. Pilot feedback: *"there's no proper conception of the space
+without real elements — entrances, exits, windows, ventilation, and the columns in large
+buildings that are part of the structure and take up floor space"* (Optioryx treats obstacles
+as first-class map elements for the same reason). Five more `LocationKind`s, all
+`spatial: "fixture"`: `door`, `exit` (emergency exit), `window`, `vent`, `pillar`. Fixtures never
+hold stock and have no bays/levels; since `kind` is a text column whose enum lives only in
+TypeScript, adding them needed **no migration**. Openings default to wall thickness (0.3 m)
+so they sit flush in a wall segment; a pillar is 0.5 × 0.5 m.
+
+Drawn in drafting shorthand (`kind-appearance.ts`): door and exit share one drawing — a
+wall-thick bar broken by a light dashed centre line — and differ only in colour (green in,
+red out), deliberately, since they're the same object and one of them is the one you run for;
+a window is the classic double line; a vent a grille of fine louvres; a pillar a cross-hatched
+solid section, a step lighter than a wall so the two solids still read apart. Code suffixes:
+`DR`, `EX`, `WN`, `V`, `C` (column) — e.g. `A-DR1`, or `P-C3` outside any zone.
+
+Two knock-on changes: the palette is now grouped the way a plan is drawn — **Areas** (zone,
+aisle), **Storage** (rack, platform, pallet, bin), **Structure** (wall, pillar, dock, door, exit,
+window, vent) — with the legend following the same order; and a fixture smaller than 1 m²
+(pillars, vents, windows) hides its on-canvas label unless selected, because a pillar grid or a
+run of windows would otherwise drown the plan in 9px labels. The label is still the tooltip and
+the inspector title.
+
 ### Two-axis subdivision: bays × levels, and the level selector
 
 A "store" location subdivides along two independent axes: `bays` (lateral position — always
@@ -1005,7 +1031,8 @@ A floating **legend** (bottom-left of the canvas, toggled from the toolbar, reme
 `localStorage`) lists the kinds actually present on the floor with swatch, name and count. It
 exists mainly for the viewers who never see the palette — workers and the phone map — since for
 an editor the palette already is the legend; the inspector's composition rows gained the same
-swatches for the same reason.
+swatches for the same reason. On the phone it clears the bottom nav the way `.map-sheet` does
+(`.canvas-legend` in `globals.css`) and hides while the tap sheet is up, so the two never stack.
 
 One follow-on fix this surfaced: a subdivided rack/platform's bay-grid cells painted opaque
 white, which fully hid the kind's own pattern in exactly the case (multi-bay racks) where it

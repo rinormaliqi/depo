@@ -506,6 +506,11 @@
   },
   "builder": {
     "entities": "Entities",
+    "paletteGroup": {
+      "areas": "Areas",
+      "storage": "Storage",
+      "structure": "Structure"
+    },
     "entitiesHint": "Click to drop onto the floor, then drag it into place or fine-tune the exact numbers on the right.",
     "kind": {
       "zone": "Zone",
@@ -515,7 +520,12 @@
       "pallet": "Pallet",
       "bin": "Bin",
       "dock": "Dock",
-      "wall": "Wall"
+      "wall": "Wall",
+      "door": "Door",
+      "exit": "Emergency exit",
+      "window": "Window",
+      "vent": "Vent",
+      "pillar": "Pillar"
     },
     "kindPlural": {
       "zone": "Zones",
@@ -525,7 +535,12 @@
       "pallet": "Pallets",
       "bin": "Bins",
       "dock": "Docks",
-      "wall": "Walls"
+      "wall": "Walls",
+      "door": "Doors",
+      "exit": "Emergency exits",
+      "window": "Windows",
+      "vent": "Vents",
+      "pillar": "Pillars"
     },
     "hint": {
       "zone": "area",

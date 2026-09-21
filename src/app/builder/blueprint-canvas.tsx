@@ -53,16 +53,14 @@ type Drag =
   | { kind: "move"; id: string; pointerStart: { x: number; y: number }; origin: Box }
   | { kind: "resize"; id: string; pointerStart: { x: number; y: number }; origin: Box };
 
-const PALETTE_KINDS: LocationKind[] = [
-  "zone",
-  "aisle",
-  "rack",
-  "platform",
-  "pallet",
-  "bin",
-  "dock",
-  "wall",
+// Palette order = legend order. Grouped the way a floor plan is drawn:
+// the space, then what stores things in it, then the building around it.
+const PALETTE_GROUPS: { key: "areas" | "storage" | "structure"; kinds: LocationKind[] }[] = [
+  { key: "areas", kinds: ["zone", "aisle"] },
+  { key: "storage", kinds: ["rack", "platform", "pallet", "bin"] },
+  { key: "structure", kinds: ["wall", "pillar", "dock", "door", "exit", "window", "vent"] },
 ];
+const PALETTE_KINDS: LocationKind[] = PALETTE_GROUPS.flatMap((g) => g.kinds);
 
 function snap(v: number) {
   return Math.round(v / SNAP) * SNAP;
@@ -977,7 +975,12 @@ export function BlueprintCanvas({
             </div>
           )}
 
-          {!readOnly && PALETTE_KINDS.map((kind) => {
+          {!readOnly && PALETTE_GROUPS.map((group) => (
+            <div key={group.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ fontFamily: "var(--font-heading)", fontSize: 10, letterSpacing: ".16em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 50%,transparent)", marginTop: 4 }}>
+                {t(`paletteGroup.${group.key}`)}
+              </div>
+              {group.kinds.map((kind) => {
             const type = LOCATION_TYPES[kind];
             return (
               <button
@@ -999,7 +1002,9 @@ export function BlueprintCanvas({
                 </div>
               </button>
             );
-          })}
+              })}
+            </div>
+          ))}
 
           {!readOnly && (
             <button className="btn btn-secondary btn-block" onClick={handleAddSector} disabled={busy} title={t("addSectorHint")}>
@@ -1188,6 +1193,10 @@ export function BlueprintCanvas({
                         <span style={{ position: "absolute", right: -1, bottom: -1, width: 4, height: 4, background: "var(--color-accent-900)", pointerEvents: "none", zIndex: 5 }} />
                       </>
                     )}
+                    {/* A pillar grid or a run of windows would drown the plan in
+                        9px labels — small fixtures keep theirs for the tooltip and
+                        the inspector, and show it only while selected. */}
+                    {!(type.spatial === "fixture" && live.widthM * live.heightM < 1 && !isSel) && (
                     <div
                       onMouseDown={(ev) => startDrag("move", ev, e)}
                       style={{
@@ -1211,6 +1220,7 @@ export function BlueprintCanvas({
                         </span>
                       )}
                     </div>
+                    )}
 
                     {row.length > 0 ? (
                       <div style={{ display: "grid", gridTemplateColumns: `repeat(${row.length},minmax(0,1fr))`, gap: 1, padding: 1, width: "100%", height: "100%" }}>
@@ -1301,11 +1311,11 @@ export function BlueprintCanvas({
           </div>
         )}
 
-        {legendOpen && composition.length > 0 && (
+        {legendOpen && composition.length > 0 && !(mapOnly && selected) && (
           <div
+            className="canvas-legend"
             aria-label={t("legend")}
             style={{
-              position: "absolute", left: 10, bottom: 10, zIndex: 8,
               display: "flex", flexDirection: "column", gap: 4, padding: "7px 9px",
               background: "color-mix(in srgb,#fff 92%,transparent)", border: "1px solid var(--color-divider)",
               boxShadow: "var(--shadow-md)", fontSize: 11, pointerEvents: "none",

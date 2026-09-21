@@ -57,6 +57,16 @@
   --kind-bin: #14877a;
   --kind-dock: #d9822b;
   --kind-wall: #2b2b2d;
+  /* Structure: door green (the way in), emergency exit red (the way out —
+     the one colour that must never be confused with anything else on the
+     plan), window sky blue, vent slate, pillar the dark grey of a section
+     cut through concrete — a step lighter than a wall so the two solids
+     still read apart. */
+  --kind-door: #2f7a4f;
+  --kind-exit: #c23b2e;
+  --kind-window: #4a9fd8;
+  --kind-vent: #6c7a99;
+  --kind-pillar: #5d5d60;
 
   /* Status ramps. Success is the depot green — a dark, slightly desaturated
      green that reads as "stocked / done" next to the ink blue, and is the

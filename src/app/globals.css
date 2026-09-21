@@ -311,6 +311,14 @@ input[type="number"] {
 .canvas-wrap.canvas-mode-edit { cursor: default; }
 
 /* ── Map-only blueprint (workers, and every role under 768px) ─────────── */
+/* The floating kind legend sits in the canvas corner; on the phone it clears
+   the bottom nav the same way the map sheet does, and hides while the sheet
+   is up so the two never stack. */
+.canvas-legend { position: absolute; left: 10px; bottom: calc(10px + var(--bottom-nav, 0px)); z-index: 8; }
+@media (max-width: 767px) {
+  .canvas-legend { left: 8px; bottom: calc(8px + var(--bottom-nav, 0px) + env(safe-area-inset-bottom, 0px)); }
+}
+
 .map-sheet {
   position: absolute; left: 10px; right: 10px; bottom: calc(10px + var(--bottom-nav, 0px)); z-index: 40;
   padding: 12px 12px 12px; background: #fff; box-shadow: var(--shadow-lg);

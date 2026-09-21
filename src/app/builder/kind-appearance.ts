@@ -14,6 +14,11 @@ export const KIND_COLOR: Record<LocationKind, string> = {
   bin: "var(--kind-bin)",
   dock: "var(--kind-dock)",
   wall: "var(--kind-wall)",
+  door: "var(--kind-door)",
+  exit: "var(--kind-exit)",
+  window: "var(--kind-window)",
+  vent: "var(--kind-vent)",
+  pillar: "var(--kind-pillar)",
 };
 
 // A tint / shade of a kind's colour, so patterns and fills stay in family.
@@ -88,5 +93,37 @@ export const KIND_APPEARANCE: Record<LocationKind, CSSProperties> = {
   wall: {
     border: `1px solid ${KIND_COLOR.wall}`,
     background: KIND_COLOR.wall,
+  },
+  // An opening in a wall: a wall-thick bar broken by a light dashed centre
+  // line — the leaf and its clearance, read top-down. Door and emergency
+  // exit share the drawing and differ only in colour, on purpose: they are
+  // the same object, one of them is the one you run for.
+  door: {
+    border: `1px solid ${KIND_COLOR.door}`,
+    background:
+      `repeating-linear-gradient(90deg,transparent 0 4px,#fff 4px 6px) center / 100% 2px no-repeat,` + kindTint("door", 45),
+  },
+  exit: {
+    border: `1px solid ${KIND_COLOR.exit}`,
+    background:
+      `repeating-linear-gradient(90deg,transparent 0 4px,#fff 4px 6px) center / 100% 2px no-repeat,` + kindTint("exit", 50),
+  },
+  // Glazing: the classic double line — a wall-thick box with a single pane
+  // line through its middle.
+  window: {
+    border: `1px solid ${KIND_COLOR.window}`,
+    background: `linear-gradient(${KIND_COLOR.window},${KIND_COLOR.window}) center / 100% 1px no-repeat,` + kindTint("window", 18),
+  },
+  // Ventilation: a grille of fine horizontal louvres.
+  vent: {
+    border: `1px solid ${KIND_COLOR.vent}`,
+    background: `repeating-linear-gradient(0deg,transparent 0 2px,${kindAlpha("vent", 55)} 2px 3px),` + kindTint("vent", 12),
+  },
+  // Structural column: a solid section cut, cross-hatched like concrete on
+  // a drawing — solid because, like a wall, you can't put anything there.
+  pillar: {
+    border: `1px solid ${KIND_COLOR.pillar}`,
+    background:
+      `repeating-linear-gradient(45deg,transparent 0 3px,color-mix(in srgb,#fff 35%,transparent) 3px 4px),` + KIND_COLOR.pillar,
   },
 };

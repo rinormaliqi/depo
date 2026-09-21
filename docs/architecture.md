@@ -773,6 +773,32 @@ inflating the count and skipping codes (a zone's second rack came out `"A-08"` i
 `"A-02"`). Templates create multiple racks in one zone in quick succession, which surfaced it
 immediately; fixed by requiring the remainder after the stem to be pure digits.
 
+### Openings sit in walls
+
+In every floor-plan editor a door is not a free box — it's a segment of a wall, drawn as an
+opening with its swing. Doors, exits and windows (`OPENING_KINDS`) now behave that way:
+`snapToWall()` in `blueprint-types.ts` takes an opening's box and the floor's walls and, if the
+opening's *near edge* comes within `WALL_SNAP_M` (0.6 m) of a wall's centre line and its
+centre falls within the wall's run, returns the settled box — turned to run along the wall
+(rotation 0 or 90), set into the wall's thickness, its long side kept as its length and slid so
+it never overhangs an end. Measured from the near edge rather than the centre on purpose: a
+door still lying the other way is long *across* the wall, so its centre is far from the line
+while its edge already touches it, and it would otherwise refuse to snap to a perpendicular
+wall. No wall close enough → `null`, and the opening stays a free box exactly where it was
+put (a doorway in a partition the user hasn't drawn yet is legitimate).
+
+Applied in three places so the rule can't be dodged: server-side on create
+(`createEntityImpl`) and on every move/resize/rotate of an opening (`settleOpening()` in
+`updateEntityImpl`), and client-side in `computeDragBox` so the drag preview already shows
+where the door will land — the drop holds no surprise. Because a move can turn an opening,
+the drag's save sends the whole box plus rotation when width/height changed (openings only;
+a rack's resize never touches rotation), and the undo patch carries the original rotation.
+
+Drawing: a `door`/`exit` gets its swing — a quarter arc from the hinge with the leaf standing
+open, the classic plan symbol — as one bordered `<span>` with a single rounded corner, sized to
+the opening's length, placed on the side facing the floor's centre (the building's inside).
+A window keeps its double line; its snapping is the same.
+
 ### Column grid, and templates that respect the building
 
 A large building carries its roof on 20–60 columns on a regular structural grid, and racking

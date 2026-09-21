@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { avoidObstacles, bayLayout, buildTemplate, flip, intersects, isRotation, pillarGridPositions, rotateBox, turnClockwise } from "./blueprint-types";
+import { avoidObstacles, bayLayout, buildTemplate, flip, intersects, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise } from "./blueprint-types";
 
 describe("rotation", () => {
   it("a quarter turn swaps width and depth about the same centre, on the grid", () => {
@@ -99,5 +99,35 @@ describe("buildTemplate with structure", () => {
     for (const r of withStructure.filter((s) => s.kind === "rack")) {
       assert.equal(intersects(r, { xM: 6, yM: 4.2, widthM: 0.5, heightM: 0.5 }, 0.3), false);
     }
+  });
+});
+
+describe("snapToWall", () => {
+  const top = { xM: 0, yM: 0, widthM: 24, heightM: 0.3 };
+  const left = { xM: 0, yM: 0, widthM: 0.3, heightM: 16 };
+
+  it("a door dropped near a horizontal wall takes its line and thickness", () => {
+    const r = snapToWall({ xM: 9.4, yM: 0.4, widthM: 1.2, heightM: 0.3 }, [top, left]);
+    assert.deepEqual(r, { box: { xM: 9.4, yM: 0, widthM: 1.2, heightM: 0.3 }, rotation: 0 });
+  });
+
+  it("a door dropped near a vertical wall stands up along it", () => {
+    const r = snapToWall({ xM: 0.35, yM: 6, widthM: 1.2, heightM: 0.3 }, [top, left]);
+    // centre y = 6.15 → door runs 5.55 → 6.75, at the wall's x, wall-thick.
+    assert.deepEqual(r, { box: { xM: 0, yM: 5.55, widthM: 0.3, heightM: 1.2 }, rotation: 90 });
+  });
+
+  it("slides along the wall so it never overhangs an end", () => {
+    const r = snapToWall({ xM: 23.6, yM: 0.2, widthM: 1.2, heightM: 0.3 }, [top]);
+    assert.deepEqual(r?.box, { xM: 22.8, yM: 0, widthM: 1.2, heightM: 0.3 });
+  });
+
+  it("leaves a free-standing door alone", () => {
+    assert.equal(snapToWall({ xM: 10, yM: 8, widthM: 1.2, heightM: 0.3 }, [top, left]), null);
+  });
+
+  it("picks the nearer of two walls at a corner", () => {
+    const r = snapToWall({ xM: 0.5, yM: 0.1, widthM: 1.2, heightM: 0.3 }, [top, left]);
+    assert.equal(r?.rotation, 0);
   });
 });

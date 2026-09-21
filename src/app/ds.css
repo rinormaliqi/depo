@@ -41,6 +41,23 @@
   --color-accent-2-800: #314457;
   --color-accent-2-900: #1f2d3a;
 
+  /* One hue per location kind on the floor plan. The kinds used to share
+     the accent-blue ramp and differed only by hatch pattern, which a pilot
+     customer found near-indistinguishable ("dock, bin… they all look the
+     same"). These are picked to stay apart under deuteranopia too — blue /
+     violet / timber / teal / orange never collapse into one another — and
+     the hatch patterns are kept, so a greyscale print still tells them
+     apart. Areas stay quiet (zone = the structural blue, aisle = neutral);
+     storage and fixtures carry the colour. */
+  --kind-zone: #5980a6;
+  --kind-aisle: #8d8d92;
+  --kind-rack: #2f56a3;
+  --kind-platform: #7b4fb0;
+  --kind-pallet: #a0672c;
+  --kind-bin: #14877a;
+  --kind-dock: #d9822b;
+  --kind-wall: #2b2b2d;
+
   /* Status ramps. Success is the depot green — a dark, slightly desaturated
      green that reads as "stocked / done" next to the ink blue, and is the
      second colour the landing page and the notifications share. */

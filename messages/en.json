@@ -540,6 +540,7 @@
     "editFloor": "Edit floor",
     "zoomFit": "FIT",
     "gridOn": "GRID ON",
+    "legend": "LEGEND",
     "gridOff": "GRID OFF",
     "resizePanel": "Drag to resize",
     "undo": "Undo (⌘Z)",

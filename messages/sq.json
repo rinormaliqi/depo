@@ -705,7 +705,75 @@
       "inspect": "Inspekto",
       "inspectHint": "Kliko një objekt për t'i parë detajet — asgjë s'lëviz (I)"
     },
-    "zoom100": "Zoom 100%"
+    "zoom100": "Zoom 100%",
+    "wizard": {
+      "open": "Ndërto sipas objektit tënd",
+      "openHint": "Përgjigju pesë pyetjeve — doke, hyrje, shtylla, zona — dhe merr një depo të vendosur sipas tyre.",
+      "title": "Ndërto sipas objektit tënd",
+      "preview": "Pamje paraprake",
+      "cancel": "Anulo",
+      "back": "Prapa",
+      "next": "Tjetra",
+      "step": {
+        "floor": "Planimetria",
+        "access": "Doket & hyrja",
+        "structure": "Shtyllat",
+        "storage": "Ruajtja",
+        "review": "Përmbledhje"
+      },
+      "wall": {
+        "top": "Sipër",
+        "bottom": "Poshtë",
+        "left": "Majtas",
+        "right": "Djathtas"
+      },
+      "at": {
+        "start": "Afër fillimit",
+        "middle": "Në mes",
+        "end": "Afër fundit"
+      },
+      "floor": {
+        "body": "Përmasat e jashtme të hallës, në metra. Mund t’i ndryshosh më vonë.",
+        "width": "Gjerësia (m)",
+        "depth": "Thellësia (m)",
+        "walls": "Vizato muret e perimetrit"
+      },
+      "access": {
+        "body": "Ku ndalen kamionët dhe ku hyjnë njerëzit? Raftet mbahen larg murit të dokeve me një brez pritjeje para dyerve.",
+        "docks": "Doket e ngarkimit",
+        "dockCount": "Sa",
+        "dockWall": "Në cilin mur",
+        "entrance": "Hyrja e personelit",
+        "hasEntrance": "Shto një derë hyrjeje",
+        "entranceWall": "Në cilin mur",
+        "entranceAt": "Ku përgjatë tij"
+      },
+      "structure": {
+        "body": "Hallat e mëdha e mbajnë çatinë mbi shtylla çdo 6–12 m. Raftet priten rreth tyre.",
+        "hasPillars": "Halla ka rrjet shtyllash",
+        "spacingX": "Hapësira horizontalisht (m)",
+        "spacingY": "Hapësira vertikalisht (m)",
+        "size": "Madhësia e shtyllës (m)",
+        "kept": "{n} elemente strukturore që janë tashmë në planimetri ruhen dhe ndërtohet rreth tyre."
+      },
+      "storage": {
+        "body": "Si ndahet ruajtja. Çdo zonë mbushet me aq rreshta raftesh sa hyjnë realisht.",
+        "zones": "Zona",
+        "orientation": "Të vendosura",
+        "vertical": "Krah për krah",
+        "horizontal": "Në breza",
+        "levels": "Nivele raftesh",
+        "bays": "Hapësira për raft"
+      },
+      "review": {
+        "body": "Kjo është ajo që do të vendoset. Gjithçka mbetet e ndryshueshme më pas.",
+        "replaceBody": "Kjo zëvendëson zonat, korridoret dhe ruajtjen që janë tani në planimetri. Muret, shtyllat, doket dhe dyert ruhen dhe ndërtohet rreth tyre.",
+        "bins": "Vendndodhje kutish",
+        "floor": "Përmasa e re e planimetrisë",
+        "generate": "Gjenero",
+        "replace": "Zëvendëso skemën"
+      }
+    }
   },
   "bin": {
     "kicker": "Kuti",

@@ -705,7 +705,75 @@
       "inspect": "Inspect",
       "inspectHint": "Click an object to read its details — nothing moves (I)"
     },
-    "zoom100": "Zoom to 100%"
+    "zoom100": "Zoom to 100%",
+    "wizard": {
+      "open": "Build from your building",
+      "openHint": "Answer five questions — docks, entrance, columns, zones — and get a depot laid out to match.",
+      "title": "Build from your building",
+      "preview": "Preview",
+      "cancel": "Cancel",
+      "back": "Back",
+      "next": "Next",
+      "step": {
+        "floor": "Floor",
+        "access": "Docks & entrance",
+        "structure": "Columns",
+        "storage": "Storage",
+        "review": "Review"
+      },
+      "wall": {
+        "top": "Top",
+        "bottom": "Bottom",
+        "left": "Left",
+        "right": "Right"
+      },
+      "at": {
+        "start": "Near the start",
+        "middle": "Middle",
+        "end": "Near the end"
+      },
+      "floor": {
+        "body": "The outside dimensions of the hall, in metres. You can change them later.",
+        "width": "Width (m)",
+        "depth": "Depth (m)",
+        "walls": "Draw the perimeter walls"
+      },
+      "access": {
+        "body": "Where do trucks dock, and where do people come in? Racking is kept clear of the dock wall with a staging strip in front of the doors.",
+        "docks": "Loading docks",
+        "dockCount": "How many",
+        "dockWall": "On which wall",
+        "entrance": "Personnel entrance",
+        "hasEntrance": "Add an entrance door",
+        "entranceWall": "On which wall",
+        "entranceAt": "Where along it"
+      },
+      "structure": {
+        "body": "Large halls carry the roof on columns every 6–12 m. Racking is cut around them.",
+        "hasPillars": "The hall has a column grid",
+        "spacingX": "Spacing across (m)",
+        "spacingY": "Spacing down (m)",
+        "size": "Column size (m)",
+        "kept": "{n} structural elements already on the floor are kept and built around."
+      },
+      "storage": {
+        "body": "How the storage is divided. Each zone is filled with as many rows of racking as realistically fit.",
+        "zones": "Zones",
+        "orientation": "Laid out as",
+        "vertical": "Side by side",
+        "horizontal": "Stacked bands",
+        "levels": "Rack levels",
+        "bays": "Bays per rack"
+      },
+      "review": {
+        "body": "This is what will be put down. Everything stays editable afterwards.",
+        "replaceBody": "This replaces the zones, aisles and storage currently on the floor. Walls, columns, docks and doors stay and are built around.",
+        "bins": "Bin locations",
+        "floor": "New floor size",
+        "generate": "Generate",
+        "replace": "Replace scheme"
+      }
+    }
   },
   "bin": {
     "kicker": "Bin",

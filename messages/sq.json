@@ -511,7 +511,9 @@
       "storage": "Ruajtje",
       "structure": "Strukturë"
     },
-    "entitiesHint": "Kliko për ta vendosur në planimetri, pastaj tërhiqe në vend ose rregulloje saktësisht me numra në të djathtë.",
+    "entitiesHint": "Kliko një element, pastaj kliko në planimetri ku do ta vendosësh — ose tërhiqe direkt në planimetri. Mbaj Shift për të vendosur disa.",
+    "placingHint": "Kliko në planimetri për ta vendosur. Esc e anulon.",
+    "placingHintSticky": "Kliko në planimetri për t'i vendosur njëri pas tjetrit. Esc kur mbaron.",
     "kind": {
       "zone": "Zonë",
       "aisle": "Korridor",

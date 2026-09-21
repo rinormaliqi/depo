@@ -1249,9 +1249,10 @@ export function BlueprintCanvas({
           onClick={() => chooseTemplate(key)}
           disabled={busy}
           title={t(`template.${key}.description`)}
-          style={{ textAlign: "left" }}
+          style={{ textAlign: "left", display: "block" }}
         >
           {t(`template.${key}.name`)}
+          <span style={{ display: "block", fontSize: 11, fontWeight: 400, opacity: 0.75, marginTop: 2 }}>{t(`template.${key}.description`)}</span>
         </button>
       ))}
     </div>
@@ -1500,7 +1501,8 @@ export function BlueprintCanvas({
                             {t("wizard.open")}
                           </button>
                         )}
-                        {TEMPLATE_KEYS.map((key) => (
+                        {/* An empty floor is already blank. */}
+                        {TEMPLATE_KEYS.filter((key) => key !== "blank").map((key) => (
                           <button key={key} className="btn btn-secondary" onClick={() => chooseTemplate(key)} disabled={busy} title={t(`template.${key}.description`)}>
                             {t(`template.${key}.name`)}
                           </button>

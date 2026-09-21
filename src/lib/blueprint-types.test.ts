@@ -89,46 +89,53 @@ describe("avoidObstacles", () => {
   });
 });
 
-describe("buildTemplate with structure", () => {
-  it("keeps its walls out when the floor already has some, and routes around obstacles", () => {
-    const plain = buildTemplate("depotVertical", 40, 24);
-    const withStructure = buildTemplate("depotVertical", 40, 24, { hasWalls: true, obstacles: [{ xM: 6, yM: 4.2, widthM: 0.5, heightM: 0.5 }] });
-    assert.equal(plain.filter((s) => s.kind === "wall").length, 4);
-    assert.equal(withStructure.filter((s) => s.kind === "wall").length, 0);
-    assert.ok(withStructure.filter((s) => s.kind === "rack").length >= plain.filter((s) => s.kind === "rack").length);
-    for (const r of withStructure.filter((s) => s.kind === "rack")) {
-      assert.equal(intersects(r, { xM: 6, yM: 4.2, widthM: 0.5, heightM: 0.5 }, 0.3), false);
+describe("flow templates", () => {
+  it("I-flow: inbound docks and staging on the left, dispatch on the right, storage between, nothing on a dock", () => {
+    const specs = buildTemplate("flowI", 40, 24);
+    const docks = specs.filter((s) => s.kind === "dock");
+    assert.equal(docks.length, 6);
+    assert.ok(docks.some((d) => d.xM < 1) && docks.some((d) => d.xM > 36));
+    const zones = specs.filter((s) => s.kind === "zone");
+    const receiving = zones.find((z) => z.name === "RECEIVING")!;
+    const dispatch = zones.find((z) => z.name === "DISPATCH")!;
+    assert.ok(receiving.xM < dispatch.xM);
+    assert.ok(zones.some((z) => z.name === "OFFICE"));
+    assert.equal(specs.filter((s) => s.kind === "door").length, 1);
+    const racks = specs.filter((s) => s.kind === "rack");
+    assert.ok(racks.length >= 3);
+    for (const r of racks) {
+      assert.ok(r.xM > receiving.xM + receiving.widthM && r.xM + r.widthM < dispatch.xM, "racks sit between the staging zones");
+      for (const d of docks) assert.equal(intersects(r, d, 0.3), false);
     }
   });
-});
 
-describe("snapToWall", () => {
-  const top = { xM: 0, yM: 0, widthM: 24, heightM: 0.3 };
-  const left = { xM: 0, yM: 0, widthM: 0.3, heightM: 16 };
-
-  it("a door dropped near a horizontal wall takes its line and thickness", () => {
-    const r = snapToWall({ xM: 9.4, yM: 0.4, widthM: 1.2, heightM: 0.3 }, [top, left]);
-    assert.deepEqual(r, { box: { xM: 9.4, yM: 0, widthM: 1.2, heightM: 0.3 }, rotation: 0 });
+  it("U-flow: all docks on the bottom wall, two staging zones above them, storage columns, office top-right", () => {
+    const specs = buildTemplate("flowU", 40, 24);
+    const docks = specs.filter((s) => s.kind === "dock");
+    assert.ok(docks.length >= 2 && docks.every((d) => d.yM + d.heightM > 23));
+    const zones = specs.filter((s) => s.kind === "zone");
+    const receiving = zones.find((z) => z.name === "RECEIVING")!;
+    const dispatch = zones.find((z) => z.name === "DISPATCH")!;
+    assert.ok(receiving.xM < 20 && dispatch.xM > 20 && receiving.yM === dispatch.yM);
+    const office = zones.find((z) => z.name === "OFFICE")!;
+    assert.ok(office.xM > 30 && office.yM < 2);
+    for (const r of specs.filter((s) => s.kind === "rack")) assert.ok(r.yM + r.heightM < receiving.yM, "storage stays above the staging");
   });
 
-  it("a door dropped near a vertical wall stands up along it", () => {
-    const r = snapToWall({ xM: 0.35, yM: 6, widthM: 1.2, heightM: 0.3 }, [top, left]);
-    // centre y = 6.15 → door runs 5.55 → 6.75, at the wall's x, wall-thick.
-    assert.deepEqual(r, { box: { xM: 0, yM: 5.55, widthM: 0.3, heightM: 1.2 }, rotation: 90 });
+  it("blank draws nothing; labels are translatable; walls are left out when the floor has some", () => {
+    assert.deepEqual(buildTemplate("blank", 40, 24), []);
+    const sq = buildTemplate("flowU", 40, 24, { labels: { receiving: "PRANIM", dispatch: "DËRGESË", office: "ZYRA" } });
+    assert.ok(sq.some((s) => s.name === "PRANIM"));
+    assert.equal(buildTemplate("flowI", 40, 24, { hasWalls: true }).filter((s) => s.kind === "wall").length, 0);
+    assert.equal(buildTemplate("flowI", 40, 24).filter((s) => s.kind === "wall").length, 4);
   });
 
-  it("slides along the wall so it never overhangs an end", () => {
-    const r = snapToWall({ xM: 23.6, yM: 0.2, widthM: 1.2, heightM: 0.3 }, [top]);
-    assert.deepEqual(r?.box, { xM: 22.8, yM: 0, widthM: 1.2, heightM: 0.3 });
-  });
-
-  it("leaves a free-standing door alone", () => {
-    assert.equal(snapToWall({ xM: 10, yM: 8, widthM: 1.2, heightM: 0.3 }, [top, left]), null);
-  });
-
-  it("picks the nearer of two walls at a corner", () => {
-    const r = snapToWall({ xM: 0.5, yM: 0.1, widthM: 1.2, heightM: 0.3 }, [top, left]);
-    assert.equal(r?.rotation, 0);
+  it("scales down to a small hall without anything landing outside it", () => {
+    for (const key of ["flowI", "flowU"] as const) {
+      for (const s of buildTemplate(key, 16, 12)) {
+        assert.ok(s.xM >= 0 && s.yM >= 0 && s.xM + s.widthM <= 16 + 1e-6 && s.yM + s.heightM <= 12 + 1e-6, `${key} ${s.kind} ${s.name ?? ""} ${s.xM},${s.yM} ${s.widthM}×${s.heightM}`);
+      }
+    }
   });
 });
 

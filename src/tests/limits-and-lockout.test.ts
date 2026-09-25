@@ -92,6 +92,15 @@ describe("lockout", () => {
     const lockedAdmin = await addMember(locked.org.id, "admin");
     actAs(lockedAdmin);
     await assert.rejects(requirePermission("editLayout"), /orgLocked\.trialEnded/);
+    // ...but not billing: paying is how the lock is lifted, so the gate in
+    // front of checkout has to let a locked admin through (#138).
+    await assert.doesNotReject(requirePermission("manageBilling"));
+
+    // A locked manager is still refused, and told it is their role rather
+    // than the lock — they could not fix the lock anyway.
+    const lockedManager = await addMember(locked.org.id, "manager");
+    actAs(lockedManager);
+    await assert.rejects(requirePermission("manageBilling"), /permission\.manageBilling/);
   });
 });
 

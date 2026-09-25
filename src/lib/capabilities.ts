@@ -16,8 +16,9 @@ import { UserError } from "@/lib/user-error";
 //
 // Capabilities come in two kinds:
 // - actions (the role permissions): moveStock, editLayout, manageItems,
-//   manageTeam, manageBilling — also off while the org is locked
-//   (unverified / trial ended / expired / past due / canceled).
+//   manageTeam — also off while the org is locked (unverified / trial
+//   ended / expired / past due / canceled). manageBilling is the
+//   exception, see survivesLock().
 // - features (plan-gated): printLabels, cameraScanning, viewMetrics,
 //   multiFacility — a feature the plan doesn't include is off for every
 //   role; reading is still allowed on a locked org.
@@ -79,7 +80,7 @@ export function resolveCapabilities(input: {
     if (!(PERMISSIONS[permission] as readonly MembershipRole[]).includes(role)) {
       can[permission] = false;
       reason[permission] = { kind: "role" };
-    } else if (locked) {
+    } else if (locked && !survivesLock(permission, locked)) {
       can[permission] = false;
       reason[permission] = { kind: "locked", lock: locked };
     } else {
@@ -163,6 +164,19 @@ export async function getCapabilities(): Promise<Capabilities | null> {
   const session = await getMySession();
   if (!session) return null;
   return getCapabilitiesFor(session.organizationId, session.role);
+}
+
+// Paying is how a lock is lifted, so billing stays open to an admin while
+// the organization is locked. Without this the lock sealed the only door
+// out of itself: /billing answered with the blocked page, LockBanner's
+// "Te Faturimi" button led back into it, and a trial that ended or a card
+// that lapsed could only be rescued from the database.
+//
+// `unverified` is not one of those: that trial hasn't started, there is
+// nothing to renew, and the way out is the verification link the banner
+// already points at — so billing stays shut until the address is real.
+function survivesLock(permission: Permission, lock: NonNullable<OrgLockReason>) {
+  return permission === "manageBilling" && lock !== "unverified";
 }
 
 export async function blockMessage(reason: BlockReason, capability: Capability): Promise<string> {

@@ -9,6 +9,7 @@ import { attempt } from "@/lib/action-result";
 import { requirePermission } from "@/lib/permissions";
 import { requireOrgId } from "@/lib/session";
 import { UserError } from "@/lib/user-error";
+import { MAX_FIELD_CHARS } from "@/lib/import-table";
 
 export type ItemRow = typeof items.$inferSelect;
 
@@ -39,6 +40,16 @@ export async function getMyItemsWithStock() {
 }
 export type ItemWithStock = Awaited<ReturnType<typeof getMyItemsWithStock>>[number];
 
+// The import has always capped a field at MAX_FIELD_CHARS and reported a
+// tooLong row; the form capped nothing, and the columns are unbounded
+// `text`. So a name typed by hand could be any length and then could not
+// come back through the app's own export → import cycle — besides having
+// to render in the catalogue, the scanner's item picker, the movement log
+// and a 70 × 40 mm label, none of which have room for it.
+function tooLong(...values: (string | undefined)[]) {
+  return values.some((v) => (v?.length ?? 0) > MAX_FIELD_CHARS);
+}
+
 type FormState = { error?: string; created?: { name: string; at: number } } | undefined;
 
 export async function createItem(_prevState: FormState, formData: FormData): Promise<FormState> {
@@ -57,6 +68,10 @@ export async function createItem(_prevState: FormState, formData: FormData): Pro
   if (!name || !unitOfMeasure) {
     const t = await getTranslations("items");
     return { error: t("errorRequired") };
+  }
+  if (tooLong(name, unitOfMeasure, sku, category)) {
+    const t = await getTranslations("items");
+    return { error: t("errorTooLong", { max: MAX_FIELD_CHARS }) };
   }
 
   try {
@@ -107,6 +122,7 @@ async function updateItemImpl(itemId: string, patch: ItemPatch) {
   const sku = patch.sku.trim();
   const category = patch.category.trim();
   if (!name || !unitOfMeasure) throw new UserError(t("errorRequired"));
+  if (tooLong(name, unitOfMeasure, sku, category)) throw new UserError(t("errorTooLong", { max: MAX_FIELD_CHARS }));
 
   try {
     await db

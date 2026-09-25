@@ -8,6 +8,7 @@ import { items, movements, stock } from "@/db/schema";
 import { pickStockAt, receiveStockAt } from "@/lib/stock";
 import { addMember, createBin, createItem, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
+import { MAX_FIELD_CHARS } from "@/lib/import-table";
 
 async function itemById(id: string) {
   const [row] = await db.select().from(items).where(eq(items.id, id));
@@ -101,4 +102,21 @@ describe("items edit and delete", () => {
     assert.equal((await db.select().from(stock).where(eq(stock.itemId, other.id))).length, 0);
     assert.ok(await itemById(foreign.id), "the other company's item untouched");
   });
+  test("a field longer than the import's own cap is refused, so the catalogue can round-trip", async () => {
+    // The import has always refused a field past MAX_FIELD_CHARS; the form
+    // refused nothing and the columns are unbounded text, so a name typed
+    // by hand could not come back through the app's own export → import.
+    const tooLong = "x".repeat(MAX_FIELD_CHARS + 1);
+    const long = await updateItem(cement.id, patch({ name: tooLong }));
+    assert.equal(long.ok, false);
+    assert.match(long.ok ? "" : long.error, /errorTooLong/);
+
+    const longCategory = await updateItem(cement.id, patch({ category: tooLong }));
+    assert.equal(longCategory.ok, false);
+    assert.match(longCategory.ok ? "" : longCategory.error, /errorTooLong/);
+
+    const atCap = await updateItem(cement.id, patch({ name: "x".repeat(MAX_FIELD_CHARS) }));
+    assert.equal(atCap.ok, true, "the cap itself is fine");
+  });
+
 });

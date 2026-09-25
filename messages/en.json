@@ -927,7 +927,9 @@
       "done": "{rows} lines received into {bins} bins"
     },
     "importLink": "Import a stock count (Excel / CSV)",
-    "exportLink": "Export CSV"
+    "exportLink": "Export CSV",
+    "searching": "Searching…",
+    "noStorage": "no storage locations · {area} m²"
   },
   "metrics": {
     "mappedFloor": "Mapped floor",
@@ -949,7 +951,8 @@
     "qty": "Qty",
     "from": "From",
     "to": "To",
-    "noMovements": "No movements recorded yet."
+    "noMovements": "No movements recorded yet.",
+    "noStorage": "no storage locations · {area} m²"
   },
   "scanner": {
     "itemKicker": "ITEM",

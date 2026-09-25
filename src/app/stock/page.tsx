@@ -81,13 +81,19 @@ export default async function StockPage({
                   <span style={{ fontFamily: "var(--font-heading)", fontSize: 16, letterSpacing: ".05em" }}>
                     {z.code} · {z.name}
                   </span>
+                  {/* A receiving bay, a shipping bay or an office holds no
+                      bins, so "0%" there is not a low figure — it is a
+                      meaningless one, sitting in the column people scan for
+                      the figures that do mean something. */}
                   <span style={{ fontFamily: "var(--font-heading)", fontSize: 19, fontVariantNumeric: "tabular-nums" }}>
-                    {z.occPct}%
+                    {z.totalBins > 0 ? `${z.occPct}%` : "—"}
                   </span>
                 </div>
-                <div style={{ marginTop: 7, height: 8, background: "var(--color-neutral-200)" }}>
-                  <div style={{ width: `${z.occPct}%`, height: "100%", background: "var(--color-accent)" }} />
-                </div>
+                {z.totalBins > 0 && (
+                  <div style={{ marginTop: 7, height: 8, background: "var(--color-neutral-200)" }}>
+                    <div style={{ width: `${z.occPct}%`, height: "100%", background: "var(--color-accent)" }} />
+                  </div>
+                )}
                 <div
                   style={{
                     marginTop: 5,
@@ -96,7 +102,9 @@ export default async function StockPage({
                     color: "color-mix(in srgb, var(--color-text) 50%, transparent)",
                   }}
                 >
-                  {t("stock.occupiedOfTotal", { occupied: z.occupied, total: z.totalBins, area: z.areaM2 })}
+                  {z.totalBins > 0
+                    ? t("stock.occupiedOfTotal", { occupied: z.occupied, total: z.totalBins, area: z.areaM2 })
+                    : t("stock.noStorage", { area: z.areaM2 })}
                 </div>
               </div>
             ))}

@@ -37,12 +37,23 @@ const SPEC: TableSpec<StockColumn> = {
 };
 
 // "40", " 40 ", "1.200" and "1 200" (a spreadsheet's thousands separator)
-// are quantities; "40,5", "-3", "abc" and "" are not — stock is whole
-// units, and a count can't be negative or zero.
+// are quantities; "40,5", "3.0", "-3", "abc" and "" are not — stock is
+// whole units, and a count can't be negative or zero.
+//
+// The separator only counts as a thousands separator where it actually
+// separates groups of three, and the same character has to be used
+// throughout: "1.200" and "1 200" are twelve hundred, "1.234.567" is a
+// million, but "3.0" and "1.5" are decimals this app cannot store, so
+// they are refused rather than read as 30 and 15. Stripping every "."
+// first is what made a column formatted to one decimal place import ten
+// times the stock it meant, with no error to show for it.
+const PLAIN = /^\d+$/;
+const GROUPED = /^\d{1,3}(?:([ .])\d{3})(?:\1\d{3})*$/;
+
 export function parseQuantity(cell: string): number | null {
-  const compact = cell.replace(/[\s.]/g, "");
-  if (!/^\d+$/.test(compact)) return null;
-  const n = Number(compact);
+  const s = cell.trim();
+  if (!PLAIN.test(s) && !GROUPED.test(s)) return null;
+  const n = Number(s.replace(/[ .]/g, ""));
   return n > 0 && Number.isSafeInteger(n) ? n : null;
 }
 

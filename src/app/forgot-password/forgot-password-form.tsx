@@ -17,7 +17,7 @@ export function ForgotPasswordForm() {
     <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div className="field">
         <label>{t("emailLabel")}</label>
-        <input className="input" name="email" type="email" placeholder="you@company.com" required />
+        <input className="input" name="email" type="email" placeholder="you@company.com" required defaultValue={state?.values?.email} />
       </div>
       <FormError>{state?.error}</FormError>
       <button type="submit" className="btn btn-primary btn-block" disabled={isPending}>

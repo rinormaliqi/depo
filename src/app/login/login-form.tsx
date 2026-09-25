@@ -14,7 +14,7 @@ export function LoginForm() {
     <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div className="field">
         <label>{t("email")}</label>
-        <input className="input" name="email" type="email" placeholder="you@company.com" required />
+        <input className="input" name="email" type="email" placeholder="you@company.com" required defaultValue={state?.values?.email} />
       </div>
       <div className="field">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>

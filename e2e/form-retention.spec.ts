@@ -4,11 +4,11 @@ import { test, expect, accounts } from "./helpers/fixtures";
 // action resolves — including when it resolved with an error. Every form
 // that doesn't feed the submitted values back through `defaultValue`
 // therefore empties itself under the user while showing them what to fix.
-// Expected failures until the forms feed submitted values back through
-// `defaultValue`. They flip to passing the moment that lands, which is the
-// point: remove the test.fail() line with the fix.
+// React resets an uncontrolled <form action={serverAction}> to its
+// defaultValue once the action resolves — errors included — so each action
+// hands the submitted values back and the form renders them as defaults.
+// That is what makes the reset land on what the person typed.
 test.describe("a rejected submit keeps what the user typed", () => {
-  test.fail();
 
   test("login keeps the email after a wrong password", async ({ page }) => {
     await page.goto("/login");

@@ -5,7 +5,11 @@ import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { createOrganizationForFounder, hasMembership } from "@/lib/onboarding";
 
-type FormState = { error?: string } | undefined;
+// `values` carries what was submitted back to the form: React resets an
+// uncontrolled form to its defaultValue once the action resolves, errors
+// included, so without this a refused submit empties the field the person
+// has to correct.
+type FormState = { error?: string; values?: { companyName?: string } } | undefined;
 
 // The one thing the password signup form asks that Google can't answer:
 // what the company is called. Idempotent — a double submit or a stale tab
@@ -18,12 +22,12 @@ export async function createCompany(_prev: FormState, formData: FormData): Promi
   if (await hasMembership(session.user.id)) redirect("/start");
 
   const companyName = formData.get("companyName")?.toString().trim();
-  if (!companyName) return { error: t("errorRequired") };
+  if (!companyName) return { error: t("errorRequired"), values: { companyName } };
 
   try {
     await createOrganizationForFounder({ userId: session.user.id, companyName, emailVerified: true });
   } catch {
-    return { error: t("errorGeneric") };
+    return { error: t("errorGeneric"), values: { companyName } };
   }
   redirect("/start");
 }

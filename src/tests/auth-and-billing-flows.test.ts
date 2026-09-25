@@ -53,9 +53,20 @@ describe("signup and email verification", () => {
   });
 
   test("aliases of an existing inbox and disposable domains cannot sign up", async () => {
-    assert.deepEqual(await runSignup({ name: "X", companyName: "X", email: "veratest@gmail.com", password: "password123" }), { error: "auth.signup.errorEmailExists" });
-    assert.deepEqual(await runSignup({ name: "X", companyName: "X", email: "v.e.r.a.test+b@gmail.com", password: "password123" }), { error: "auth.signup.errorEmailExists" });
-    assert.deepEqual(await runSignup({ name: "X", companyName: "X", email: "someone@mailinator.com", password: "password123" }), { error: "auth.signup.errorDisposableEmail" });
+    // A refusal hands back what was typed (never the password) so the form
+    // can render it again — see the FormState comment in signup/actions.ts.
+    assert.deepEqual(await runSignup({ name: "X", companyName: "X", email: "veratest@gmail.com", password: "password123" }), {
+      error: "auth.signup.errorEmailExists",
+      values: { name: "X", companyName: "X", email: "veratest@gmail.com" },
+    });
+    assert.deepEqual(await runSignup({ name: "X", companyName: "X", email: "v.e.r.a.test+b@gmail.com", password: "password123" }), {
+      error: "auth.signup.errorEmailExists",
+      values: { name: "X", companyName: "X", email: "v.e.r.a.test+b@gmail.com" },
+    });
+    assert.deepEqual(await runSignup({ name: "X", companyName: "X", email: "someone@mailinator.com", password: "password123" }), {
+      error: "auth.signup.errorDisposableEmail",
+      values: { name: "X", companyName: "X", email: "someone@mailinator.com" },
+    });
   });
 
   test("consuming the token verifies the user, starts a 30-day trial, and is single-use", async () => {
@@ -121,14 +132,14 @@ describe("invite acceptance", () => {
     assert.equal(m.role, "worker");
     const [inv] = await db.select().from(invites).where(eq(invites.token, token));
     assert.ok(inv.acceptedAt);
-    assert.deepEqual(await acceptInviteAsNewUser(undefined, form({ token, name: "Again", password: "password123" })), { error: "invite.error.invalid" });
+    assert.deepEqual(await acceptInviteAsNewUser(undefined, form({ token, name: "Again", password: "password123" })), { error: "invite.error.invalid", values: { name: "Again" } });
   });
 
   test("an expired invite is refused", async () => {
     const { org } = await createOrg();
     const admin = await addMember(org.id, "admin");
     await db.insert(invites).values({ organizationId: org.id, email: "late@example.com", role: "worker", token: "expired-1", invitedBy: admin.id, expiresAt: new Date(Date.now() - 1000) });
-    assert.deepEqual(await acceptInviteAsNewUser(undefined, form({ token: "expired-1", name: "Late", password: "password123" })), { error: "invite.error.invalid" });
+    assert.deepEqual(await acceptInviteAsNewUser(undefined, form({ token: "expired-1", name: "Late", password: "password123" })), { error: "invite.error.invalid", values: { name: "Late" } });
   });
 });
 

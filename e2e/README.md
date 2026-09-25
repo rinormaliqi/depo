@@ -34,9 +34,7 @@ input `name` attributes and ARIA roles, not on visible strings. There are no
 
 A test marked `test.fail()` documents a bug that is real and not yet fixed —
 it is *expected to fail*, so the suite stays green and flips loudly the moment
-the bug is fixed. Remove the `test.fail()` line with the fix. Currently:
+the bug is fixed. Remove the `test.fail()` line with the fix.
 
-- `form-retention.spec.ts` — every form empties itself when a submit is
-  rejected (React 19 resets an uncontrolled form after its action resolves).
-- `billing-lockout.spec.ts` — a locked organisation cannot reach `/billing`
-  at all, so it has no way to pay its way out (#138).
+There are none at the moment: the three the v1.4 sweep left behind (#126,
+#128 and #138) were fixed and their markers removed.

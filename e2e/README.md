@@ -38,8 +38,6 @@ the bug is fixed. Remove the `test.fail()` line with the fix. Currently:
 
 - `form-retention.spec.ts` — every form empties itself when a submit is
   rejected (React 19 resets an uncontrolled form after its action resolves).
-- `imports.spec.ts` — a stock quantity written `3.0` imports as 30, because
-  `parseQuantity()` strips every `.` to tolerate thousands separators.
 - `billing-lockout.spec.ts` — a locked organisation's admin is told the page
   is not for their role, because the seven pages rendering `<NotForRole>`
   discard the `reason` that `resolveCapabilities()` already worked out.

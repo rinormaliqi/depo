@@ -91,17 +91,27 @@ test.describe("stock import", () => {
     await expect(page.getByRole("button", { name: /^importo/i })).toHaveCount(0);
   });
 
-  // parseQuantity() strips every "." to tolerate a spreadsheet's thousands
-  // separator, so a column formatted to one decimal place is multiplied by
-  // ten with no warning: "3.0" becomes 30, "1.5" becomes 15, "2.75" becomes
-  // 275. src/lib/import-locations.ts parseMetres() already does this right.
-  test("a quantity written 3.0 stays 3 instead of becoming 30", async ({ adminPage: page }) => {
-    test.fail();
+  // parseQuantity() used to strip every "." to tolerate a spreadsheet's
+  // thousands separator, so it could not tell "1.200" from "3.0" and a
+  // column formatted to one decimal place imported ten times the stock it
+  // meant, reporting no error at all. Both halves are pinned here: the
+  // decimal is refused, and the thousands separator still reads as before.
+  test("a decimal quantity is refused instead of becoming ten times itself", async ({ adminPage: page }) => {
     await openCsv(page, "decimal.csv", csv([
       ["artikulli", "kutia", "sasia"],
       [SKU, BIN, "3.0"],
     ]));
-    // Today the summary reads "30 njësi" and reports 0 errors.
-    await expect(page.locator("body")).toContainText(/\b3 njësi\b/);
+    await expect(page.getByText(/Rreshti 2/)).toBeVisible();
+    await expect(page.locator("body")).not.toContainText(/\b30 njësi\b/);
+    await expect(page.getByRole("button", { name: /^importo/i })).toHaveCount(0);
+  });
+
+  test("a thousands separator still reads as thousands", async ({ adminPage: page }) => {
+    await openCsv(page, "thousands.csv", csv([
+      ["artikulli", "kutia", "sasia"],
+      [SKU, BIN, "1.200"],
+    ]));
+    await expect(page.locator("body")).toContainText(/1[\s.]?200 njësi/);
+    await expect(page.getByRole("button", { name: /^importo/i })).toBeVisible();
   });
 });

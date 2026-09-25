@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { searchStock } from "./actions";
 
 type Result = Awaited<ReturnType<typeof searchStock>>[number];
@@ -19,14 +19,25 @@ export function StockSearch({
   const [results, setResults] = useState(initialResults);
   const [loading, setLoading] = useState(false);
 
+  // Every keystroke starts a search and they don't necessarily come back in
+  // order, so a slow earlier one could land last and leave the box showing
+  // results for a query the person has already typed past — which here means
+  // the wrong bin for the thing they are walking to. Only the newest reply
+  // is allowed to write.
+  const latest = useRef(0);
+
   async function handleChange(value: string) {
     setQuery(value);
     if (!value.trim()) {
+      latest.current += 1;
       setResults([]);
+      setLoading(false);
       return;
     }
+    const seq = (latest.current += 1);
     setLoading(true);
     const r = await searchStock(value);
+    if (seq !== latest.current) return;
     setResults(r);
     setLoading(false);
   }
@@ -52,6 +63,12 @@ export function StockSearch({
         onChange={(e) => handleChange(e.target.value)}
         autoFocus
       />
+
+      {loading && (
+        <div style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>
+          {t("searching")}
+        </div>
+      )}
 
       {results.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>

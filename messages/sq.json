@@ -929,7 +929,9 @@
       "done": "{rows} rreshta hynë në {bins} kuti"
     },
     "importLink": "Importo inventarin (Excel / CSV)",
-    "exportLink": "Eksporto CSV"
+    "exportLink": "Eksporto CSV",
+    "searching": "Duke kërkuar…",
+    "noStorage": "pa vendndodhje ruajtjeje · {area} m²"
   },
   "metrics": {
     "mappedFloor": "Sipërfaqja e mapuar",
@@ -951,7 +953,8 @@
     "qty": "Sasia",
     "from": "Nga",
     "to": "Në",
-    "noMovements": "Ende nuk ka lëvizje të regjistruara."
+    "noMovements": "Ende nuk ka lëvizje të regjistruara.",
+    "noStorage": "pa vendndodhje ruajtjeje · {area} m²"
   },
   "scanner": {
     "itemKicker": "ARTIKULLI",

@@ -86,13 +86,20 @@ export default async function MetricsPage() {
               <div key={z.id} style={{ padding: "11px 0", borderBottom: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
                   <span style={{ fontFamily: "var(--font-heading)", fontSize: 16, letterSpacing: ".05em" }}>{z.code} · {z.name}</span>
-                  <span style={{ fontFamily: "var(--font-heading)", fontSize: 19, fontVariantNumeric: "tabular-nums" }}>{z.occPct}%</span>
+                  {/* A zone holding no bins — receiving, shipping, an office
+                      — has no occupancy to report, and a 0% sitting among the
+                      real figures reads as a bad one. */}
+                  <span style={{ fontFamily: "var(--font-heading)", fontSize: 19, fontVariantNumeric: "tabular-nums" }}>{z.totalBins > 0 ? `${z.occPct}%` : "—"}</span>
                 </div>
-                <div style={{ marginTop: 7, height: 8, background: "var(--color-neutral-200)" }}>
-                  <div style={{ width: `${z.occPct}%`, height: "100%", background: "var(--color-accent)" }} />
-                </div>
+                {z.totalBins > 0 && (
+                  <div style={{ marginTop: 7, height: 8, background: "var(--color-neutral-200)" }}>
+                    <div style={{ width: `${z.occPct}%`, height: "100%", background: "var(--color-accent)" }} />
+                  </div>
+                )}
                 <div style={{ marginTop: 5, fontSize: 11, fontVariantNumeric: "tabular-nums", color: "color-mix(in srgb, var(--color-text) 50%, transparent)" }}>
-                  {t("metrics.locationsAreaM2", { occupied: z.occupied, total: z.totalBins, area: z.areaM2 })}
+                  {z.totalBins > 0
+                    ? t("metrics.locationsAreaM2", { occupied: z.occupied, total: z.totalBins, area: z.areaM2 })
+                    : t("metrics.noStorage", { area: z.areaM2 })}
                 </div>
               </div>
             ))}

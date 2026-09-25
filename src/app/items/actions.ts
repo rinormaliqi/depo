@@ -50,28 +50,34 @@ function tooLong(...values: (string | undefined)[]) {
   return values.some((v) => (v?.length ?? 0) > MAX_FIELD_CHARS);
 }
 
-type FormState = { error?: string; created?: { name: string; at: number } } | undefined;
+// `values` carries what was submitted back to the form. React resets an
+// uncontrolled form to its defaultValue once the action resolves — errors
+// included — so handing the values back as defaults is what makes a
+// rejected submit leave the row as the person typed it.
+type ItemValues = { name?: string; unitOfMeasure?: string; sku?: string; category?: string };
+type FormState = { error?: string; created?: { name: string; at: number }; values?: ItemValues } | undefined;
 
 export async function createItem(_prevState: FormState, formData: FormData): Promise<FormState> {
   let organizationId: string;
   try {
     organizationId = (await requirePermission("manageItems")).organizationId;
   } catch (e) {
-    return { error: e instanceof Error ? e.message : String(e) };
+    return { error: e instanceof Error ? e.message : String(e), values: readValues(formData) };
   }
 
   const name = formData.get("name")?.toString().trim();
   const unitOfMeasure = formData.get("unitOfMeasure")?.toString().trim();
   const sku = formData.get("sku")?.toString().trim();
   const category = formData.get("category")?.toString().trim();
+  const values: ItemValues = { name, unitOfMeasure, sku, category };
 
   if (!name || !unitOfMeasure) {
     const t = await getTranslations("items");
-    return { error: t("errorRequired") };
+    return { error: t("errorRequired"), values };
   }
   if (tooLong(name, unitOfMeasure, sku, category)) {
     const t = await getTranslations("items");
-    return { error: t("errorTooLong", { max: MAX_FIELD_CHARS }) };
+    return { error: t("errorTooLong", { max: MAX_FIELD_CHARS }), values };
   }
 
   try {
@@ -85,7 +91,7 @@ export async function createItem(_prevState: FormState, formData: FormData): Pro
   } catch (e) {
     if (isSkuTaken(e)) {
       const t = await getTranslations("items");
-      return { error: t("errorSkuTaken", { sku: sku ?? "" }) };
+      return { error: t("errorSkuTaken", { sku: sku ?? "" }), values };
     }
     throw e;
   }
@@ -93,6 +99,15 @@ export async function createItem(_prevState: FormState, formData: FormData): Pro
   revalidatePath("/items");
   // `at` makes each success distinct, so the form's toast fires per submit.
   return { created: { name, at: Date.now() } };
+}
+
+function readValues(formData: FormData): ItemValues {
+  return {
+    name: formData.get("name")?.toString().trim(),
+    unitOfMeasure: formData.get("unitOfMeasure")?.toString().trim(),
+    sku: formData.get("sku")?.toString().trim(),
+    category: formData.get("category")?.toString().trim(),
+  };
 }
 
 // items_org_sku_idx: the same SKU twice in one company. Drizzle wraps

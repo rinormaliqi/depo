@@ -12,7 +12,7 @@ export function CompanyForm() {
     <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div className="field">
         <label>{t("companyName")}</label>
-        <input className="input" name="companyName" type="text" placeholder={t("companyPlaceholder")} required autoFocus />
+        <input className="input" name="companyName" type="text" placeholder={t("companyPlaceholder")} required autoFocus defaultValue={state?.values?.companyName} />
       </div>
       <FormError>{state?.error}</FormError>
       <button type="submit" className="btn btn-primary btn-block" disabled={isPending}>

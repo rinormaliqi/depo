@@ -13,7 +13,12 @@ import { createOrganizationForFounder } from "@/lib/onboarding";
 import { LIMITS, assertNotLimited, clientIp, record } from "@/lib/rate-limit";
 import { UserError } from "@/lib/user-error";
 
-type FormState = { error?: string } | undefined;
+// `values` carries what was submitted back to the form. React resets an
+// uncontrolled form to its defaultValue once the action resolves — errors
+// included — so handing the values back as defaults is what makes a
+// rejected submit leave the page as the person typed it. The password is
+// deliberately not among them.
+type FormState = { error?: string; values?: { name?: string; companyName?: string; email?: string } } | undefined;
 
 export async function signUp(_prevState: FormState, formData: FormData): Promise<FormState> {
   const t = await getTranslations("auth.signup");
@@ -21,23 +26,24 @@ export async function signUp(_prevState: FormState, formData: FormData): Promise
   const companyName = formData.get("companyName")?.toString().trim();
   const email = formData.get("email")?.toString().trim().toLowerCase();
   const password = formData.get("password")?.toString();
+  const values = { name, companyName, email };
 
   if (!name || !companyName || !email || !password) {
-    return { error: t("errorRequired") };
+    return { error: t("errorRequired"), values };
   }
   if (password.length < 8) {
-    return { error: t("errorPasswordLength") };
+    return { error: t("errorPasswordLength"), values };
   }
 
   if (isDisposableEmail(email)) {
-    return { error: t("errorDisposableEmail") };
+    return { error: t("errorDisposableEmail"), values };
   }
 
   const ipKey = `signup:ip:${await clientIp()}`;
   try {
     await assertNotLimited(ipKey, LIMITS.signup);
   } catch (e) {
-    if (e instanceof UserError) return { error: e.message };
+    if (e instanceof UserError) return { error: e.message, values };
     throw e;
   }
 
@@ -46,14 +52,14 @@ export async function signUp(_prevState: FormState, formData: FormData): Promise
   const normalizedEmail = normalizeEmail(email);
   const [existing] = await db.select().from(users).where(eq(users.normalizedEmail, normalizedEmail));
   if (existing) {
-    return { error: t("errorEmailExists") };
+    return { error: t("errorEmailExists"), values };
   }
 
   // Checked before the user row exists, so a missing seed can't leave an
   // orphaned user behind.
   const [businessPlan] = await db.select({ id: plans.id }).from(plans).where(eq(plans.key, "business"));
   if (!businessPlan) {
-    return { error: t("errorPlansNotSeeded") };
+    return { error: t("errorPlansNotSeeded"), values };
   }
 
   await record(ipKey);
@@ -71,7 +77,7 @@ export async function signUp(_prevState: FormState, formData: FormData): Promise
     await signIn("credentials", { email, password, redirectTo: "/verify-email" });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: t("errorSignInFailed") };
+      return { error: t("errorSignInFailed"), values };
     }
     throw error;
   }

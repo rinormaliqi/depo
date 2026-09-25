@@ -17,7 +17,7 @@ export function AcceptInviteForm({ token, isExistingUser }: { token: string; isE
       {!isExistingUser && (
         <div className="field">
           <label>{t("yourName")}</label>
-          <input className="input" name="name" placeholder={t("yourNamePlaceholder")} required />
+          <input className="input" name="name" placeholder={t("yourNamePlaceholder")} required defaultValue={state?.values?.name} />
         </div>
       )}
 

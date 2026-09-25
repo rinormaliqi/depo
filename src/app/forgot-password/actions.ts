@@ -11,12 +11,16 @@ import { LIMITS, clientIp, isLimited, record } from "@/lib/rate-limit";
 
 const RESET_VALID_MINUTES = 60;
 
-type FormState = { error?: string; sent?: boolean } | undefined;
+// `values` carries what was submitted back to the form: React resets an
+// uncontrolled form to its defaultValue once the action resolves, errors
+// included, so without this a refused submit empties the field the person
+// has to correct.
+type FormState = { error?: string; sent?: boolean; values?: { email?: string } } | undefined;
 
 export async function requestPasswordReset(_prevState: FormState, formData: FormData): Promise<FormState> {
   const t = await getTranslations("forgotPassword");
   const email = formData.get("email")?.toString().trim().toLowerCase();
-  if (!email) return { error: t("error.required") };
+  if (!email) return { error: t("error.required"), values: { email } };
 
   // Over the limit → the same "sent" screen, nothing sent: a flood of
   // requests must not turn into a flood of mail, and must not reveal

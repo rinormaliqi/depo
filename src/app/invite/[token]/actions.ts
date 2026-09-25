@@ -15,7 +15,11 @@ import { markEmailVerified } from "@/lib/email-verification";
 import { getOrgLockReason } from "@/lib/session";
 import { rememberOrganization } from "@/lib/organizations";
 
-type FormState = { error?: string } | undefined;
+// `values` carries the typed name back to the form: React resets an
+// uncontrolled form to its defaultValue once the action resolves, errors
+// included, so without this someone accepting an invite retypes their name
+// every time the password is rejected.
+type FormState = { error?: string; values?: { name?: string } } | undefined;
 
 async function loadValidInvite(token: string) {
   const [invite] = await db
@@ -76,17 +80,18 @@ export async function acceptInviteAsNewUser(_prevState: FormState, formData: For
   const token = formData.get("token")?.toString();
   const name = formData.get("name")?.toString().trim();
   const password = formData.get("password")?.toString();
-  if (!token || !name || !password) return { error: t("required") };
-  if (password.length < 8) return { error: t("passwordLength") };
+  const values = { name };
+  if (!token || !name || !password) return { error: t("required"), values };
+  if (password.length < 8) return { error: t("passwordLength"), values };
 
   const invite = await loadValidInvite(token);
-  if (!invite) return { error: t("invalid") };
+  if (!invite) return { error: t("invalid"), values };
   const lockError = await orgLockError(invite.organizationId);
-  if (lockError) return { error: lockError };
+  if (lockError) return { error: lockError, values };
 
   const normalizedEmail = normalizeEmail(invite.email);
   const [existing] = await db.select().from(users).where(eq(users.normalizedEmail, normalizedEmail));
-  if (existing) return { error: t("accountExists") };
+  if (existing) return { error: t("accountExists"), values };
 
   const passwordHash = await hash(password, 12);
   const [user] = await db

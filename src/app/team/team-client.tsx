@@ -207,7 +207,7 @@ export function TeamClient({
           <form action={formAction} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
             <div className="field" style={{ flex: "1 1 220px" }}>
               <label>{t("emailLabel")}</label>
-              <input className="input" name="email" type="email" placeholder="name@company.com" required />
+              <input className="input" name="email" type="email" placeholder="name@company.com" required defaultValue={state?.values?.email} />
             </div>
             <div className="field" style={{ width: 140 }}>
               <label>{t("roleLabel")}</label>

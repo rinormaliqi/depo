@@ -69,20 +69,30 @@ async function sendInviteEmail(invite: { email: string; token: string; role: Mem
   });
 }
 
-export async function createInvite(_prevState: { error?: string } | undefined, formData: FormData) {
+// `values` carries the address and role back to the form: React resets an
+// uncontrolled form to its defaultValue once the action resolves, errors
+// included, so without this a refused invite empties the field the person
+// has to correct.
+type InviteState = { error?: string; values?: { email?: string; role?: string } } | undefined;
+
+export async function createInvite(_prevState: InviteState, formData: FormData): Promise<InviteState> {
   const t = await getTranslations("team.error");
   let session: Awaited<ReturnType<typeof requireSession>>;
   try {
     session = await requirePermission("manageTeam");
   } catch (e) {
-    return { error: e instanceof Error ? e.message : String(e) };
+    return {
+      error: e instanceof Error ? e.message : String(e),
+      values: { email: formData.get("email")?.toString().trim().toLowerCase(), role: formData.get("role")?.toString() },
+    };
   }
 
   const email = formData.get("email")?.toString().trim().toLowerCase();
   const role = formData.get("role")?.toString();
+  const values = { email, role };
 
-  if (!email || !isRole(role)) return { error: t("required") };
-  if (role === "admin" && session.role !== "admin") return { error: t("onlyAdminCanInviteAdmin") };
+  if (!email || !isRole(role)) return { error: t("required"), values };
+  if (role === "admin" && session.role !== "admin") return { error: t("onlyAdminCanInviteAdmin"), values };
 
   const [existingUser] = await db.select().from(users).where(eq(users.normalizedEmail, normalizeEmail(email)));
   if (existingUser) {
@@ -90,7 +100,7 @@ export async function createInvite(_prevState: { error?: string } | undefined, f
       .select()
       .from(memberships)
       .where(and(eq(memberships.userId, existingUser.id), eq(memberships.organizationId, session.organizationId)));
-    if (existingMembership) return { error: t("alreadyMember", { email: existingUser.email }) };
+    if (existingMembership) return { error: t("alreadyMember", { email: existingUser.email }), values };
   }
 
   const expiresAt = expiryFromNow();
@@ -113,7 +123,7 @@ export async function createInvite(_prevState: { error?: string } | undefined, f
     try {
       await assertCanAddSeats(session.organizationId, 1);
     } catch (e) {
-      return { error: e instanceof Error ? e.message : t("notAuthorized") };
+      return { error: e instanceof Error ? e.message : t("notAuthorized"), values };
     }
     [invite] = await db
       .insert(invites)
@@ -134,7 +144,7 @@ export async function createInvite(_prevState: { error?: string } | undefined, f
     // The invite row exists and its link is on /team — a mail provider
     // hiccup shouldn't throw away the seat, just tell the inviter.
     revalidatePath("/team");
-    return { error: t("emailFailed") };
+    return { error: t("emailFailed"), values };
   }
 
   revalidatePath("/team");

@@ -14,15 +14,15 @@ export function SignupForm() {
     <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div className="field">
         <label>{t("signup.companyName")}</label>
-        <input className="input" name="companyName" placeholder={t("signup.companyPlaceholder")} required />
+        <input className="input" name="companyName" placeholder={t("signup.companyPlaceholder")} required defaultValue={state?.values?.companyName} />
       </div>
       <div className="field">
         <label>{t("signup.yourName")}</label>
-        <input className="input" name="name" placeholder={t("signup.namePlaceholder")} required />
+        <input className="input" name="name" placeholder={t("signup.namePlaceholder")} required defaultValue={state?.values?.name} />
       </div>
       <div className="field">
         <label>{t("email")}</label>
-        <input className="input" name="email" type="email" placeholder="you@company.com" required />
+        <input className="input" name="email" type="email" placeholder="you@company.com" required defaultValue={state?.values?.email} />
       </div>
       <div className="field">
         <label>{t("password")}</label>

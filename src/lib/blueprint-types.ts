@@ -74,6 +74,36 @@ export function bayLayout(r: Rotation): { vertical: boolean; reversed: boolean }
   return { vertical: r === 90 || r === 270, reversed: r === 180 || r === 270 };
 }
 
+// Keep a box inside the building: never wider or deeper than the floor,
+// never hanging over an edge. The drag path has always clamped what it
+// places, but the inspector's number fields went straight to the server,
+// so typing 999 into a 40 m building saved a rack that reached across the
+// whole plan and out the far wall.
+//
+// Used on both sides of the wire on purpose. On the way in, so nothing is
+// stored outside the envelope. On the way out, so a row stored *before*
+// this rule still draws somewhere it can be clicked — left at its stored
+// size it paints over its neighbours and its own bays swallow every
+// click, which is how the one object that needs correcting becomes the
+// one object nobody can select.
+export function clampToFloor(box: Box, floor: { widthM: number; heightM: number }, minM = MIN_SIDE_M): Box {
+  const widthM = Math.min(Math.max(box.widthM, minM), floor.widthM);
+  const heightM = Math.min(Math.max(box.heightM, minM), floor.heightM);
+  return {
+    widthM: round2(widthM),
+    heightM: round2(heightM),
+    xM: round2(Math.min(Math.max(box.xM, 0), Math.max(0, floor.widthM - widthM))),
+    yM: round2(Math.min(Math.max(box.yM, 0), Math.max(0, floor.heightM - heightM))),
+  };
+}
+
+// Anything thinner than this is a mis-tap rather than a thing.
+export const MIN_SIDE_M = 0.3;
+
+export function outsideFloor(box: Box, floor: { widthM: number; heightM: number }) {
+  return box.widthM > floor.widthM || box.heightM > floor.heightM || box.xM + box.widthM > floor.widthM || box.yM + box.heightM > floor.heightM;
+}
+
 export function round2(v: number) {
   return Math.round(v * 100) / 100;
 }

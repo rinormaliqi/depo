@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { alignSnap, avoidObstacles, bayLayout, buildParametric, buildTemplate, DEFAULT_PARAMETRIC, flip, intersects, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise } from "./blueprint-types";
+import { alignSnap, avoidObstacles, bayLayout, buildParametric, buildTemplate, clampToFloor, DEFAULT_PARAMETRIC, flip, intersects, isRotation, outsideFloor, pillarGridPositions, rotateBox, snapToWall, turnClockwise } from "./blueprint-types";
 
 describe("rotation", () => {
   it("a quarter turn swaps width and depth about the same centre, on the grid", () => {
@@ -208,4 +208,33 @@ describe("alignSnap", () => {
     const r = alignSnap({ xM: 2, yM: 3, widthM: 7.9, heightM: 1.2 }, [rack], 0.2, "resize");
     assert.deepEqual([r.box.xM, r.box.widthM, r.guides.x], [2, 8, 10]);
   });
+});
+
+it("clampToFloor keeps a box inside the building, size and position together", () => {
+  const floor = { widthM: 40, heightM: 24 };
+
+  // A box already inside is left exactly as it is.
+  assert.deepEqual(clampToFloor({ xM: 9.21, yM: 7.55, widthM: 5.49, heightM: 1.2 }, floor), { xM: 9.21, yM: 7.55, widthM: 5.49, heightM: 1.2 });
+
+  // The case this exists for: a rack typed as 999 m wide in a 40 m building.
+  // It cannot be wider than the floor, and once it fills the floor it has to
+  // start at the wall — clamping the size alone would still leave it hanging
+  // out of the far end.
+  assert.deepEqual(clampToFloor({ xM: 9.21, yM: 7.55, widthM: 999, heightM: 1.2 }, floor), { xM: 0, yM: 7.55, widthM: 40, heightM: 1.2 });
+
+  // Growing a box pushes it back off the edge it would have crossed.
+  assert.deepEqual(clampToFloor({ xM: 38, yM: 0, widthM: 6, heightM: 2 }, floor), { xM: 34, yM: 0, widthM: 6, heightM: 2 });
+
+  // Negative coordinates come back to the wall; a sliver keeps a minimum.
+  assert.deepEqual(clampToFloor({ xM: -5, yM: -1, widthM: 0.01, heightM: 0.01 }, floor), { xM: 0, yM: 0, widthM: 0.3, heightM: 0.3 });
+
+  // Depth is bounded by the building's depth, not its width.
+  assert.deepEqual(clampToFloor({ xM: 0, yM: 0, widthM: 10, heightM: 100 }, floor), { xM: 0, yM: 0, widthM: 10, heightM: 24 });
+});
+
+it("outsideFloor spots a box that reaches past the building", () => {
+  const floor = { widthM: 40, heightM: 24 };
+  assert.equal(outsideFloor({ xM: 0, yM: 0, widthM: 40, heightM: 24 }, floor), false, "exactly filling it is inside");
+  assert.equal(outsideFloor({ xM: 9.21, yM: 7.55, widthM: 999, heightM: 1.2 }, floor), true);
+  assert.equal(outsideFloor({ xM: 38, yM: 0, widthM: 6, heightM: 2 }, floor), true, "hanging over an edge counts");
 });

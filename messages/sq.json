@@ -294,7 +294,8 @@
     "errorNotFound": "Artikulli nuk u gjet",
     "errorHasStock": "{name} ka ende stok në një kuti — nxirre fillimisht",
     "errorHasHistory": "{name} ka lëvizje në historik dhe mbetet në katalog; riemërtoje nëse është gabim",
-    "stockNote": "{count} në stok"
+    "stockNote": "{count} në stok",
+    "errorTooLong": "Fushat e artikullit nuk mund të kalojnë {max} karaktere"
   },
   "team": {
     "title": "Ekipi",

@@ -294,7 +294,8 @@
     "errorNotFound": "Item not found",
     "errorHasStock": "{name} still has stock in a bin — pick it first",
     "errorHasHistory": "{name} has movements in the history and stays in the catalog; rename it if it's wrong",
-    "stockNote": "{count} in stock"
+    "stockNote": "{count} in stock",
+    "errorTooLong": "An item's fields cannot be longer than {max} characters"
   },
   "team": {
     "title": "Team",

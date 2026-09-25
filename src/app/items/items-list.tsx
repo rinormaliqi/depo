@@ -6,6 +6,7 @@ import { useConfirm, useNotify } from "@/components/notifications";
 import { unwrap } from "@/lib/action-result";
 import * as rawActions from "./actions";
 import type { ItemPatch, ItemWithStock } from "./actions";
+import { MAX_FIELD_CHARS } from "@/lib/import-table";
 
 const updateItem = unwrap(rawActions.updateItem);
 const deleteItem = unwrap(rawActions.deleteItem);
@@ -97,10 +98,10 @@ function ItemEditor({ item, onDone }: { item: ItemWithStock; onDone: () => void 
       }}
       style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--color-divider)" }}
     >
-      <input className="input" value={patch.name} onChange={set("name")} placeholder={t("namePlaceholder")} required autoFocus style={{ width: 160 }} />
-      <input className="input" value={patch.unitOfMeasure} onChange={set("unitOfMeasure")} placeholder={t("unitPlaceholder")} required style={{ width: 120 }} />
-      <input className="input" value={patch.sku} onChange={set("sku")} placeholder={t("skuPlaceholder")} style={{ width: 120 }} />
-      <input className="input" value={patch.category} onChange={set("category")} placeholder={t("categoryPlaceholder")} style={{ width: 140 }} />
+      <input className="input" value={patch.name} onChange={set("name")} maxLength={MAX_FIELD_CHARS} placeholder={t("namePlaceholder")} required autoFocus style={{ width: 160 }} />
+      <input className="input" value={patch.unitOfMeasure} onChange={set("unitOfMeasure")} maxLength={MAX_FIELD_CHARS} placeholder={t("unitPlaceholder")} required style={{ width: 120 }} />
+      <input className="input" value={patch.sku} onChange={set("sku")} maxLength={MAX_FIELD_CHARS} placeholder={t("skuPlaceholder")} style={{ width: 120 }} />
+      <input className="input" value={patch.category} onChange={set("category")} maxLength={MAX_FIELD_CHARS} placeholder={t("categoryPlaceholder")} style={{ width: 140 }} />
       <button type="submit" className="btn btn-primary" disabled={isPending}>
         {isPending ? t("saving") : t("save")}
       </button>

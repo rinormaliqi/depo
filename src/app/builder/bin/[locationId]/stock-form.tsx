@@ -6,6 +6,7 @@ import { useState } from "react";
 import * as rawActions from "./actions";
 import { unwrap } from "@/lib/action-result";
 import { useNotify } from "@/components/notifications";
+import { MAX_MOVEMENT_QUANTITY } from "@/lib/stock-limits";
 
 const receiveStock = unwrap(rawActions.receiveStock);
 const pickStock = unwrap(rawActions.pickStock);
@@ -52,6 +53,7 @@ export function StockForm({ locationId, items }: { locationId: string; items: It
           type="number"
           inputMode="numeric"
           min={1}
+          max={MAX_MOVEMENT_QUANTITY}
           step={1}
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}

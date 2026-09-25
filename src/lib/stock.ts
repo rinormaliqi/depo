@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { facilities, items, locations, movements, stock } from "@/db/schema";
 import { getOrgLockReason } from "@/lib/session";
 import { UserError } from "@/lib/user-error";
+import { MAX_MOVEMENT_QUANTITY } from "@/lib/stock-limits";
 
 // Shared by both the bin detail page and the Scanner — not itself a server
 // action, just the core receive/pick logic called from ones that are.
@@ -48,9 +49,12 @@ async function requireOrgNotLocked(organizationId: string) {
 }
 
 async function requirePositiveQuantity(quantity: number) {
+  const t = await getTranslations("stockError");
   if (!Number.isInteger(quantity) || quantity <= 0) {
-    const t = await getTranslations("stockError");
     throw new UserError(t("quantity"));
+  }
+  if (quantity > MAX_MOVEMENT_QUANTITY) {
+    throw new UserError(t("quantityTooLarge", { max: MAX_MOVEMENT_QUANTITY }));
   }
 }
 

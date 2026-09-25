@@ -877,7 +877,8 @@
     "binNotFound": "Kutia nuk u gjet",
     "itemNotFound": "Artikulli nuk u gjet",
     "quantity": "Sasia duhet të jetë një numër i plotë pozitiv",
-    "notEnough": "Nuk ka stok të mjaftueshëm në këtë kuti"
+    "notEnough": "Nuk ka stok të mjaftueshëm në këtë kuti",
+    "quantityTooLarge": "Sasia më e madhe që mund të regjistrohet njëherësh është {max}"
   },
   "stock": {
     "locate": "Gjej",

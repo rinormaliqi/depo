@@ -37,6 +37,18 @@ test.describe("labels", () => {
     await expect(page.locator(".label-qr svg")).toHaveCount(claimed);
   });
 
+  // The QR spec wants four modules of white around a symbol or a scanner
+  // may not find its edges. It used to be generated with margin: 0, leaving
+  // only what the label's own padding happened to give — about three
+  // modules above and below. Carrying it inside the SVG makes it
+  // independent of the box: the dark modules now start four in.
+  test("each QR carries its own quiet zone", async ({ adminPage: page }) => {
+    await page.goto("/labels");
+    const d = await page.locator(".label-qr svg path[stroke]").first().getAttribute("d");
+    const firstX = Number(d?.match(/^M(\d+(?:\.\d+)?)/)?.[1] ?? 0);
+    expect(firstX, "dark modules must start inside a quiet zone").toBeGreaterThanOrEqual(4);
+  });
+
   test("every label carries its code and path", async ({ adminPage: page }) => {
     await page.goto("/labels");
     const first = page.locator(".label").first();

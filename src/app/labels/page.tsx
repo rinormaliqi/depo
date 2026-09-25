@@ -34,7 +34,13 @@ export default async function LabelsPage({
   const labels = await Promise.all(
     bins.map(async (b) => ({
       ...b,
-      qr: await QRCode.toString(`${base}/builder/bin/${b.id}`, { type: "svg", margin: 0, errorCorrectionLevel: "M" }),
+      // margin is in modules, and the spec asks for four of white around a
+      // symbol or a scanner may not find its edges. At 30 mm across 37
+      // modules one module is 0.81 mm, and the label's own padding left
+      // about 2.5 mm above and below — a little over three. Carrying the
+      // quiet zone inside the SVG makes it independent of whatever the
+      // label box does around it.
+      qr: await QRCode.toString(`${base}/builder/bin/${b.id}`, { type: "svg", margin: 4, errorCorrectionLevel: "M" }),
     })),
   );
 

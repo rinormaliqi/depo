@@ -46,12 +46,27 @@ test("a plan without a feature switches it off for every role, with the plan as 
   assert.equal(resolveCapabilities({ role: "admin", plan: { ...business, maxFacilities: null }, locked: null, usage }).can.multiFacility, true);
 });
 
-test("a locked org keeps read-side features but loses every action, naming the lock", () => {
-  for (const lock of ["unverified", "trialEnded", "expired", "pastDue", "canceled"] as const) {
+test("a locked org keeps read-side features, loses every action, and keeps the way to pay", () => {
+  // Paying is how a lock is lifted, so billing survives it — otherwise the
+  // lock seals the only door out of itself (#138).
+  for (const lock of ["trialEnded", "expired", "pastDue", "canceled"] as const) {
     const caps = resolveCapabilities({ role: "admin", plan: business, locked: lock, usage });
-    expectCan(caps, ["printLabels", "cameraScanning", "viewMetrics", "multiFacility"]);
+    expectCan(caps, ["manageBilling", "printLabels", "cameraScanning", "viewMetrics", "multiFacility"]);
     assert.deepEqual(caps.reason.moveStock, { kind: "locked", lock });
+    assert.equal(caps.reason.manageBilling, undefined, `${lock}: billing must stay open`);
   }
+
+  // Before verification there is nothing to renew and the way out is the
+  // verification link, not a payment, so billing stays shut with the rest.
+  const unverified = resolveCapabilities({ role: "admin", plan: business, locked: "unverified", usage });
+  expectCan(unverified, ["printLabels", "cameraScanning", "viewMetrics", "multiFacility"]);
+  assert.deepEqual(unverified.reason.manageBilling, { kind: "locked", lock: "unverified" });
+
+  // The exemption is about the lock, not about handing billing to anyone:
+  // a manager never had it, locked or not.
+  const manager = resolveCapabilities({ role: "manager", plan: business, locked: "trialEnded", usage });
+  assert.deepEqual(manager.reason.manageBilling, { kind: "role" });
+
   // Role outranks lock in the explanation: a worker on a locked org is told
   // about their role for layout, not about billing they can't fix.
   const worker = resolveCapabilities({ role: "worker", plan: business, locked: "trialEnded", usage });

@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { movements, stock } from "@/db/schema";
 import { pickStockAt, receiveStockAt } from "@/lib/stock";
 import { addMember, createBin, createItem, createOrg } from "@/test-support/factories";
+import { MAX_MOVEMENT_QUANTITY } from "@/lib/stock-limits";
 
 // movements is the append-only source of truth and stock is the derived
 // "current quantity" (docs/architecture.md, "Stock model"). After any
@@ -61,6 +62,20 @@ describe("stock arithmetic", () => {
     await assert.rejects(receiveStockAt(org.org.id, user.id, bin.id, item.id, 0), /quantity/);
     await assert.rejects(pickStockAt(org.org.id, user.id, bin.id, item.id, -1), /quantity/);
     assert.equal(await sumOfMovements(), 25);
+  });
+
+  test("a quantity past the cap is refused here, not by Postgres", async () => {
+    // Without the cap this reached the `integer` column, came back as
+    // "integer out of range" and left the person with the generic error
+    // while Sentry logged a typo as a defect.
+    await assert.rejects(
+      receiveStockAt(org.org.id, user.id, bin.id, item.id, 3_000_000_000),
+      /quantityTooLarge/,
+      "a number past the column's own limit",
+    );
+    await assert.rejects(receiveStockAt(org.org.id, user.id, bin.id, item.id, MAX_MOVEMENT_QUANTITY + 1), /quantityTooLarge/);
+    await assert.doesNotReject(receiveStockAt(org.org.id, user.id, bin.id, item.id, MAX_MOVEMENT_QUANTITY), "the cap itself is allowed");
+    assert.equal(await sumOfMovements(), 25 + MAX_MOVEMENT_QUANTITY);
   });
 
   test("a locked org cannot move stock at all", async () => {

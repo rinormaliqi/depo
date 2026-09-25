@@ -8,6 +8,7 @@ import { unwrap } from "@/lib/action-result";
 import { CameraScanner } from "./camera-scanner";
 import { useNotify } from "@/components/notifications";
 import { Gate } from "@/components/capabilities";
+import { MAX_MOVEMENT_QUANTITY } from "@/lib/stock-limits";
 
 const commitScan = unwrap(rawActions.commitScan);
 const resolveScan = unwrap(rawActions.resolveScan);
@@ -88,7 +89,7 @@ export function ScanForm({ items }: { items: Item[] }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 9 }}>
           <div className="field">
             <label>{t("quantity")}</label>
-            <input className="input" type="number" inputMode="numeric" min="1" placeholder="200" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            <input className="input" type="number" inputMode="numeric" min="1" max={MAX_MOVEMENT_QUANTITY} placeholder="200" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
           </div>
           <div className="field">
             <label>{t("location")}</label>

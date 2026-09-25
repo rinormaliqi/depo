@@ -877,7 +877,8 @@
     "binNotFound": "Bin not found",
     "itemNotFound": "Item not found",
     "quantity": "Quantity must be a positive whole number",
-    "notEnough": "Not enough stock in this bin"
+    "notEnough": "Not enough stock in this bin",
+    "quantityTooLarge": "The most that can be booked at once is {max}"
   },
   "stock": {
     "locate": "Locate",

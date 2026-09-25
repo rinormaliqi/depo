@@ -9,7 +9,7 @@ import { KIND_APPEARANCE, KIND_COLOR, kindAppearance, kindLabelColor } from "./k
 import { LayoutWizard } from "./layout-wizard";
 import { UnderlayPanel, type Calibration } from "./underlay-panel";
 import { calibrateUnderlay, underlayUrl, type UnderlayMeta } from "@/lib/underlay-shared";
-import { LOCATION_TYPES, TEMPLATE_KEYS, ZONE_COLORS, alignSnap, bayLayout, flip, intersects, isOpening, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise, type Box as FloorBox, type Guides, type ParametricLayout, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
+import { LOCATION_TYPES, TEMPLATE_KEYS, ZONE_COLORS, alignSnap, bayLayout, clampToFloor, flip, intersects, isOpening, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise, type Box as FloorBox, type Guides, type ParametricLayout, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
 import type { FacilityLevel } from "@/lib/levels";
 import { useConfirm } from "@/components/notifications";
@@ -1572,7 +1572,14 @@ export function BlueprintCanvas({
               {topLevel.map((e) => {
                 const type = LOCATION_TYPES[e.kind as LocationKind];
                 const isSel = e.id === selectedId;
-                const live = localOverride[e.id] ?? e;
+                // Drawn inside the floor even when the stored box isn't, so a
+                // row saved before updateEntity() clamped — a rack typed as
+                // 999 m wide — can still be picked up and corrected. Left at
+                // its stored size it covers the plan and its own bays take
+                // every click. The inspector still shows the stored numbers,
+                // so what is wrong stays visible and fixable.
+                const stored = localOverride[e.id] ?? e;
+                const live = { ...stored, ...clampToFloor(stored, facility) };
                 const box: React.CSSProperties = {
                   position: "absolute", left: live.xM * z, top: live.yM * z, width: live.widthM * z, height: live.heightM * z,
                   cursor: "move",

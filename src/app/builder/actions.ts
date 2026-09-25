@@ -17,6 +17,7 @@ import {
   isZoneColor,
   LOCATION_TYPES,
   nextCode,
+  clampToFloor,
   pillarGridPositions,
   rescaleWithinZone,
   round2,
@@ -73,7 +74,7 @@ async function requireOwnedLocation(locationId: string) {
     throw new UserError(t("locationNotFound"));
   }
 
-  return { ...location, organizationId };
+  return { ...location, organizationId, facility };
 }
 
 // The facility the user is currently working in — the one the facility
@@ -638,10 +639,31 @@ async function updateEntityImpl(
     }
     values.code = trimmed;
   }
-  if (patch.xM !== undefined) values.xM = Math.max(0, round2(patch.xM));
-  if (patch.yM !== undefined) values.yM = Math.max(0, round2(patch.yM));
-  if (patch.widthM !== undefined) values.widthM = Math.max(0.3, round2(patch.widthM));
-  if (patch.heightM !== undefined) values.heightM = Math.max(0.3, round2(patch.heightM));
+  // The inspector's number fields used to land here unchecked, so typing
+  // 999 into a 40 m building stored a rack that crossed the whole plan and
+  // hung out of the far wall — over its neighbours, outside every zone, and
+  // with its own bays swallowing the clicks needed to select it back. The
+  // drag path has always clamped; this is the same rule for the typed one,
+  // and it lives on the server so it holds whatever calls the action.
+  //
+  // All four are written whenever any of them moves: growing a box can push
+  // it past an edge it was previously inside, so the position has to settle
+  // with the size.
+  if (patch.xM !== undefined || patch.yM !== undefined || patch.widthM !== undefined || patch.heightM !== undefined) {
+    const clamped = clampToFloor(
+      {
+        xM: patch.xM ?? location.xM,
+        yM: patch.yM ?? location.yM,
+        widthM: patch.widthM ?? location.widthM,
+        heightM: patch.heightM ?? location.heightM,
+      },
+      location.facility,
+    );
+    values.xM = clamped.xM;
+    values.yM = clamped.yM;
+    values.widthM = clamped.widthM;
+    values.heightM = clamped.heightM;
+  }
   if (patch.rotation !== undefined) {
     if (!isRotation(patch.rotation)) throw new UserError(t("badRotation"));
     values.rotation = patch.rotation;

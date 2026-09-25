@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
-import { NotForRole } from "@/components/not-for-role";
+import { BlockedPage } from "@/components/blocked-page";
 import { AppHeader } from "@/components/app-header";
 import { getCapabilities } from "@/lib/capabilities";
 import { getMyItemsWithStock } from "./actions";
@@ -14,7 +14,7 @@ export default async function ItemsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const capsGate = await getCapabilities();
-  if (!capsGate?.can.manageItems) return <NotForRole capability="manageItems" />;
+  if (!capsGate?.can.manageItems) return <BlockedPage capability="manageItems" reason={capsGate?.reason.manageItems} />;
 
   const [facility, myItems, caps, t] = await Promise.all([
     getMyFacility(),

@@ -38,6 +38,5 @@ the bug is fixed. Remove the `test.fail()` line with the fix. Currently:
 
 - `form-retention.spec.ts` — every form empties itself when a submit is
   rejected (React 19 resets an uncontrolled form after its action resolves).
-- `billing-lockout.spec.ts` — a locked organisation's admin is told the page
-  is not for their role, because the seven pages rendering `<NotForRole>`
-  discard the `reason` that `resolveCapabilities()` already worked out.
+- `billing-lockout.spec.ts` — a locked organisation cannot reach `/billing`
+  at all, so it has no way to pay its way out (#138).

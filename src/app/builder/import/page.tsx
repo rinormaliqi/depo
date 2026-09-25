@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
-import { NotForRole } from "@/components/not-for-role";
+import { BlockedPage } from "@/components/blocked-page";
 import { PasteImport } from "@/components/paste-import";
 import { getCapabilities } from "@/lib/capabilities";
 import { LOCATION_COLUMNS } from "@/lib/import-locations";
@@ -16,7 +16,7 @@ export default async function LocationsImportPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const caps = await getCapabilities();
-  if (!caps?.can.editLayout) return <NotForRole capability="editLayout" />;
+  if (!caps?.can.editLayout) return <BlockedPage capability="editLayout" reason={caps?.reason.editLayout} />;
 
   const [facility, t] = await Promise.all([getMyFacility(), getTranslations()]);
   if (!facility) {

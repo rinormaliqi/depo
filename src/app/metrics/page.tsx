@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
 import { getMetrics } from "./actions";
 import { getCapabilities } from "@/lib/capabilities";
-import { NotForRole } from "@/components/not-for-role";
+import { BlockedPage } from "@/components/blocked-page";
 
 function reasonChip(reason: string) {
   const base: React.CSSProperties = {
@@ -40,7 +40,7 @@ export default async function MetricsPage() {
   }
 
   const caps = await getCapabilities();
-  if (!caps?.can.viewMetrics) return <NotForRole capability="viewMetrics" />;
+  if (!caps?.can.viewMetrics) return <BlockedPage capability="viewMetrics" reason={caps?.reason.viewMetrics} />;
   const data = await getMetrics();
   const kpis = data?.kpis;
   const zoneRows = data?.zoneRows ?? [];

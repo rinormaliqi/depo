@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
-import { NotForRole } from "@/components/not-for-role";
+import { BlockedPage } from "@/components/blocked-page";
 import { getCapabilities } from "@/lib/capabilities";
 import { AppHeader } from "@/components/app-header";
 import { getTeam } from "./actions";
@@ -12,7 +12,7 @@ export default async function TeamPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const capsGate = await getCapabilities();
-  if (!capsGate?.can.manageTeam) return <NotForRole capability="manageTeam" />;
+  if (!capsGate?.can.manageTeam) return <BlockedPage capability="manageTeam" reason={capsGate?.reason.manageTeam} />;
 
   const [facility, team, t] = await Promise.all([getMyFacility(), getTeam(), getTranslations()]);
 

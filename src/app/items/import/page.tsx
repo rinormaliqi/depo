@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
-import { NotForRole } from "@/components/not-for-role";
+import { BlockedPage } from "@/components/blocked-page";
 import { getCapabilities } from "@/lib/capabilities";
 import { PasteImport } from "@/components/paste-import";
 import { IMPORT_COLUMNS } from "@/lib/import-items";
@@ -13,7 +13,7 @@ export default async function ItemsImportPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const caps = await getCapabilities();
-  if (!caps?.can.manageItems) return <NotForRole capability="manageItems" />;
+  if (!caps?.can.manageItems) return <BlockedPage capability="manageItems" reason={caps?.reason.manageItems} />;
 
   const [facility, t] = await Promise.all([getMyFacility(), getTranslations()]);
 

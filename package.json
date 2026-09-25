@@ -17,7 +17,9 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:seed:dev": "tsx src/db/seed-dev.ts",
     "test": "node --import tsx --import ./src/test-support/register.mjs --test --test-concurrency=1 \"src/**/*.test.ts\"",
-    "test:unit": "node --import tsx --test \"src/lib/*.test.ts\""
+    "test:unit": "node --import tsx --test \"src/lib/*.test.ts\"",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.75.0",
@@ -38,6 +40,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22",
     "@types/nodemailer": "^8.0.2",

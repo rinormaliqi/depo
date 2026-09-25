@@ -11,6 +11,8 @@
 // Quotes work the RFC 4180 way ("" escapes a quote, a quoted field may
 // contain the delimiter or a line break).
 
+import { stripFormulaGuard } from "./csv";
+
 export type Delimiter = "\t" | ";" | ",";
 
 export const MAX_IMPORT_ROWS = 5000;
@@ -64,8 +66,15 @@ export function tokenize(text: string, delimiter: string): { line: number; cells
   let recordLine = 1;
   let atRecordStart = true;
 
+  // A cell the export guarded against Excel's formula parsing comes back
+  // as its original value here — see addFormulaGuard() in src/lib/csv.ts.
+  const pushCell = () => {
+    cells.push(stripFormulaGuard(cell));
+    cell = "";
+  };
+
   const endRecord = () => {
-    cells.push(cell);
+    cells.push(stripFormulaGuard(cell));
     records.push({ line: recordLine, cells });
     cells = [];
     cell = "";
@@ -95,8 +104,7 @@ export function tokenize(text: string, delimiter: string): { line: number; cells
     if (ch === '"' && cell.length === 0) {
       quoted = true;
     } else if (ch === delimiter) {
-      cells.push(cell);
-      cell = "";
+      pushCell();
     } else if (ch === "\n" || (ch === "\r" && text[i + 1] === "\n")) {
       if (ch === "\r") i++;
       endRecord();

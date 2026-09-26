@@ -366,8 +366,13 @@ export const movements = pgTable(
       onDelete: "set null",
     }),
     quantity: integer("quantity").notNull(),
+    // "pick" is a generic historical exit (kept for back-compat with
+    // existing callers); "sale"/"remove" are its specific successors so
+    // history and metrics can tell a sale apart from scrap/loss. "relocate"
+    // is a single row with both from/to set — one bin to another, in one
+    // atomic movement rather than a pick + a receive.
     reason: text("reason", {
-      enum: ["receive", "pick", "relocate", "adjust"],
+      enum: ["receive", "pick", "relocate", "sale", "remove", "adjust"],
     }).notNull(),
     performedBy: uuid("performed_by")
       .notNull()

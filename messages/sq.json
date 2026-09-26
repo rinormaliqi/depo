@@ -879,7 +879,8 @@
     "itemNotFound": "Artikulli nuk u gjet",
     "quantity": "Sasia duhet të jetë një numër i plotë pozitiv",
     "notEnough": "Nuk ka stok të mjaftueshëm në këtë kuti",
-    "quantityTooLarge": "Sasia më e madhe që mund të regjistrohet njëherësh është {max}"
+    "quantityTooLarge": "Sasia më e madhe që mund të regjistrohet njëherësh është {max}",
+    "sameLocation": "Zgjidh një kuti tjetër ku të zhvendosësh stokun"
   },
   "stock": {
     "locate": "Gjej",

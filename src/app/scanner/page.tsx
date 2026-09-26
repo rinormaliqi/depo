@@ -55,7 +55,7 @@ export default async function ScannerPage() {
               <thead>
                 <tr>
                   <th>{t("metrics.when")}</th><th>{t("metrics.move")}</th><th>{t("metrics.item")}</th>
-                  <th style={{ textAlign: "right" }}>{t("metrics.qty")}</th><th>{t("metrics.to")}</th>
+                  <th style={{ textAlign: "right" }}>{t("metrics.qty")}</th><th>{t("metrics.from")}</th><th>{t("metrics.to")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -65,6 +65,7 @@ export default async function ScannerPage() {
                     <td style={{ fontSize: 11 }}>{t(`common.reason.${m.reason}` as "common.reason.receive")}</td>
                     <td style={{ fontSize: 12 }}>{m.itemName}</td>
                     <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{m.quantity}</td>
+                    <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{m.from}</td>
                     <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums", color: "var(--color-accent-700)" }}>{m.to}</td>
                   </tr>
                 ))}

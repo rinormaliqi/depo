@@ -89,6 +89,49 @@ export async function receiveStockAt(
     });
 }
 
+// Shared by pickStockAt and exitStockAt — they differ only in which reason
+// lands in the history row (generic "pick" vs. a specific "sale"/"remove"),
+// not in how the quantity check or the debit itself works.
+async function deductStockAt(
+  organizationId: string,
+  userId: string,
+  locationId: string,
+  itemId: string,
+  quantity: number,
+  reason: "pick" | "sale" | "remove",
+) {
+  await requireOrgNotLocked(organizationId);
+  await requireOwnedBin(locationId, organizationId);
+  await requireOwnedItem(itemId, organizationId);
+  await requirePositiveQuantity(quantity);
+  const t = await getTranslations("stockError");
+
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select()
+      .from(stock)
+      .where(and(eq(stock.itemId, itemId), eq(stock.locationId, locationId)));
+    if (!existing || existing.quantity < quantity) {
+      throw new UserError(t("notEnough"));
+    }
+
+    await tx.insert(movements).values({
+      organizationId,
+      itemId,
+      fromLocationId: locationId,
+      toLocationId: null,
+      quantity,
+      reason,
+      performedBy: userId,
+    });
+
+    await tx
+      .update(stock)
+      .set({ quantity: existing.quantity - quantity, updatedAt: new Date() })
+      .where(and(eq(stock.itemId, itemId), eq(stock.locationId, locationId)));
+  });
+}
+
 export async function pickStockAt(
   organizationId: string,
   userId: string,
@@ -96,32 +139,76 @@ export async function pickStockAt(
   itemId: string,
   quantity: number,
 ) {
+  return deductStockAt(organizationId, userId, locationId, itemId, quantity, "pick");
+}
+
+// The item leaves the warehouse for good — sold, or scrapped/lost/otherwise
+// removed. Unlike "pick" (a generic historical exit kept for back-compat),
+// callers must say which, so history and metrics can tell a sale apart from
+// a loss instead of lumping every exit together.
+export async function exitStockAt(
+  organizationId: string,
+  userId: string,
+  locationId: string,
+  itemId: string,
+  quantity: number,
+  reason: "sale" | "remove",
+) {
+  return deductStockAt(organizationId, userId, locationId, itemId, quantity, reason);
+}
+
+// Moves quantity from one bin straight to another as a single "relocate"
+// history row (both fromLocationId and toLocationId set), instead of a
+// pick-then-receive pair that would read as two unrelated exits/entries.
+export async function moveStockAt(
+  organizationId: string,
+  userId: string,
+  fromLocationId: string,
+  toLocationId: string,
+  itemId: string,
+  quantity: number,
+) {
   await requireOrgNotLocked(organizationId);
-  await requireOwnedBin(locationId, organizationId);
+  await requireOwnedBin(fromLocationId, organizationId);
+  await requireOwnedBin(toLocationId, organizationId);
   await requireOwnedItem(itemId, organizationId);
   await requirePositiveQuantity(quantity);
+  const t = await getTranslations("stockError");
 
-  const [existing] = await db
-    .select()
-    .from(stock)
-    .where(and(eq(stock.itemId, itemId), eq(stock.locationId, locationId)));
-  if (!existing || existing.quantity < quantity) {
-    const t = await getTranslations("stockError");
-    throw new UserError(t("notEnough"));
+  if (fromLocationId === toLocationId) {
+    throw new UserError(t("sameLocation"));
   }
 
-  await db.insert(movements).values({
-    organizationId,
-    itemId,
-    fromLocationId: locationId,
-    toLocationId: null,
-    quantity,
-    reason: "pick",
-    performedBy: userId,
-  });
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select()
+      .from(stock)
+      .where(and(eq(stock.itemId, itemId), eq(stock.locationId, fromLocationId)));
+    if (!existing || existing.quantity < quantity) {
+      throw new UserError(t("notEnough"));
+    }
 
-  await db
-    .update(stock)
-    .set({ quantity: existing.quantity - quantity, updatedAt: new Date() })
-    .where(and(eq(stock.itemId, itemId), eq(stock.locationId, locationId)));
+    await tx.insert(movements).values({
+      organizationId,
+      itemId,
+      fromLocationId,
+      toLocationId,
+      quantity,
+      reason: "relocate",
+      performedBy: userId,
+    });
+
+    await tx
+      .update(stock)
+      .set({ quantity: existing.quantity - quantity, updatedAt: new Date() })
+      .where(and(eq(stock.itemId, itemId), eq(stock.locationId, fromLocationId)));
+
+    await tx
+      .insert(stock)
+      .values({ itemId, locationId: toLocationId, quantity })
+      .onConflictDoUpdate({
+        target: [stock.itemId, stock.locationId],
+        set: { quantity: sql`${stock.quantity} + ${quantity}`, updatedAt: new Date() },
+      });
+  });
 }

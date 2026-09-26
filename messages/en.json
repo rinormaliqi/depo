@@ -879,7 +879,8 @@
     "itemNotFound": "Item not found",
     "quantity": "Quantity must be a positive whole number",
     "notEnough": "Not enough stock in this bin",
-    "quantityTooLarge": "The most that can be booked at once is {max}"
+    "quantityTooLarge": "The most that can be booked at once is {max}",
+    "sameLocation": "Pick a different bin to move stock into"
   },
   "stock": {
     "locate": "Locate",

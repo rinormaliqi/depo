@@ -32,7 +32,10 @@ marketing site) actually shows up — not before.
   Postgres instance, no vendor lock-in).
 - **Stock model:** `item + bin (leaf location) + quantity`, plus an append-only `movements`
   table (who/what/from/to/qty/reason/timestamp) as the source of truth for "current location"
-  and for stats.
+  and for stats. `reason` distinguishes a bin-to-bin `relocate` (one row, both from/to set) and
+  a permanent exit — `sale` vs. `remove` (scrap/loss/etc.) — from the generic legacy `pick`, so
+  history and metrics can tell "sold" apart from "just left a bin" (`src/lib/stock.ts`:
+  `moveStockAt`, `exitStockAt`).
 
 ## Auth
 

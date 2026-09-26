@@ -874,7 +874,11 @@
     "errorPickItem": "Pick an item and a positive whole quantity",
     "printLabel": "Print label",
     "added": "Added {qty} {unit} of {name}",
-    "removed": "Removed {qty} {unit} of {name}"
+    "removed": "Removed {qty} {unit} of {name}",
+    "moved": "Moved {qty} {unit} of {name} to {code}",
+    "sold": "Sold {qty} {unit} of {name}",
+    "history": "History",
+    "noHistory": "No history yet for this bin."
   },
   "stockError": {
     "binNotFound": "Bin not found",

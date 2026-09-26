@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
 import { getCapabilities } from "@/lib/capabilities";
 import { locationLabel } from "@/lib/location-path";
-import { getBinInfo, getBinStock } from "./actions";
+import { getBinHistory, getBinInfo, getBinStock, getOtherBinCodes } from "./actions";
 import { StockForm } from "./stock-form";
 
 export default async function BinPage({
@@ -24,12 +24,14 @@ export default async function BinPage({
   // against the facility the bin actually belongs to — a link from a
   // search or QR label can open a bin in another site.
   const facility = await getMyFacility();
-  const [stockRows, myItems, allLocations, t, caps] = await Promise.all([
+  const [stockRows, myItems, allLocations, t, caps, otherBinCodes, history] = await Promise.all([
     getBinStock(locationId),
     getMyItems(),
     getFacilityLocations(bin.facilityId),
     getTranslations(),
     getCapabilities(),
+    getOtherBinCodes(locationId),
+    getBinHistory(locationId),
   ]);
   const byId = new Map(allLocations.map((l) => [l.id, l]));
   const path = locationLabel(locationId, byId);
@@ -83,7 +85,39 @@ export default async function BinPage({
               {t("bin.first")}
             </p>
           ) : (
-            <StockForm locationId={locationId} items={myItems} />
+            <StockForm locationId={locationId} items={myItems} otherBinCodes={otherBinCodes} />
+          )}
+
+          <div style={{ height: 28 }} />
+
+          <div style={{ fontFamily: "var(--font-heading)", fontSize: 13, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 11 }}>
+            {t("bin.history")}
+          </div>
+          {history.length === 0 ? (
+            <p className="text-muted" style={{ fontSize: 13 }}>{t("bin.noHistory")}</p>
+          ) : (
+            <div className="table-scroll">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t("metrics.when")}</th><th>{t("metrics.move")}</th><th>{t("metrics.item")}</th>
+                    <th style={{ textAlign: "right" }}>{t("metrics.qty")}</th><th>{t("metrics.from")}</th><th>{t("metrics.to")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((m) => (
+                    <tr key={m.id}>
+                      <td style={{ fontVariantNumeric: "tabular-nums", fontSize: 12, whiteSpace: "nowrap" }}>{m.when}</td>
+                      <td style={{ fontSize: 11 }}>{t(`common.reason.${m.reason}` as "common.reason.receive")}</td>
+                      <td style={{ fontSize: 12 }}>{m.itemName}</td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{m.quantity}</td>
+                      <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{m.from}</td>
+                      <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums", color: "var(--color-accent-700)" }}>{m.to}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

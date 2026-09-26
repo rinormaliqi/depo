@@ -874,7 +874,11 @@
     "errorPickItem": "Zgjidhni një artikull dhe një sasi pozitive të plotë",
     "printLabel": "Printo etiketën",
     "added": "U shtuan {qty} {unit} {name}",
-    "removed": "U hoqën {qty} {unit} {name}"
+    "removed": "U hoqën {qty} {unit} {name}",
+    "moved": "U zhvendosën {qty} {unit} {name} te {code}",
+    "sold": "U shitën {qty} {unit} {name}",
+    "history": "Historiku",
+    "noHistory": "Ende nuk ka histori për këtë kuti."
   },
   "stockError": {
     "binNotFound": "Kutia nuk u gjet",

@@ -33,6 +33,31 @@ export function priceForPeriod(plan: { priceCents: number }, months: number) {
   return plan.priceCents * months;
 }
 
+// Epic #8: a 12-month contract for a plan on this list pays for 10 months
+// (2 free) instead of 12 — the offer is "10 for the price of 12", not a
+// generic multi-month discount, so it's a separate function from
+// priceForPeriod rather than a branch inside it. Only Business today —
+// Enterprise's price is "from €X", negotiated per customer, so there is
+// no fixed monthly figure to discount off of; a contract for Enterprise
+// still goes through the existing manual "contact us" path.
+export const CONTRACT_MONTHS = 12 as const;
+export const CONTRACT_DISCOUNT_MONTHS = 2;
+export const CONTRACT_ELIGIBLE_PLAN_KEYS = ["business"] as const;
+
+export type ContractPriceBreakdown = {
+  monthlyPriceCents: number;
+  standardTotalCents: number;
+  discountCents: number;
+  finalTotalCents: number;
+};
+
+export function contractPriceBreakdown(plan: { priceCents: number }): ContractPriceBreakdown {
+  const monthlyPriceCents = plan.priceCents;
+  const standardTotalCents = monthlyPriceCents * CONTRACT_MONTHS;
+  const discountCents = monthlyPriceCents * CONTRACT_DISCOUNT_MONTHS;
+  return { monthlyPriceCents, standardTotalCents, discountCents, finalTotalCents: standardTotalCents - discountCents };
+}
+
 export function addMonths(date: Date, months: number): Date {
   const d = new Date(date);
   d.setMonth(d.getMonth() + months);

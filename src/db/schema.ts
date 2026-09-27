@@ -494,6 +494,56 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   },
 });
 
+export const contractStatuses = ["draft", "signed"] as const;
+export type ContractStatus = (typeof contractStatuses)[number];
+
+// A generated 12-month contract for one organization's chosen plan
+// (Epic #7) — draft the moment it's generated, signed once the customer
+// uploads a signed copy (which is also the moment SmartDepo gets emailed
+// it). `pricingSnapshot` freezes the price breakdown at generation time —
+// Business's monthly price changing later must never retroactively alter
+// a contract someone already downloaded and is about to sign.
+export const contracts = pgTable(
+  "contracts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => plans.id),
+    months: integer("months").notNull().default(12),
+    status: text("status", { enum: contractStatuses }).notNull().default("draft"),
+    pricingSnapshot: jsonb("pricing_snapshot").$type<{
+      monthlyPriceCents: number;
+      standardTotalCents: number;
+      discountCents: number;
+      finalTotalCents: number;
+    }>().notNull(),
+    // The org's own `name` is a workspace label, not necessarily the legal
+    // entity a contract needs to name — nothing else on `organizations`
+    // collects a registration number, a legal address or a signatory, so
+    // the admin fills these in once when starting the contract.
+    clientInfo: jsonb("client_info").$type<{
+      legalName: string;
+      registrationNumber: string;
+      address: string;
+      contactName: string;
+      contactEmail: string;
+    }>().notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    generatedAt: timestamp("generated_at").notNull().defaultNow(),
+    signedFileName: text("signed_file_name"),
+    signedFileMimeType: text("signed_file_mime_type"),
+    signedFileData: bytea("signed_file_data"),
+    signedAt: timestamp("signed_at"),
+  },
+  (table) => [index("contracts_org_idx").on(table.organizationId)],
+);
+
 // The real building's drawing, traced over in the builder: one image per
 // facility (a PDF is rasterised to PNG client-side before upload), stored
 // here rather than in a blob store so a depot's plan has no second vendor

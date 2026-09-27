@@ -6,6 +6,7 @@ import { getMyItems } from "@/app/items/actions";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
 import { ReasonChip } from "@/components/reason-chip";
+import { getMyFieldDefinitions, getMyItemsCustomValues } from "@/app/items/custom-fields-actions";
 import { getRecentMovements } from "./actions";
 import { ScanForm } from "./scan-form";
 
@@ -23,7 +24,8 @@ export default async function ScannerPage() {
     );
   }
 
-  const [items, recent] = await Promise.all([getMyItems(), getRecentMovements()]);
+  const [items, recent, fieldDefs] = await Promise.all([getMyItems(), getRecentMovements(), getMyFieldDefinitions()]);
+  const customValues = await getMyItemsCustomValues(items.map((i) => i.id));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
@@ -44,7 +46,7 @@ export default async function ScannerPage() {
               {t("scanner.first")}
             </p>
           ) : (
-            <ScanForm items={items} />
+            <ScanForm items={items} fieldDefs={fieldDefs} customValues={customValues} />
           )}
 
           <div className="scan-recent">

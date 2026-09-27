@@ -1,16 +1,50 @@
 "use server";
 
-import { and, eq, gt, ilike, inArray, or } from "drizzle-orm";
+import { and, eq, gt, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { getMyFacility } from "@/app/builder/actions";
 import { db } from "@/db";
-import { facilities, items, locations, stock } from "@/db/schema";
+import { facilities, items, itemCustomFieldDefinitions, itemCustomFieldValues, locations, stock } from "@/db/schema";
 import { locationLabel } from "@/lib/location-path";
 import { requireOrgId } from "@/lib/session";
 
-export async function searchStock(query: string) {
+export type StockFieldFilter = { fieldId: string; value: string };
+
+export async function searchStock(query: string, filter?: StockFieldFilter) {
   const organizationId = await requireOrgId();
   const q = query.trim();
-  if (!q) return [];
+  const filterValue = (filter?.value ?? "").trim();
+  // A field picked with no value yet isn't a filter someone can act on —
+  // same as typing nothing into the text box, it's "not searching yet",
+  // not "show nothing".
+  if (!q && !filter?.fieldId) return [];
+
+  const conditions: SQL[] = [eq(items.organizationId, organizationId), gt(stock.quantity, 0)];
+  if (q) conditions.push(or(ilike(items.name, `%${q}%`), ilike(items.sku, `%${q}%`))!);
+
+  if (filter?.fieldId) {
+    const [field] = await db
+      .select({ type: itemCustomFieldDefinitions.type })
+      .from(itemCustomFieldDefinitions)
+      .where(and(eq(itemCustomFieldDefinitions.id, filter.fieldId), eq(itemCustomFieldDefinitions.organizationId, organizationId)));
+    if (field && !filterValue) {
+      // A field picked with nothing to match against yet narrows to zero
+      // rather than either showing every item that merely has some value
+      // for it, or — worse — falling through to every current stock row
+      // unfiltered. The search box's job is to narrow down, not dump the
+      // catalog the moment a field is picked.
+      conditions.push(sql`false`);
+    } else if (field) {
+      // select/boolean values are exact choices — a substring match on
+      // "Red" would also catch "Redwood" if that were ever an option.
+      const exactMatch = field.type === "select" || field.type === "boolean";
+      const valueMatch = exactMatch ? eq(itemCustomFieldValues.value, filterValue) : ilike(itemCustomFieldValues.value, `%${filterValue}%`);
+      const matchingItemIds = db
+        .select({ id: itemCustomFieldValues.itemId })
+        .from(itemCustomFieldValues)
+        .where(and(eq(itemCustomFieldValues.fieldDefinitionId, filter.fieldId), valueMatch));
+      conditions.push(inArray(items.id, matchingItemIds));
+    }
+  }
 
   const rows = await db
     .select({
@@ -22,13 +56,7 @@ export async function searchStock(query: string) {
     })
     .from(stock)
     .innerJoin(items, eq(stock.itemId, items.id))
-    .where(
-      and(
-        eq(items.organizationId, organizationId),
-        gt(stock.quantity, 0),
-        or(ilike(items.name, `%${q}%`), ilike(items.sku, `%${q}%`)),
-      ),
-    )
+    .where(and(...conditions))
     .limit(30);
 
   if (rows.length === 0) return [];

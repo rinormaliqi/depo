@@ -2,32 +2,55 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import * as rawActions from "./actions";
 import type { ScanAction } from "./actions";
 import { unwrap } from "@/lib/action-result";
 import { CameraScanner } from "./camera-scanner";
 import { useNotify } from "@/components/notifications";
 import { Gate } from "@/components/capabilities";
+import { CustomFieldFilterBar, matchesCustomFieldFilter } from "@/components/custom-field-filter";
+import type { FieldDefinition } from "@/lib/custom-fields";
 import { MAX_MOVEMENT_QUANTITY } from "@/lib/stock-limits";
 
 const commitScan = unwrap(rawActions.commitScan);
 const resolveScan = unwrap(rawActions.resolveScan);
 
 type Item = { id: string; name: string; sku: string | null; unitOfMeasure: string };
+type CustomValues = Record<string, Record<string, string>>;
 
 const ACTIONS: ScanAction[] = ["receive", "move", "sale", "remove"];
 
-export function ScanForm({ items }: { items: Item[] }) {
+export function ScanForm({
+  items,
+  fieldDefs = [],
+  customValues = {},
+}: {
+  items: Item[];
+  fieldDefs?: FieldDefinition[];
+  customValues?: CustomValues;
+}) {
   const t = useTranslations("scanner");
   const router = useRouter();
   const [action, setAction] = useState<ScanAction>("receive");
+  const [filterFieldId, setFilterFieldId] = useState("");
+  const [filterValue, setFilterValue] = useState("");
+  const filterField = fieldDefs.find((f) => f.id === filterFieldId);
+  const visibleItems = useMemo(() => {
+    if (!filterField) return items;
+    return items.filter((item) => matchesCustomFieldFilter(customValues[item.id]?.[filterField.id], filterField, filterValue));
+  }, [items, customValues, filterField, filterValue]);
   const [itemId, setItemId] = useState(items[0]?.id ?? "");
   const [quantity, setQuantity] = useState("");
   const [code, setCode] = useState("");
   const [toCode, setToCode] = useState("");
   const notify = useNotify();
   const [busy, setBusy] = useState(false);
+
+  // The filtered-down list can drop the item currently picked — fall back
+  // to the first one still visible rather than leave a <select> pointing
+  // at an option that no longer exists.
+  const effectiveItemId = visibleItems.some((i) => i.id === itemId) ? itemId : (visibleItems[0]?.id ?? "");
   // Which field a camera scan should fill — only "move" has two locations
   // to aim at, so this only ever differs from "code" in that mode.
   const [scanTarget, setScanTarget] = useState<"code" | "toCode">("code");
@@ -52,7 +75,7 @@ export function ScanForm({ items }: { items: Item[] }) {
     setCameraOpen(true);
   }
 
-  const selectedItem = items.find((i) => i.id === itemId);
+  const selectedItem = items.find((i) => i.id === effectiveItemId);
 
   function changeAction(next: ScanAction) {
     setAction(next);
@@ -61,7 +84,7 @@ export function ScanForm({ items }: { items: Item[] }) {
 
   async function handleCommit() {
     const qty = parseInt(quantity, 10);
-    if (!itemId) {
+    if (!effectiveItemId) {
       notify.warning(t("errorPickItem"));
       return;
     }
@@ -79,7 +102,7 @@ export function ScanForm({ items }: { items: Item[] }) {
       | "successMoved"
       | "successSold"
       | "successRemoved";
-    const done = await notify.run(() => commitScan(action, itemId, qty, code, action === "move" ? toCode : undefined), {
+    const done = await notify.run(() => commitScan(action, effectiveItemId, qty, code, action === "move" ? toCode : undefined), {
       success: t(successKey, {
         qty,
         unit: selectedItem?.unitOfMeasure ?? "",
@@ -123,10 +146,12 @@ export function ScanForm({ items }: { items: Item[] }) {
           )}
         </div>
 
+        <CustomFieldFilterBar fieldDefs={fieldDefs} fieldId={filterFieldId} value={filterValue} onFieldChange={setFilterFieldId} onValueChange={setFilterValue} />
+
         <div className="field">
           <label>{t("item")}</label>
-          <select className="input" value={itemId} onChange={(e) => setItemId(e.target.value)}>
-            {items.map((i) => (
+          <select className="input" value={effectiveItemId} onChange={(e) => setItemId(e.target.value)}>
+            {visibleItems.map((i) => (
               <option key={i.id} value={i.id}>
                 {i.name}
                 {i.sku ? ` (${i.sku})` : ""}

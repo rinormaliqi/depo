@@ -5,6 +5,8 @@ import { getMyFacility } from "@/app/builder/actions";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
 import { getCapabilities } from "@/lib/capabilities";
+import { getFieldDefinitions } from "@/lib/custom-fields";
+import { requireOrgId } from "@/lib/session";
 import { getZoneUtilization, searchStock } from "./actions";
 import { StockSearch } from "./stock-search";
 
@@ -27,10 +29,12 @@ export default async function StockPage({
   }
 
   const { q } = await searchParams;
-  const [initialResults, zones, caps] = await Promise.all([
+  const organizationId = await requireOrgId();
+  const [initialResults, zones, caps, fieldDefs] = await Promise.all([
     q ? searchStock(q) : Promise.resolve([]),
     getZoneUtilization(),
     getCapabilities(),
+    getFieldDefinitions(organizationId),
   ]);
 
   return (
@@ -43,7 +47,7 @@ export default async function StockPage({
       />
       <div className="stock-layout" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
         <div className="stock-search-pane" style={{ background: "#fff", overflow: "auto" }}>
-          <StockSearch initialQuery={q ?? ""} initialResults={initialResults} />
+          <StockSearch initialQuery={q ?? ""} initialResults={initialResults} fieldDefs={fieldDefs} />
         </div>
 
         <div className="stock-zones-pane" style={{ overflow: "auto" }}>

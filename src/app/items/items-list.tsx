@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 import { useConfirm, useNotify } from "@/components/notifications";
+import { CustomFieldFilterBar, matchesCustomFieldFilter } from "@/components/custom-field-filter";
 import { unwrap } from "@/lib/action-result";
 import * as rawActions from "./actions";
 import * as customFieldActions from "./custom-fields-actions";
@@ -36,7 +37,6 @@ export function ItemsList({
   fieldDefs: FieldDefinition[];
   customValues: CustomValues;
 }) {
-  const t = useTranslations("customFields");
   const [editing, setEditing] = useState<string | null>(null);
   const [filterFieldId, setFilterFieldId] = useState("");
   const [filterValue, setFilterValue] = useState("");
@@ -44,54 +44,14 @@ export function ItemsList({
   const filterField = fieldDefs.find((f) => f.id === filterFieldId);
   const visibleItems = useMemo(() => {
     if (!filterField) return items;
-    const needle = filterValue.trim().toLowerCase();
-    return items.filter((item) => {
-      const raw = customValues[item.id]?.[filterField.id];
-      if (filterField.type === "select" || filterField.type === "boolean") return raw === filterValue;
-      if (!needle) return true;
-      return (raw ?? "").toLowerCase().includes(needle);
-    });
+    return items.filter((item) => matchesCustomFieldFilter(customValues[item.id]?.[filterField.id], filterField, filterValue));
   }, [items, customValues, filterField, filterValue]);
 
   return (
     <div>
-      {fieldDefs.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 12, fontSize: 12 }}>
-          <span className="text-muted">{t("filterLabel")}</span>
-          <select
-            className="input"
-            value={filterFieldId}
-            onChange={(e) => {
-              setFilterFieldId(e.target.value);
-              setFilterValue("");
-            }}
-            style={{ width: 160 }}
-          >
-            <option value="">{t("filterAll")}</option>
-            {fieldDefs.map((f) => (
-              <option key={f.id} value={f.id}>{f.label}</option>
-            ))}
-          </select>
-          {filterField?.type === "select" && (
-            <select className="input" value={filterValue} onChange={(e) => setFilterValue(e.target.value)} style={{ width: 160 }}>
-              <option value="">{t("selectPlaceholder")}</option>
-              {(filterField.options ?? []).map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </select>
-          )}
-          {filterField?.type === "boolean" && (
-            <select className="input" value={filterValue} onChange={(e) => setFilterValue(e.target.value)} style={{ width: 120 }}>
-              <option value="">{t("selectPlaceholder")}</option>
-              <option value="true">{t("yes")}</option>
-              <option value="false">{t("no")}</option>
-            </select>
-          )}
-          {filterField && filterField.type !== "select" && filterField.type !== "boolean" && (
-            <input className="input" value={filterValue} onChange={(e) => setFilterValue(e.target.value)} placeholder={t("filterValuePlaceholder")} style={{ width: 180 }} />
-          )}
-        </div>
-      )}
+      <div style={{ marginTop: 12 }}>
+        <CustomFieldFilterBar fieldDefs={fieldDefs} fieldId={filterFieldId} value={filterValue} onFieldChange={setFilterFieldId} onValueChange={setFilterValue} />
+      </div>
 
       <div style={{ marginTop: 12, display: "flex", flexDirection: "column" }}>
         {visibleItems.map((item) =>

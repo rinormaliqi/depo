@@ -3,6 +3,8 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { CustomFieldFilterBar } from "@/components/custom-field-filter";
+import type { FieldDefinition } from "@/lib/custom-fields";
 import { searchStock } from "./actions";
 
 type Result = Awaited<ReturnType<typeof searchStock>>[number];
@@ -10,25 +12,28 @@ type Result = Awaited<ReturnType<typeof searchStock>>[number];
 export function StockSearch({
   initialQuery,
   initialResults,
+  fieldDefs,
 }: {
   initialQuery: string;
   initialResults: Result[];
+  fieldDefs: FieldDefinition[];
 }) {
   const t = useTranslations("stock");
   const [query, setQuery] = useState(initialQuery);
+  const [filterFieldId, setFilterFieldId] = useState("");
+  const [filterValue, setFilterValue] = useState("");
   const [results, setResults] = useState(initialResults);
   const [loading, setLoading] = useState(false);
 
-  // Every keystroke starts a search and they don't necessarily come back in
-  // order, so a slow earlier one could land last and leave the box showing
-  // results for a query the person has already typed past — which here means
-  // the wrong bin for the thing they are walking to. Only the newest reply
-  // is allowed to write.
+  // Every keystroke (or filter change) starts a search and they don't
+  // necessarily come back in order, so a slow earlier one could land last
+  // and leave the box showing results for a query the person has already
+  // moved past — which here means the wrong bin for the thing they are
+  // walking to. Only the newest reply is allowed to write.
   const latest = useRef(0);
 
-  async function handleChange(value: string) {
-    setQuery(value);
-    if (!value.trim()) {
+  async function runSearch(q: string, fieldId: string, value: string) {
+    if (!q.trim() && !fieldId) {
       latest.current += 1;
       setResults([]);
       setLoading(false);
@@ -36,10 +41,25 @@ export function StockSearch({
     }
     const seq = (latest.current += 1);
     setLoading(true);
-    const r = await searchStock(value);
+    const r = await searchStock(q, fieldId ? { fieldId, value } : undefined);
     if (seq !== latest.current) return;
     setResults(r);
     setLoading(false);
+  }
+
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    runSearch(value, filterFieldId, filterValue);
+  }
+
+  function handleFilterFieldChange(fieldId: string) {
+    setFilterFieldId(fieldId);
+    runSearch(query, fieldId, "");
+  }
+
+  function handleFilterValueChange(value: string) {
+    setFilterValue(value);
+    runSearch(query, filterFieldId, value);
   }
 
   return (
@@ -60,8 +80,16 @@ export function StockSearch({
         type="search"
         placeholder={t("searchPlaceholder")}
         value={query}
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={(e) => handleQueryChange(e.target.value)}
         autoFocus
+      />
+
+      <CustomFieldFilterBar
+        fieldDefs={fieldDefs}
+        fieldId={filterFieldId}
+        value={filterValue}
+        onFieldChange={handleFilterFieldChange}
+        onValueChange={handleFilterValueChange}
       />
 
       {loading && (
@@ -123,7 +151,7 @@ export function StockSearch({
         </div>
       )}
 
-      {query.trim() && !loading && results.length === 0 && (
+      {(query.trim() || filterFieldId) && !loading && results.length === 0 && (
         <div style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>
           {t("noMatches", { query })}
         </div>

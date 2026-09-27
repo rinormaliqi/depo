@@ -316,8 +316,9 @@ one and, later, the domain). Tests: `src/tests/google-signin.test.ts`.
 business; prepaid 1/3/6/12-month periods because Paysera's recurring billing is
 merchant-initiated token charging that isn't worth building before there's renewal volume. Only
 the 1-month period actually reaches Paysera, though — 3/6 months is a bank transfer
-(`requestBankTransfer`) the founder records manually, and 12 months is a contract (Epic #7), not
-a checkout at all; see `docs/pricing.md`'s "Billing v2" section. The pieces:
+(`requestBankTransfer`) the founder records manually, and 12 months is a contract
+(`/billing/contract`), not a checkout at all; see `docs/pricing.md`'s "Billing v2" section. The
+pieces:
 
 - **`src/lib/paysera.ts`** — the Checkout Classic (WebToPay) protocol as two pure functions,
   ported from Paysera's own `lib-webtopay` rather than adding a dependency: `data` is url-safe
@@ -338,6 +339,19 @@ a checkout at all; see `docs/pricing.md`'s "Billing v2" section. The pieces:
   payment row, just an email to the founder with the org, plan, period and amount. The founder
   records the actual payment on `/internal` once it lands, through the same
   `applyPaidPayment()` every other path uses — this is a notification, not a new approval gate.
+- **`contracts`** (`src/db/schema.ts`) + `/billing/contract` — the 12-month path, Business only
+  (Enterprise's price is negotiated, so there's no fixed figure to build a contract or a
+  discount around). `createContract` (`src/lib/contracts.ts`) freezes the plan's current price
+  into a 2-months-free breakdown (`contractPriceBreakdown()`, `src/lib/billing-plans.ts`) and the
+  admin's typed-in client details onto one row — frozen so a later price change can't rewrite a
+  contract someone already downloaded. `/api/contracts/[id]/pdf` regenerates the PDF from that
+  row on every request (`src/lib/contract-pdf.ts`, `pdf-lib`; clause text lives in
+  `src/content/contract-template.ts`, the same "editable data, not code" pattern as
+  `src/content/legal.ts`) rather than storing the unsigned copy — nothing to keep in sync.
+  `/api/contracts/[id]/signed` (POST) stores the customer's uploaded signed copy and emails it to
+  the founder immediately, same shape as the underlay upload route. No "pending" contract status
+  exists either — `draft` → `signed` is the whole lifecycle; the founder still activates the plan
+  by hand on `/internal` once they've reviewed and countersigned it.
 - **`/api/billing/paysera/callback`** — the only path that grants access. Verifies `ss1`,
   checks the project id, refuses a test-mode/live mismatch, and on `status=1` checks the
   *paid* amount and currency against the row before calling `applyPaidPayment()`. Answers a

@@ -29,7 +29,7 @@ export const publicPrefixes = [
 // under it is ever meant to be reached without a session.
 export const protectedPrefixes = [
   "/billing", "/builder", "/internal", "/items", "/labels", "/metrics", "/scanner", "/stock", "/team", "/verify-email", "/welcome", "/start", "/account",
-  "/api/builder",
+  "/api/builder", "/api/contracts",
 ];
 
 export function routeAccess(pathname: string): "public" | "protected" | "unknown" {

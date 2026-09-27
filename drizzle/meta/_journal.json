@@ -120,6 +120,13 @@
       "when": 1790515293725,
       "tag": "0016_add_item_custom_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790533717004,
+      "tag": "0017_add_contracts",
+      "breakpoints": true
     }
   ]
 }

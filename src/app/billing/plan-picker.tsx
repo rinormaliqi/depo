@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useActionState, useState } from "react";
-import { BANK_TRANSFER_MONTHS, BILLING_PERIODS, PAYSERA_MONTHS, type BillingMonths, priceForPeriod } from "@/lib/billing-plans";
+import { BANK_TRANSFER_MONTHS, BILLING_PERIODS, CONTRACT_ELIGIBLE_PLAN_KEYS, PAYSERA_MONTHS, type BillingMonths, priceForPeriod } from "@/lib/billing-plans";
 import { requestBankTransfer, startCheckout } from "./actions";
 import { FormError } from "@/components/form-error";
 
@@ -131,13 +132,14 @@ export function PlanPicker({
               </span>
             ))}
 
-          {isContract && (
-            supportEmail ? (
+          {isContract &&
+            ((CONTRACT_ELIGIBLE_PLAN_KEYS as readonly string[]).includes(chosen.plan.key) ? (
+              <Link href="/billing/contract" className="btn btn-primary">{t("startContractFlow")}</Link>
+            ) : supportEmail ? (
               <a href={`mailto:${supportEmail}?subject=SmartDepo ${chosen.plan.name} — 12 months`} className="btn btn-secondary">{t("contactUs")}</a>
             ) : (
               <span className="text-muted" style={{ fontSize: 12, maxWidth: 220, textAlign: "right" }}>{t("contractComingSoon")}</span>
-            )
-          )}
+            ))}
         </div>
       )}
 

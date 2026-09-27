@@ -513,6 +513,7 @@
     "bankTransferSending": "Duke dërguar…",
     "bankTransferSent": "U njoftua SmartDepo — bëje transfertën kur të duash, duke cituar referencën më sipër.",
     "contractComingSoon": "Kontratat 12-mujore vijnë së shpejti.",
+    "startContractFlow": "Fillo kontratën 12-mujore",
     "checkoutCanceled": "Pagesa u anulua — asgjë nuk u faturua.",
     "history": "Pagesat",
     "historyLine": "{months, plural, =1 {1 muaj} other {# muaj}} · {provider}",
@@ -549,6 +550,35 @@
         "body": "Periudha e paguar për {org} mbaron pas {days} ditësh. Rinovo këtu që llogaria të mos kalojë në vetëm-lexim:\n\n{url}"
       }
     }
+  },
+  "contract": {
+    "title": "Kontrata 12-mujore",
+    "subtitle": "Një kontratë direkte me SmartDepo për planin {plan} — 2 muaj falas, e paguar me transfertë bankare.",
+    "errorPlanNotEligible": "Kontratat 12-mujore janë të disponueshme aktualisht vetëm për planin Business.",
+    "monthlyPrice": "Çmimi standard mujor",
+    "standardTotal": "Çmimi standard për 12 muaj",
+    "discount": "2 muaj falas",
+    "finalTotal": "Totali për pagesë",
+    "field": {
+      "legalName": "Emri ligjor i kompanisë",
+      "registrationNumber": "Numri i regjistrimit",
+      "registrationNumberOptional": "Opsionale",
+      "address": "Adresa",
+      "contactName": "Personi kontaktues",
+      "contactEmail": "Email kontakti"
+    },
+    "generateContract": "Gjenero kontratën",
+    "generating": "Duke gjeneruar…",
+    "downloadContract": "Shkarko kontratën (PDF)",
+    "uploadHint": "Nënshkruaj kontratën e shkarkuar, pastaj ngarkoje këtu — SmartDepo njoftohet menjëherë dhe do t'ju kontaktojë brenda 24 orëve për ta finalizuar.",
+    "uploadSigned": "Ngarko kontratën e nënshkruar",
+    "uploading": "Duke ngarkuar…",
+    "uploaded": "Kontrata e nënshkruar u mor.",
+    "signedReceivedTitle": "Kontrata e nënshkruar u mor",
+    "signedReceivedBody": "SmartDepo do t'ju kontaktojë brenda 24 orëve për të finalizuar planin dhe pagesën.",
+    "errorFileTooLarge": "Ky skedar e kalon limitin prej 8 MB.",
+    "errorUploadFailed": "Nuk u ngarkua dot kontrata e nënshkruar — provo përsëri.",
+    "errorClientFieldRequired": "{field} është e detyrueshme"
   },
   "planLimit": {
     "users": "Ky plan lejon deri në {max} përdorues. Vizito Faturimin për ta përmirësuar.",

@@ -64,8 +64,16 @@ paths):
   `requestBankTransfer` sends the founder a heads-up email. No new "pending" state exists for
   this — the founder records it on `/internal` (`recordManualPayment`) once it lands, the exact
   same way Enterprise always has, through `applyPaidPayment()`.
-- **12 months** is a contract, not a checkout at all (Epic #7 in the stock-flow project) — the
-  plan picker shows "contact us" until that flow ships.
+- **12 months** is a contract, not a checkout at all — Business only (Enterprise's price is
+  negotiated per customer, so there's no fixed monthly figure to build a contract around; it
+  keeps the plain "contact us" path). `/billing/contract` collects the client's legal details,
+  freezes the plan's current price into a 2-months-free breakdown
+  (`contractPriceBreakdown` in `src/lib/billing-plans.ts`) onto a `contracts` row, and generates
+  a PDF (`src/lib/contract-pdf.ts`, `pdf-lib`, template text in `src/content/contract-template.ts`)
+  the admin downloads, signs outside the app, and uploads back. The upload
+  (`/api/contracts/[id]/signed`) stores the signed copy and emails it to the founder immediately
+  — no new "pending" status here either, same principle as the bank-transfer path: the founder
+  still activates the plan by hand once they've actually reviewed and countersigned it.
 
 Paying before the current period ends *extends* it; changing plan starts a fresh period from now
 (no proration — the old period is simply superseded). Seven days before `paid_until` (or the
@@ -79,9 +87,10 @@ in `src/lib/billing-plans.ts`). Automatic card renewal via Paysera tokens is the
 step once the Paysera agreement covers it; nothing in the prepaid model forecloses it.
 
 ## What's explicitly deferred
-- **Discounted multi-month pricing.** 3-, 6- and 12-month periods exist but cost exactly months ×
-  monthly; a discount is one change in `priceForPeriod()`. Planned for the 12-month contract
-  specifically (Epic #8: 2 months free, i.e. pay for 10) once that flow (Epic #7) exists.
+- **Discounted multi-month pricing outside the 12-month contract.** 3- and 6-month periods still
+  cost exactly months × monthly (`priceForPeriod()`) — only the 12-month contract gets the
+  2-months-free treatment (`contractPriceBreakdown()`), because that's the one period where the
+  offer was actually requested.
 - **Usage-based/overage pricing** (e.g. charging per bin beyond the plan limit instead of a
   hard cap). Hard limits are simpler to reason about and enforce for MVP.
 

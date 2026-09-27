@@ -19,7 +19,8 @@ import { companyInfo } from "@/lib/company";
 // testable. Replies go to the support address either way.
 const RESEND_API_URL = "https://api.resend.com/emails";
 
-type Mail = { to: string; subject: string; text: string; replyTo?: string };
+type Attachment = { filename: string; content: Buffer; contentType: string };
+type Mail = { to: string; subject: string; text: string; replyTo?: string; attachments?: Attachment[] };
 
 function smtpConfig() {
   const host = process.env.SMTP_HOST?.trim();
@@ -35,7 +36,7 @@ function fromAddress() {
   return process.env.EMAIL_FROM || (user ? `SmartDepo <${user}>` : "SmartDepo <onboarding@resend.dev>");
 }
 
-export async function sendEmail({ to, subject, text, replyTo: replyToOverride }: Mail) {
+export async function sendEmail({ to, subject, text, replyTo: replyToOverride, attachments }: Mail) {
   const from = fromAddress();
   // Replies go to support — except mail we send *to* support on someone
   // else's behalf (the contact form), where the sender is the reply-to.
@@ -44,20 +45,35 @@ export async function sendEmail({ to, subject, text, replyTo: replyToOverride }:
 
   if (smtp) {
     const transport = nodemailer.createTransport(smtp);
-    await transport.sendMail({ from, to, subject, text, replyTo });
+    await transport.sendMail({
+      from,
+      to,
+      subject,
+      text,
+      replyTo,
+      attachments: attachments?.map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType })),
+    });
     return;
   }
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.log(`[email] neither SMTP_* nor RESEND_API_KEY set — logging instead of sending.\nTo: ${to}\nSubject: ${subject}\n\n${text}`);
+    const attachmentNote = attachments?.length ? `\n[${attachments.length} attachment(s): ${attachments.map((a) => a.filename).join(", ")}]` : "";
+    console.log(`[email] neither SMTP_* nor RESEND_API_KEY set — logging instead of sending.\nTo: ${to}\nSubject: ${subject}\n\n${text}${attachmentNote}`);
     return;
   }
 
   const res = await fetch(RESEND_API_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to, subject, text, reply_to: replyTo }),
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      text,
+      reply_to: replyTo,
+      attachments: attachments?.map((a) => ({ filename: a.filename, content: a.content.toString("base64") })),
+    }),
   });
 
   if (!res.ok) {

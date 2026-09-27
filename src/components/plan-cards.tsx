@@ -17,7 +17,7 @@ export async function PlanCards() {
   const rows = await db.select().from(plans).where(eq(plans.isActive, true)).orderBy(plans.priceCents);
   const limit = (n: number | null) => (n === null ? tb("unlimited") : String(n));
   const eur = (cents: number) => `€${(cents / 100).toFixed(0)}`;
-  // "1, 3 or 12" — the offered periods, with the localized "or" before the last.
+  // "1, 3, 6 or 12" — the offered periods, with the localized "or" before the last.
   const periodsText = `${BILLING_PERIODS.slice(0, -1).join(", ")} ${t("or")} ${BILLING_PERIODS[BILLING_PERIODS.length - 1]}`;
 
   return (

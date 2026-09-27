@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 import { BlockedPage } from "@/components/blocked-page";
 import { getCapabilities } from "@/lib/capabilities";
 import { AppHeader } from "@/components/app-header";
-import { companyInfo } from "@/lib/company";
+import { bankDetails, companyInfo } from "@/lib/company";
 import { formatDate } from "@/lib/format-date";
 import { getMyBilling } from "./actions";
 import { PlanPicker } from "./plan-picker";
@@ -53,6 +53,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const trialDaysLeft = org.subscriptionStatus === "trialing" ? daysUntil(org.trialEndsAt) : null;
   const paidDaysLeft = org.subscriptionStatus === "active" ? daysUntil(org.paidUntil) : null;
   const supportEmail = companyInfo().supportEmail;
+  const bank = bankDetails();
   const isAdmin = role === "admin";
   const statusUrgent = lockReason !== null || (trialDaysLeft !== null && trialDaysLeft <= 5) || (paidDaysLeft !== null && paidDaysLeft <= 7);
 
@@ -109,7 +110,15 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <SectionTitle>{tb("choosePlan")}</SectionTitle>
           {isAdmin ? (
             <div style={{ marginBottom: 28 }}>
-              <PlanPicker options={options} currentPlanKey={plan?.key ?? ""} enterprisePriceCents={enterprisePriceCents} onlinePaymentsEnabled={onlinePaymentsEnabled} supportEmail={supportEmail} />
+              <PlanPicker
+                options={options}
+                currentPlanKey={plan?.key ?? ""}
+                enterprisePriceCents={enterprisePriceCents}
+                onlinePaymentsEnabled={onlinePaymentsEnabled}
+                supportEmail={supportEmail}
+                bank={bank}
+                orgName={org.name}
+              />
             </div>
           ) : (
             <p className="text-muted" style={{ fontSize: 13, marginBottom: 28 }}>{tb("adminOnlyBody")}</p>

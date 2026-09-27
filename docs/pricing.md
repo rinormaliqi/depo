@@ -53,12 +53,24 @@ its Checkout Classic protocol is a redirect plus one signed callback. Its *recur
 is merchant-initiated (you store a card token and charge it yourself, under a separate
 agreement), so rather than build a subscription engine the model is:
 
-**Prepaid periods.** An admin picks a plan and 1 / 3 / 12 months on `/billing`, pays the total
-up front on Paysera's hosted page, and `organizations.paid_until` moves forward by that many
-months. Paying before the current period ends *extends* it; changing plan starts a fresh period
-from now (no proration — the old period is simply superseded). Seven days before `paid_until`
-(or the trial end) the admins get one reminder email; when it passes, the org drops into the
-same read-only lockout as an expired trial until another period is bought. Enterprise is not
+**Prepaid periods, three different ways to pay them.** An admin picks a plan and 1 / 3 / 6 / 12
+months on `/billing` (`BILLING_PERIODS` in `src/lib/billing-plans.ts`), and `organizations.paid_until`
+moves forward by that many months once the money is actually in — but how it gets there depends
+on the period (decided 2026-09-26, after Paysera's own review pushed toward fewer instant-online
+paths):
+- **1 month** goes through Paysera's hosted page (`startCheckout`) — the only period Paysera
+  itself ever sees.
+- **3 or 6 months** is a bank transfer: `/billing` shows the account details and the total, and
+  `requestBankTransfer` sends the founder a heads-up email. No new "pending" state exists for
+  this — the founder records it on `/internal` (`recordManualPayment`) once it lands, the exact
+  same way Enterprise always has, through `applyPaidPayment()`.
+- **12 months** is a contract, not a checkout at all (Epic #7 in the stock-flow project) — the
+  plan picker shows "contact us" until that flow ships.
+
+Paying before the current period ends *extends* it; changing plan starts a fresh period from now
+(no proration — the old period is simply superseded). Seven days before `paid_until` (or the
+trial end) the admins get one reminder email; when it passes, the org drops into the same
+read-only lockout as an expired trial until another period is bought. Enterprise is not
 self-serve — it's "contact us" and activated on `/internal`. See `docs/architecture.md`'s
 Billing section for the mechanics.
 
@@ -67,8 +79,9 @@ in `src/lib/billing-plans.ts`). Automatic card renewal via Paysera tokens is the
 step once the Paysera agreement covers it; nothing in the prepaid model forecloses it.
 
 ## What's explicitly deferred
-- **Discounted multi-month pricing.** 3- and 12-month periods exist but cost exactly months ×
-  monthly; a discount is one change in `priceForPeriod()` once monthly pricing is validated.
+- **Discounted multi-month pricing.** 3-, 6- and 12-month periods exist but cost exactly months ×
+  monthly; a discount is one change in `priceForPeriod()`. Planned for the 12-month contract
+  specifically (Epic #8: 2 months free, i.e. pay for 10) once that flow (Epic #7) exists.
 - **Usage-based/overage pricing** (e.g. charging per bin beyond the plan limit instead of a
   hard cap). Hard limits are simpler to reason about and enforce for MVP.
 

@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
-import { BILLING_PERIODS, type BillingMonths, priceForPeriod } from "@/lib/billing-plans";
-import { startCheckout } from "./actions";
+import { BANK_TRANSFER_MONTHS, BILLING_PERIODS, PAYSERA_MONTHS, type BillingMonths, priceForPeriod } from "@/lib/billing-plans";
+import { requestBankTransfer, startCheckout } from "./actions";
 import { FormError } from "@/components/form-error";
 
 type Option = {
@@ -11,24 +11,39 @@ type Option = {
   blockedBy: ("users" | "facilities" | "bins")[];
 };
 
-export function PlanPicker({ options, currentPlanKey, enterprisePriceCents, onlinePaymentsEnabled, supportEmail }: {
+type Bank = { bankName: string; iban: string; swift: string };
+
+export function PlanPicker({
+  options,
+  currentPlanKey,
+  enterprisePriceCents,
+  onlinePaymentsEnabled,
+  supportEmail,
+  bank,
+  orgName,
+}: {
   options: Option[];
   currentPlanKey: string;
   enterprisePriceCents: number | null;
   onlinePaymentsEnabled: boolean;
   supportEmail?: string;
+  bank: Bank;
+  orgName: string;
 }) {
   const t = useTranslations("billing");
-  const [state, formAction, isPending] = useActionState(startCheckout, undefined);
+  const [payseraState, payseraAction, payseraPending] = useActionState(startCheckout, undefined);
+  const [transferState, transferAction, transferPending] = useActionState(requestBankTransfer, undefined);
   const firstAllowed = options.find((o) => o.blockedBy.length === 0)?.plan.key ?? options[0]?.plan.key ?? "";
   const [planKey, setPlanKey] = useState(options.some((o) => o.plan.key === currentPlanKey && o.blockedBy.length === 0) ? currentPlanKey : firstAllowed);
   const [months, setMonths] = useState<BillingMonths>(1);
   const chosen = options.find((o) => o.plan.key === planKey);
+  const isBankTransfer = (BANK_TRANSFER_MONTHS as readonly number[]).includes(months);
+  const isContract = months === 12;
 
   const limit = (n: number | null) => (n === null ? t("unlimited") : String(n));
 
   return (
-    <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
         {options.map(({ plan, blockedBy }) => {
           const active = plan.key === planKey;
@@ -73,9 +88,6 @@ export function PlanPicker({ options, currentPlanKey, enterprisePriceCents, onli
         </div>
       </div>
 
-      <input type="hidden" name="plan" value={planKey} />
-      <input type="hidden" name="months" value={months} />
-
       <div>
         <div style={{ fontSize: 12, marginBottom: 6, color: "color-mix(in srgb,var(--color-text) 60%,transparent)" }}>{t("periodLabel")}</div>
         <div className="seg">
@@ -94,7 +106,7 @@ export function PlanPicker({ options, currentPlanKey, enterprisePriceCents, onli
       </div>
 
       {chosen && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: 12, border: "1px solid var(--color-divider)", background: "#fff" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: 12, border: "1px solid var(--color-divider)", background: "#fff", flexWrap: "wrap" }}>
           <div>
             <div style={{ fontFamily: "var(--font-heading)", fontSize: 16 }}>
               {t("total", { amount: (priceForPeriod(chosen.plan, months) / 100).toFixed(0) })}
@@ -103,24 +115,72 @@ export function PlanPicker({ options, currentPlanKey, enterprisePriceCents, onli
               {t("totalHint", { plan: chosen.plan.name, n: months })}
             </div>
           </div>
-          {onlinePaymentsEnabled ? (
-            <button type="submit" className="btn btn-primary" disabled={isPending || !chosen}>
-              {isPending ? t("redirecting") : t("payWithPaysera")}
-            </button>
-          ) : (
-            <span className="text-muted" style={{ fontSize: 12, maxWidth: 220, textAlign: "right" }}>
-              {supportEmail ? t("payOfflineWithEmail", { email: supportEmail }) : t("payOffline")}
-            </span>
+
+          {months === PAYSERA_MONTHS &&
+            (onlinePaymentsEnabled ? (
+              <form action={payseraAction}>
+                <input type="hidden" name="plan" value={planKey} />
+                <input type="hidden" name="months" value={months} />
+                <button type="submit" className="btn btn-primary" disabled={payseraPending || !chosen}>
+                  {payseraPending ? t("redirecting") : t("payWithPaysera")}
+                </button>
+              </form>
+            ) : (
+              <span className="text-muted" style={{ fontSize: 12, maxWidth: 220, textAlign: "right" }}>
+                {supportEmail ? t("payOfflineWithEmail", { email: supportEmail }) : t("payOffline")}
+              </span>
+            ))}
+
+          {isContract && (
+            supportEmail ? (
+              <a href={`mailto:${supportEmail}?subject=SmartDepo ${chosen.plan.name} — 12 months`} className="btn btn-secondary">{t("contactUs")}</a>
+            ) : (
+              <span className="text-muted" style={{ fontSize: 12, maxWidth: 220, textAlign: "right" }}>{t("contractComingSoon")}</span>
+            )
           )}
         </div>
       )}
 
-      {onlinePaymentsEnabled && (
+      {chosen && isBankTransfer && (
+        <div style={{ padding: 12, border: "1px solid var(--color-divider)", background: "#fff", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontFamily: "var(--font-heading)", fontSize: 14 }}>{t("bankTransferPanelTitle")}</div>
+          {bank.iban ? (
+            <>
+              <p style={{ fontSize: 12, margin: 0, lineHeight: 1.6 }}>
+                {t("bankTransferPanelBody", { amount: (priceForPeriod(chosen.plan, months) / 100).toFixed(0), reference: orgName })}
+              </p>
+              <dl style={{ fontSize: 12, margin: 0, display: "grid", gridTemplateColumns: "auto 1fr", gap: "2px 10px" }}>
+                {bank.bankName && (<><dt className="text-muted">{t("bankTransferBankName")}</dt><dd style={{ margin: 0 }}>{bank.bankName}</dd></>)}
+                <dt className="text-muted">{t("bankTransferIban")}</dt><dd style={{ margin: 0, fontVariantNumeric: "tabular-nums" }}>{bank.iban}</dd>
+                {bank.swift && (<><dt className="text-muted">{t("bankTransferSwift")}</dt><dd style={{ margin: 0 }}>{bank.swift}</dd></>)}
+              </dl>
+              {transferState?.ok ? (
+                <p style={{ fontSize: 12, color: "var(--color-accent-800)", margin: 0 }}>{t("bankTransferSent")}</p>
+              ) : (
+                <form action={transferAction}>
+                  <input type="hidden" name="plan" value={planKey} />
+                  <input type="hidden" name="months" value={months} />
+                  <button type="submit" className="btn btn-secondary" disabled={transferPending}>
+                    {transferPending ? t("bankTransferSending") : t("bankTransferButton")}
+                  </button>
+                  <FormError>{transferState?.error}</FormError>
+                </form>
+              )}
+            </>
+          ) : (
+            <p style={{ fontSize: 12, margin: 0 }}>
+              {supportEmail ? t("payOfflineWithEmail", { email: supportEmail }) : t("payOffline")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {onlinePaymentsEnabled && months === PAYSERA_MONTHS && (
         <p className="text-muted" style={{ fontSize: 11 }}>
           {supportEmail ? t("bankTransferHintWithEmail", { email: supportEmail }) : t("bankTransferHint")}
         </p>
       )}
-      <FormError>{state?.error}</FormError>
-    </form>
+      <FormError>{payseraState?.error}</FormError>
+    </div>
   );
 }

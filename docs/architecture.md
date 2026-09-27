@@ -313,8 +313,11 @@ one and, later, the domain). Tests: `src/tests/google-signin.test.ts`.
 ## Billing — prepaid periods via Paysera, with manual activation kept
 
 `docs/pricing.md` ("Billing v2") has the why: Paysera because Stripe won't onboard a Kosovo
-business; prepaid 1/3/12-month periods because Paysera's recurring billing is merchant-initiated
-token charging that isn't worth building before there's renewal volume. The pieces:
+business; prepaid 1/3/6/12-month periods because Paysera's recurring billing is
+merchant-initiated token charging that isn't worth building before there's renewal volume. Only
+the 1-month period actually reaches Paysera, though — 3/6 months is a bank transfer
+(`requestBankTransfer`) the founder records manually, and 12 months is a contract (Epic #7), not
+a checkout at all; see `docs/pricing.md`'s "Billing v2" section. The pieces:
 
 - **`src/lib/paysera.ts`** — the Checkout Classic (WebToPay) protocol as two pure functions,
   ported from Paysera's own `lib-webtopay` rather than adding a dependency: `data` is url-safe
@@ -327,9 +330,14 @@ token charging that isn't worth building before there's renewal volume. The piec
   `period_start`/`period_end` record what the payment actually bought — the answer to "why does
   my access end on that date".
 - **`startCheckout`** (`src/app/billing/actions.ts`) — admin-only (a locked org must still be
-  able to pay its way out, so it checks the role but not the lock), refuses a plan the org's
-  current usage already exceeds (`limitsExceeded` — a 700-bin depot can't buy Starter and lock
-  itself out of its own racks), inserts a pending row and redirects to Paysera.
+  able to pay its way out, so it checks the role but not the lock), refuses anything but the
+  1-month period, refuses a plan the org's current usage already exceeds (`limitsExceeded` — a
+  700-bin depot can't buy Starter and lock itself out of its own racks), inserts a pending row
+  and redirects to Paysera.
+- **`requestBankTransfer`** (same file) — the 3/6-month path: same admin/limits checks, no
+  payment row, just an email to the founder with the org, plan, period and amount. The founder
+  records the actual payment on `/internal` once it lands, through the same
+  `applyPaidPayment()` every other path uses — this is a notification, not a new approval gate.
 - **`/api/billing/paysera/callback`** — the only path that grants access. Verifies `ss1`,
   checks the project id, refuses a test-mode/live mismatch, and on `status=1` checks the
   *paid* amount and currency against the row before calling `applyPaidPayment()`. Answers a

@@ -601,6 +601,8 @@
     "confirmReplace": "Zëvendëso skemën",
     "stocked": "me stok",
     "empty": "bosh",
+    "fillLevel": "Niveli i mbushjes",
+    "full": "kutia më e mbushur",
     "nothingSelected": "Asgjë e zgjedhur",
     "nothingSelectedBody": "Kliko një objekt për ta zgjedhur — tërhiqe për ta lëvizur, tërhiq qoshen për ta ripërmasuar, ose redakto numrat e saktë në të djathtë.",
     "composition": "Përbërja",

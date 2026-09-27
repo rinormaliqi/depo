@@ -5,6 +5,7 @@ import { getMyFacility } from "@/app/builder/actions";
 import { getMyItems } from "@/app/items/actions";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
+import { ReasonChip } from "@/components/reason-chip";
 import { getRecentMovements } from "./actions";
 import { ScanForm } from "./scan-form";
 
@@ -62,7 +63,7 @@ export default async function ScannerPage() {
                 {recent.map((m) => (
                   <tr key={m.id}>
                     <td style={{ fontVariantNumeric: "tabular-nums", fontSize: 12, whiteSpace: "nowrap" }}>{m.when}</td>
-                    <td style={{ fontSize: 11 }}>{t(`common.reason.${m.reason}` as "common.reason.receive")}</td>
+                    <td><ReasonChip reason={m.reason} label={t(`common.reason.${m.reason}` as "common.reason.receive")} /></td>
                     <td style={{ fontSize: 12 }}>{m.itemName}</td>
                     <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{m.quantity}</td>
                     <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{m.from}</td>

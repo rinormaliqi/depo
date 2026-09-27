@@ -42,12 +42,36 @@ export async function getMetrics() {
   const accountedSkus = new Set(stockRows.filter((r) => r.quantity > 0).map((r) => r.itemId));
   const mappedArea = zones.reduce((a, z) => a + z.widthM * z.heightM, 0);
 
+  // Live stock only ever answers "what's on the floor right now" — it can't
+  // tell a quiet warehouse from one that moved a thousand units and sold
+  // them all. These come from the append-only movements log instead, so
+  // "in the warehouse" (accountedSkus/occPct above), "moved", "sold" and
+  // "removed" are each answered from the source that actually knows it.
+  const [exitTotals] = binIds.length
+    ? await db
+        .select({
+          soldUnits: sql<number>`coalesce(sum(case when ${movements.reason} = 'sale' then ${movements.quantity} else 0 end), 0)::int`,
+          removedUnits: sql<number>`coalesce(sum(case when ${movements.reason} = 'remove' then ${movements.quantity} else 0 end), 0)::int`,
+          relocatedUnits: sql<number>`coalesce(sum(case when ${movements.reason} = 'relocate' then ${movements.quantity} else 0 end), 0)::int`,
+        })
+        .from(movements)
+        .where(
+          and(
+            eq(movements.organizationId, organizationId),
+            or(inArray(movements.fromLocationId, binIds), inArray(movements.toLocationId, binIds)),
+          ),
+        )
+    : [{ soldUnits: 0, removedUnits: 0, relocatedUnits: 0 }];
+
   const kpis = {
     mappedAreaM2: Math.round(mappedArea),
     zoneCount: zones.length,
     liveLocations: bins.length,
     occPct: bins.length ? Math.round((occupied.size / bins.length) * 100) : 0,
     accountedSkus: accountedSkus.size,
+    soldUnits: exitTotals.soldUnits,
+    removedUnits: exitTotals.removedUnits,
+    relocatedUnits: exitTotals.relocatedUnits,
   };
 
   const logRows = await db

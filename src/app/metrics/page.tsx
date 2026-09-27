@@ -6,24 +6,7 @@ import { AppHeader } from "@/components/app-header";
 import { getMetrics } from "./actions";
 import { getCapabilities } from "@/lib/capabilities";
 import { BlockedPage } from "@/components/blocked-page";
-
-function reasonChip(reason: string) {
-  const base: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "2px 8px",
-    fontSize: 10,
-    letterSpacing: ".04em",
-    whiteSpace: "nowrap",
-  };
-  if (reason === "receive") {
-    return { ...base, background: "color-mix(in srgb, oklch(0.56 0.07 150) 14%, #fff)", color: "oklch(0.56 0.07 150)" };
-  }
-  if (reason === "pick") {
-    return { ...base, background: "var(--color-accent-100)", color: "var(--color-accent-800)" };
-  }
-  return { ...base, background: "var(--color-neutral-100)", color: "var(--color-neutral-800)" };
-}
+import { ReasonChip } from "@/components/reason-chip";
 
 export default async function MetricsPage() {
   const session = await auth();
@@ -52,6 +35,9 @@ export default async function MetricsPage() {
         { kicker: t("metrics.liveLocations"), value: kpis.liveLocations.toLocaleString("en-US"), meta: t("metrics.liveLocationsMeta") },
         { kicker: t("metrics.occupancy"), value: `${kpis.occPct}%`, meta: t("metrics.occupancyMeta", { n: kpis.liveLocations }) },
         { kicker: t("metrics.accountedSkus"), value: String(kpis.accountedSkus), meta: t("metrics.accountedSkusMeta") },
+        { kicker: t("metrics.soldUnits"), value: String(kpis.soldUnits), meta: t("metrics.soldUnitsMeta") },
+        { kicker: t("metrics.removedUnits"), value: String(kpis.removedUnits), meta: t("metrics.removedUnitsMeta") },
+        { kicker: t("metrics.relocatedUnits"), value: String(kpis.relocatedUnits), meta: t("metrics.relocatedUnitsMeta") },
       ]
     : [];
 
@@ -122,7 +108,7 @@ export default async function MetricsPage() {
                   <tr key={m.id}>
                     <td style={{ fontVariantNumeric: "tabular-nums", fontSize: 12, whiteSpace: "nowrap" }}>{m.when}</td>
                     <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{m.who}</td>
-                    <td><span style={reasonChip(m.reason)}>{t(`common.reason.${m.reason}` as "common.reason.receive")}</span></td>
+                    <td><ReasonChip reason={m.reason} label={t(`common.reason.${m.reason}` as "common.reason.receive")} /></td>
                     <td style={{ fontSize: 12 }}>{m.itemName}</td>
                     <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{m.quantity}</td>
                     <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums", color: "color-mix(in srgb, var(--color-text) 60%, transparent)" }}>{m.from}</td>

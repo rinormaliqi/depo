@@ -4,7 +4,7 @@ import { and, eq, gt, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
-import { facilities, locations, stock, type LocationKind } from "@/db/schema";
+import { facilities, items, locations, stock, type LocationKind } from "@/db/schema";
 import {
   bayCode,
   buildTemplate,
@@ -159,16 +159,31 @@ export async function getBlueprint(facilityId: string) {
   const rows = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
   const binIds = rows.filter((l) => l.isBin).map((l) => l.id);
 
-  const occupied = binIds.length
+  // Item breakdown per bin, not just "has stock" — the canvas shades a bin
+  // by how full it is (relative to the fullest bin here, since bins have no
+  // declared capacity) and shows what's in it on hover, so the schema
+  // carries the same "what's actually there" a worker gets from the bin
+  // page itself, without leaving the map.
+  const stockRows = binIds.length
     ? await db
-        .select({ locationId: stock.locationId })
+        .select({ locationId: stock.locationId, quantity: stock.quantity, itemName: items.name, unitOfMeasure: items.unitOfMeasure })
         .from(stock)
+        .innerJoin(items, eq(stock.itemId, items.id))
         .where(and(inArray(stock.locationId, binIds), gt(stock.quantity, 0)))
     : [];
 
+  const binStockById = new Map<string, { totalQuantity: number; items: { name: string; quantity: number; unitOfMeasure: string }[] }>();
+  for (const row of stockRows) {
+    const entry = binStockById.get(row.locationId) ?? { totalQuantity: 0, items: [] };
+    entry.totalQuantity += row.quantity;
+    entry.items.push({ name: row.itemName, quantity: row.quantity, unitOfMeasure: row.unitOfMeasure });
+    binStockById.set(row.locationId, entry);
+  }
+  const binStock = Array.from(binStockById, ([locationId, v]) => ({ locationId, ...v }));
+
   const levels = await ensureLevels(facilityId);
   const underlay = await getUnderlayMeta(facilityId);
-  return { locations: rows, occupiedBinIds: occupied.map((o) => o.locationId), levels, underlay };
+  return { locations: rows, occupiedBinIds: binStock.map((b) => b.locationId), binStock, levels, underlay };
 }
 
 // The underlay's placement and viewing settings; the bytes go through

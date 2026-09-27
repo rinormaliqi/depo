@@ -141,10 +141,17 @@ function levelRow(entity: LocationRow, all: LocationRow[], selectedLevel: number
     .map((c) => ({ bay: c.bay ?? 1, ids: [c.id] }));
 }
 
+export type BinStockEntry = {
+  locationId: string;
+  totalQuantity: number;
+  items: { name: string; quantity: number; unitOfMeasure: string }[];
+};
+
 export function BlueprintCanvas({
   facility: initialFacility,
   initialLocations,
   initialOccupiedBinIds,
+  initialBinStock,
   initialLevels,
   initialUnderlay = null,
   initialHighlightBinId,
@@ -153,6 +160,7 @@ export function BlueprintCanvas({
   facility: Facility;
   initialLocations: LocationRow[];
   initialOccupiedBinIds: string[];
+  initialBinStock: BinStockEntry[];
   initialLevels: FacilityLevel[];
   initialUnderlay?: UnderlayMeta | null;
   initialHighlightBinId?: string;
@@ -166,6 +174,7 @@ export function BlueprintCanvas({
   const [facility, setFacility] = useState(initialFacility);
   const [locations, setLocations] = useState(initialLocations);
   const [occupied, setOccupied] = useState(new Set(initialOccupiedBinIds));
+  const [binStock, setBinStock] = useState(new Map(initialBinStock.map((b) => [b.locationId, b])));
   const [levels, setLevels] = useState<FacilityLevel[]>(initialLevels);
   const [underlay, setUnderlay] = useState<UnderlayMeta | null>(initialUnderlay);
   // Two-point scale calibration of the underlay: the floor points clicked so far.
@@ -404,6 +413,7 @@ export function BlueprintCanvas({
     const data = await getBlueprint(facility.id);
     setLocations(data.locations);
     setOccupied(new Set(data.occupiedBinIds));
+    setBinStock(new Map(data.binStock.map((b) => [b.locationId, b])));
     setLevels(data.levels);
     setUnderlay(data.underlay);
   }
@@ -1234,6 +1244,26 @@ export function BlueprintCanvas({
     const parent = locations.find((p) => p.id === l.parentId);
     return parent?.kind === "zone";
   });
+  // Bins have no declared capacity, so "how full" is shaded relative to the
+  // fullest bin in this facility right now — an honest heat-map rather than
+  // a percentage of a number nobody entered.
+  const maxBinQuantity = Math.max(1, ...Array.from(binStock.values(), (b) => b.totalQuantity));
+
+  function binFill(locationId: string) {
+    const entry = binStock.get(locationId);
+    if (!entry || entry.totalQuantity <= 0) return { occupied: false, intensity: 0 };
+    return { occupied: true, intensity: Math.min(1, entry.totalQuantity / maxBinQuantity) };
+  }
+
+  // What a hover (desktop) or the title (everywhere else) reads: the actual
+  // contents, not just "stocked" — the same detail the bin page shows,
+  // without leaving the map.
+  function binTooltip(ids: string[], fallbackCode: string) {
+    const contents = ids.flatMap((id) => binStock.get(id)?.items ?? []);
+    if (contents.length === 0) return `${fallbackCode} — ${t("empty")}`;
+    return `${fallbackCode} — ${contents.map((it) => `${it.name}: ${it.quantity} ${it.unitOfMeasure}`).join(", ")}`;
+  }
+
   const composition = PALETTE_KINDS.map((k) => ({
     kind: k,
     label: t(`kindPlural.${k}`),
@@ -1683,29 +1713,41 @@ export function BlueprintCanvas({
                     {row.length > 0 ? (
                       <div style={{ display: "grid", [layout.vertical ? "gridTemplateRows" : "gridTemplateColumns"]: `repeat(${row.length},minmax(0,1fr))`, gap: 1, padding: 1, width: "100%", height: "100%" }}>
                         {row.map(({ bay, ids }) => {
-                          const isOcc = ids.some((id) => occupied.has(id));
+                          const fill = ids.reduce(
+                            (acc, id) => {
+                              const f = binFill(id);
+                              return f.occupied ? { occupied: true, intensity: Math.max(acc.intensity, f.intensity) } : acc;
+                            },
+                            { occupied: false, intensity: 0 },
+                          );
                           const targetId = ids[0];
                           const cellCode =
                             ids.length === 1
                               ? (locations.find((l) => l.id === targetId)?.code ?? `${e.code}-${bay}`)
                               : `${e.code}-${bay}`;
+                          // Bins have no declared capacity, so the tint's strength (not
+                          // just its presence) is relative to the fullest bin here —
+                          // 20% at a bare sliver of stock up to 65% at the fullest.
+                          const tintPct = Math.round(20 + fill.intensity * 45);
                           return (
                             <Link
                               key={bay}
                               href={`/builder/bin/${targetId}`}
                               onMouseDown={(ev) => ev.stopPropagation()}
-                              title={`${cellCode} — ${isOcc ? t("stocked") : t("empty")}`}
+                              title={binTooltip(ids, cellCode)}
                               className={pulseBinId && ids.includes(pulseBinId) ? "locate-ping" : undefined}
                               style={{
                                 border: "1px solid var(--color-neutral-300)",
                                 // Unoccupied cells stay translucent so the parent's kind
                                 // pattern (rack tint, platform crosshatch, …) still reads
                                 // through the bay grid instead of being papered over.
-                                backgroundColor: isOcc ? "var(--color-accent-200)" : "color-mix(in srgb,#fff 55%,transparent)",
+                                backgroundColor: fill.occupied
+                                  ? `color-mix(in srgb, var(--color-accent-700) ${tintPct}%, #fff)`
+                                  : "color-mix(in srgb,#fff 55%,transparent)",
                                 // Each bay is a pallet position — an occupied one gets the
                                 // same three-deck-board slats as the pallet kind itself, so
                                 // "stocked" reads as an actual loaded pallet sitting there.
-                                backgroundImage: isOcc
+                                backgroundImage: fill.occupied
                                   ? "linear-gradient(color-mix(in srgb,var(--color-accent-700) 45%,transparent) 0 20%,transparent 20% 40%,color-mix(in srgb,var(--color-accent-700) 45%,transparent) 40% 60%,transparent 60% 80%,color-mix(in srgb,var(--color-accent-700) 45%,transparent) 80% 100%)"
                                   : undefined,
                                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -1723,8 +1765,16 @@ export function BlueprintCanvas({
                       <Link
                         href={`/builder/bin/${e.id}`}
                         onMouseDown={(ev) => ev.stopPropagation()}
+                        title={binTooltip([e.id], e.code ?? e.name)}
                         className={pulseBinId === e.id ? "locate-ping" : undefined}
-                        style={{ display: "block", width: "100%", height: "100%", background: occupied.has(e.id) ? "var(--color-accent-200)" : undefined }}
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          height: "100%",
+                          background: binFill(e.id).occupied
+                            ? `color-mix(in srgb, var(--color-accent-700) ${Math.round(20 + binFill(e.id).intensity * 45)}%, #fff)`
+                            : undefined,
+                        }}
                       />
                     ) : null}
 
@@ -1798,6 +1848,25 @@ export function BlueprintCanvas({
                 ))}
               </div>
             ))}
+            {locations.some((l) => l.isBin) && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 3, paddingTop: 5, borderTop: "1px solid var(--color-divider)" }}>
+                <span style={{ color: "color-mix(in srgb,var(--color-text) 55%,transparent)", fontFamily: "var(--font-heading)", letterSpacing: ".06em" }}>
+                  {t("fillLevel").toUpperCase()}
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 9, color: "color-mix(in srgb,var(--color-text) 50%,transparent)" }}>{t("empty")}</span>
+                  <span
+                    style={{
+                      flex: 1,
+                      height: 8,
+                      background: "linear-gradient(to right, color-mix(in srgb,#fff 55%,transparent), color-mix(in srgb, var(--color-accent-700) 65%, #fff))",
+                      border: "1px solid var(--color-neutral-300)",
+                    }}
+                  />
+                  <span style={{ fontSize: 9, color: "color-mix(in srgb,var(--color-text) 50%,transparent)" }}>{t("full")}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

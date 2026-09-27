@@ -601,6 +601,8 @@
     "confirmReplace": "Replace scheme",
     "stocked": "stocked",
     "empty": "empty",
+    "fillLevel": "Fill level",
+    "full": "fullest bin",
     "nothingSelected": "Nothing selected",
     "nothingSelectedBody": "Click an object to select it — drag to move, drag the corner to resize, or edit exact numbers on the right.",
     "composition": "Composition",

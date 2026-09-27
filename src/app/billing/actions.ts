@@ -6,8 +6,18 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { organizations, payments, plans, users } from "@/db/schema";
 import { appBaseUrl } from "@/lib/app-url";
-import { BILLING_CURRENCY, SELF_SERVE_PLAN_KEYS, getOrgUsage, isBillingMonths, limitsExceeded, priceForPeriod } from "@/lib/billing";
+import {
+  BANK_TRANSFER_MONTHS,
+  BILLING_CURRENCY,
+  PAYSERA_MONTHS,
+  SELF_SERVE_PLAN_KEYS,
+  getOrgUsage,
+  limitsExceeded,
+  priceForPeriod,
+} from "@/lib/billing";
 import { maybeSendExpiryReminder } from "@/lib/billing-reminders";
+import { companyInfo } from "@/lib/company";
+import { sendEmail } from "@/lib/email";
 import { buildPayseraPaymentUrl, getPayseraConfig } from "@/lib/paysera";
 import { requirePermission } from "@/lib/permissions";
 import { getOrgLockReason, requireSession } from "@/lib/session";
@@ -84,7 +94,10 @@ export async function startCheckout(_prevState: CheckoutState, formData: FormDat
 
   const planKey = formData.get("plan")?.toString();
   const months = Number(formData.get("months"));
-  if (!planKey || !(SELF_SERVE_PLAN_KEYS as readonly string[]).includes(planKey) || !isBillingMonths(months)) {
+  // Paysera is the instant-online path — 1 month only. 3/6 are a bank
+  // transfer (requestBankTransfer below) and 12 is a contract (Epic #7),
+  // neither of which is a Paysera checkout at all.
+  if (!planKey || !(SELF_SERVE_PLAN_KEYS as readonly string[]).includes(planKey) || months !== PAYSERA_MONTHS) {
     return { error: t("invalidChoice") };
   }
 
@@ -126,6 +139,64 @@ export async function startCheckout(_prevState: CheckoutState, formData: FormDat
   });
 
   redirect(url);
+}
+
+type BankTransferState = { ok?: true; error?: string } | undefined;
+
+// 3/6-month periods don't go through Paysera at all (decided 2026-09-26):
+// this just tells SmartDepo a transfer is coming, for the same amount
+// startCheckout would have charged. No row is written and no status
+// changes here — the founder records the actual payment on /internal
+// (recordManualPayment) once it lands, through the exact same
+// applyPaidPayment() path a Paysera callback uses. This is a heads-up
+// email, not a new approval step.
+export async function requestBankTransfer(_prevState: BankTransferState, formData: FormData): Promise<BankTransferState> {
+  const t = await getTranslations("billing.error");
+  let session: Awaited<ReturnType<typeof requireSession>>;
+  try {
+    session = await requirePermission("manageBilling");
+  } catch {
+    const s = await requireSession();
+    if (s.role !== "admin") return { error: t("adminOnly") };
+    session = s;
+  }
+
+  const planKey = formData.get("plan")?.toString();
+  const months = Number(formData.get("months"));
+  if (!planKey || !(SELF_SERVE_PLAN_KEYS as readonly string[]).includes(planKey) || !(BANK_TRANSFER_MONTHS as readonly number[]).includes(months)) {
+    return { error: t("invalidChoice") };
+  }
+
+  const [plan] = await db.select().from(plans).where(and(eq(plans.key, planKey), eq(plans.isActive, true)));
+  if (!plan) return { error: t("invalidChoice") };
+
+  const usage = await getOrgUsage(session.organizationId);
+  if (limitsExceeded(plan, usage).length > 0) return { error: t("overLimits", { plan: plan.name }) };
+
+  const [payer] = await db.select({ email: users.email }).from(users).where(eq(users.id, session.userId));
+  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, session.organizationId));
+  const amountCents = priceForPeriod(plan, months);
+
+  try {
+    await sendEmail({
+      to: companyInfo().supportEmail,
+      replyTo: payer?.email,
+      subject: `[SmartDepo] Bank transfer requested — ${org?.name ?? session.organizationId}`,
+      text: [
+        `${org?.name ?? "?"} wants to pay by bank transfer.`,
+        `Plan: ${plan.name}`,
+        `Period: ${months} months`,
+        `Amount: €${(amountCents / 100).toFixed(2)}`,
+        `Requested by: ${payer?.email ?? session.userId}`,
+        `Organization id: ${session.organizationId}`,
+      ].join("\n"),
+    });
+  } catch (e) {
+    console.error("[billing] bank transfer notice failed", e);
+    return { error: t("bankTransferSendFailed") };
+  }
+
+  return { ok: true };
 }
 
 export async function getPaymentStatus(paymentId: string) {

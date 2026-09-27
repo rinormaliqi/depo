@@ -95,7 +95,7 @@
       },
       "prepaid": {
         "title": "Parapagim, për kompani, në euro",
-        "body": "Një çmim për organizatë, jo për përdorues. Paguaj 1, 3 ose 12 muaj përpara me kartelë, e-banking ose transfer bankar, me faturë. Pa pagesa automatike."
+        "body": "Një çmim për organizatë, jo për përdorues. Paguaj 1, 3, 6 ose 12 muaj përpara — online për 1 muaj, me transfertë bankare për periudha më të gjata. Pa pagesa automatike."
       },
       "roles": {
         "title": "Admin, menaxher, punëtor",
@@ -504,6 +504,15 @@
     "payOfflineWithEmail": "Pagesa online nuk është ende e disponueshme këtu — shkruaj te {email} për të paguar me transfer bankar.",
     "bankTransferHint": "Paysera pranon karta dhe pagesa bankare. Preferon faturë dhe transfer bankar? Kontakto atë që e ka hapur llogarinë.",
     "bankTransferHintWithEmail": "Paysera pranon karta dhe pagesa bankare. Preferon faturë dhe transfer bankar? Shkruaj te {email}.",
+    "bankTransferPanelTitle": "Paguaj me transfertë bankare",
+    "bankTransferPanelBody": "Transfero €{amount} në llogarinë më poshtë, me “{reference}” si referencë pagese. Planin ta aktivizojmë sapo të mbërrijë pagesa.",
+    "bankTransferBankName": "Banka",
+    "bankTransferIban": "IBAN",
+    "bankTransferSwift": "SWIFT / BIC",
+    "bankTransferButton": "Njofto SmartDepo-n",
+    "bankTransferSending": "Duke dërguar…",
+    "bankTransferSent": "U njoftua SmartDepo — bëje transfertën kur të duash, duke cituar referencën më sipër.",
+    "contractComingSoon": "Kontratat 12-mujore vijnë së shpejti.",
     "checkoutCanceled": "Pagesa u anulua — asgjë nuk u faturua.",
     "history": "Pagesat",
     "historyLine": "{months, plural, =1 {1 muaj} other {# muaj}} · {provider}",
@@ -516,7 +525,8 @@
       "adminOnly": "Vetëm një administrator mund të paguajë për organizatën",
       "notConfigured": "Pagesa online nuk është konfiguruar në këtë mjedis",
       "invalidChoice": "Zgjidh një plan dhe një periudhë",
-      "overLimits": "Organizata tashmë i tejkalon limitet e planit {plan} — ul përdorimin ose zgjidh një plan më të madh"
+      "overLimits": "Organizata tashmë i tejkalon limitet e planit {plan} — ul përdorimin ose zgjidh një plan më të madh",
+      "bankTransferSendFailed": "Nuk arritëm ta njoftojmë SmartDepo-n tani — provo përsëri, ose na shkruaj direkt me email."
     },
     "return": {
       "paidTitle": "Pagesa u pranua",
@@ -1192,7 +1202,7 @@
       "enterpriseNote": "Operacione me shumë objekte, limite të personalizuara, faturim dhe onboarding. Çmim sipas klientit.",
       "startTrial": "Fillo provën falas",
       "noteTrial": "Prova: 30 ditë, të gjitha funksionet, pa të dhëna pagese. Pas saj llogaria bëhet vetëm-lexim derisa të aktivizohet një plan — asgjë nuk fshihet.",
-      "notePrepaid": "Pagesa: paraprakisht për 1, 3 ose 12 muaj përmes Paysera (kartë, e-banking, transfer bankar) ose me faturë. Pa rinovim automatik — nuk faturohesh kurrë pa e nisur vetë pagesën.",
+      "notePrepaid": "Pagesa: 1 muaj online përmes Paysera (kartë, e-banking); 3 ose 6 muaj me transfertë bankare; 12 muaj përmes kontrate. Pa rinovim automatik — nuk faturohesh kurrë pa e nisur vetë pagesën.",
       "noteVat": "Të gjitha çmimet në EUR. TVSH-ja shtohet aty ku e kërkon ligji dhe tregohet para pagesës.",
       "noteRefund": "Rimbursim i plotë brenda 14 ditësh nga çdo pagesë, pa pyetje.",
       "refundLink": "Lexo politikën e rimbursimit",
@@ -1236,7 +1246,7 @@
       },
       "pricing": {
         "title": "Çmimet — €49, €119 ose nga €249 në muaj, për kompani",
-        "description": "Planet e SmartDepo për një magazinë me 5 vetë, një depo me 15 vetë dhe operacione me disa objekte. Një çmim për kompani, jo për përdorues; parapagim 1, 3 ose 12 muaj; provë falas 30 ditë pa kartelë."
+        "description": "Planet e SmartDepo për një magazinë me 5 vetë, një depo me 15 vetë dhe operacione me disa objekte. Një çmim për kompani, jo për përdorues; parapagim 1, 3, 6 ose 12 muaj; provë falas 30 ditë pa kartelë."
       },
       "login": {
         "title": "Kyçu",

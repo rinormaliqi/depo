@@ -9,3 +9,15 @@ export function companyInfo() {
     supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "pikembipresje@gmail.com",
   };
 }
+
+// Where a 3/6-month bank transfer (billing/actions.ts requestBankTransfer)
+// and a 12-month contract's payment section (Epic #7) both point — real
+// account details, so env-driven the same way the legal identity above is:
+// they belong to the account holder, not in source control as a default.
+export function bankDetails() {
+  return {
+    bankName: process.env.NEXT_PUBLIC_BANK_NAME || "",
+    iban: process.env.NEXT_PUBLIC_BANK_IBAN || "",
+    swift: process.env.NEXT_PUBLIC_BANK_SWIFT || "",
+  };
+}

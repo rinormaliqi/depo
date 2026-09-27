@@ -6,7 +6,7 @@ import type { Locale } from "@/i18n/locales";
 // {email}, {address} are substituted by the page. `sq` is the binding
 // version (docs/architecture.md: Albanian is the primary market); `en`
 // is a courtesy translation, and the terms say so.
-export const LEGAL_UPDATED = "2026-09-15";
+export const LEGAL_UPDATED = "2026-09-27";
 // The privacy policy moves on its own when a processor changes.
 export const PRIVACY_UPDATED = "2026-09-20";
 
@@ -27,7 +27,7 @@ export const terms: Record<Locale, Section[]> = {
     ]},
     { title: "Planet, çmimet dhe pagesa", paragraphs: [
       "Planet dhe limitet e tyre (përdorues, objekte, vende magazinimi) janë të publikuara në faqen e çmimeve. Çmimet janë në euro (EUR) dhe përfshijnë të gjitha tarifat tona; TVSH-ja aplikohet aty ku e kërkon ligji dhe tregohet para pagesës.",
-      "Shërbimi paguhet paraprakisht për periudha prej 1, 3 ose 12 muajsh. Pagesa kryhet përmes Paysera (kartë, e-banking, transfer bankar ose llogari Paysera) ose, me marrëveshje, me faturë dhe transfer bankar. Nuk ka rinovim automatik dhe nuk tërheqim asnjëherë para nga llogaria jote pa një pagesë të iniciuar nga ti.",
+      "Shërbimi paguhet paraprakisht për periudha prej 1, 3, 6 ose 12 muajsh. Periudha 1-mujore paguhet online përmes Paysera (kartë, e-banking ose llogari Paysera). Periudhat 3- ose 6-mujore paguhen me transfertë bankare, sipas të dhënave të treguara në faqen e faturimit. Periudha 12-mujore ofrohet përmes një kontrate biznesi të veçantë. Nuk ka rinovim automatik dhe nuk tërheqim asnjëherë para nga llogaria jote pa një pagesë të iniciuar nga ti.",
       "Pagesa e kryer para mbarimit të periudhës aktuale e zgjat atë; ndërrimi i planit fillon një periudhë të re nga dita e pagesës. Nuk mund të kalosh në një plan limitet e të cilit organizata jote tashmë i tejkalon.",
       "Kur periudha e paguar mbaron pa u rinovuar, llogaria kalon në vetëm-lexim, njësoj si pas provës. Të njoftojmë me email 7 ditë para mbarimit.",
     ]},
@@ -67,7 +67,7 @@ export const terms: Record<Locale, Section[]> = {
     ]},
     { title: "Plans, prices and payment", paragraphs: [
       "Plans and their limits (users, facilities, storage bins) are published on the pricing page. Prices are in euro (EUR) and include all of our fees; VAT is applied where the law requires it and shown before payment.",
-      "The service is paid up front for periods of 1, 3 or 12 months, via Paysera (card, e-banking, bank transfer or Paysera account) or, by arrangement, by invoice and bank transfer. There is no automatic renewal and we never charge you without a payment you initiate.",
+      "The service is paid up front for periods of 1, 3, 6 or 12 months. A 1-month period is paid online via Paysera (card, e-banking or Paysera account). A 3- or 6-month period is paid by bank transfer, using the details shown on the billing page. A 12-month period is arranged through a separate business contract. There is no automatic renewal and we never charge you without a payment you initiate.",
       "Paying before the current period ends extends it; changing plan starts a new period from the payment date. You cannot move to a plan whose limits your organization already exceeds.",
       "When a paid period ends without renewal the account becomes read-only, just as after the trial. We email you 7 days before it ends.",
     ]},

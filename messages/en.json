@@ -95,7 +95,7 @@
       },
       "prepaid": {
         "title": "Prepaid, per company, in euro",
-        "body": "One price per organization, not per user. Pay 1, 3 or 12 months up front by card, e-banking or bank transfer, with an invoice. No automatic charges."
+        "body": "One price per organization, not per user. Pay 1, 3, 6 or 12 months up front — online for 1 month, by bank transfer for longer periods. No automatic charges."
       },
       "roles": {
         "title": "Admin, manager, worker",
@@ -504,6 +504,15 @@
     "payOfflineWithEmail": "Online payment isn't available here yet — email {email} to pay by bank transfer.",
     "bankTransferHint": "Paysera accepts cards and bank payments. Prefer an invoice and bank transfer? Get in touch with whoever set up your account.",
     "bankTransferHintWithEmail": "Paysera accepts cards and bank payments. Prefer an invoice and bank transfer? Email {email}.",
+    "bankTransferPanelTitle": "Pay by bank transfer",
+    "bankTransferPanelBody": "Transfer €{amount} to the account below, with “{reference}” as the payment reference. We'll activate your plan once it arrives.",
+    "bankTransferBankName": "Bank",
+    "bankTransferIban": "IBAN",
+    "bankTransferSwift": "SWIFT / BIC",
+    "bankTransferButton": "Notify SmartDepo",
+    "bankTransferSending": "Sending…",
+    "bankTransferSent": "We've been notified — make the transfer whenever you're ready, quoting the reference above.",
+    "contractComingSoon": "12-month contracts are coming soon.",
     "checkoutCanceled": "Payment canceled — nothing was charged.",
     "history": "Payments",
     "historyLine": "{months, plural, =1 {1 month} other {# months}} · {provider}",
@@ -516,7 +525,8 @@
       "adminOnly": "Only an admin can pay for the organization",
       "notConfigured": "Online payment isn't set up in this environment",
       "invalidChoice": "Pick a plan and a period",
-      "overLimits": "Your organization already exceeds the {plan} plan's limits — reduce usage first or pick a larger plan"
+      "overLimits": "Your organization already exceeds the {plan} plan's limits — reduce usage first or pick a larger plan",
+      "bankTransferSendFailed": "Couldn't notify SmartDepo right now — try again, or email us directly."
     },
     "return": {
       "paidTitle": "Payment received",
@@ -1192,7 +1202,7 @@
       "enterpriseNote": "Multi-site operations, custom limits, invoicing and onboarding. Priced per customer.",
       "startTrial": "Start free trial",
       "noteTrial": "Trial: 30 days, full features, no payment details. Afterwards the account becomes read-only until a plan is active — nothing is deleted.",
-      "notePrepaid": "Payment: prepaid for 1, 3 or 12 months via Paysera (cards, e-banking, bank transfer) or by invoice. No automatic renewal — you are never charged without initiating a payment.",
+      "notePrepaid": "Payment: 1 month online via Paysera (card, e-banking); 3 or 6 months by bank transfer; 12 months by contract. No automatic renewal — you are never charged without initiating a payment.",
       "noteVat": "All prices in EUR. VAT is added where required by law and shown before you pay.",
       "noteRefund": "Full refund within 14 days of any payment, no questions asked.",
       "refundLink": "Read the refund policy",
@@ -1236,7 +1246,7 @@
       },
       "pricing": {
         "title": "Pricing — €49, €119 or from €249 per month, per company",
-        "description": "SmartDepo plans for a 5-person stockroom, a 15-person depot and multi-site operations. One price per company, not per user; prepaid 1, 3 or 12 months; 30-day free trial without a card."
+        "description": "SmartDepo plans for a 5-person stockroom, a 15-person depot and multi-site operations. One price per company, not per user; prepaid 1, 3, 6 or 12 months; 30-day free trial without a card."
       },
       "login": {
         "title": "Log in",

@@ -7,6 +7,8 @@ import { BlockedPage } from "@/components/blocked-page";
 import { AppHeader } from "@/components/app-header";
 import { getCapabilities } from "@/lib/capabilities";
 import { getMyItemsWithStock } from "./actions";
+import { getMyFieldDefinitions, getMyItemsCustomValues } from "./custom-fields-actions";
+import { CustomFieldsManager } from "./custom-fields-manager";
 import { ItemForm } from "./item-form";
 import { ItemsList } from "./items-list";
 
@@ -16,12 +18,14 @@ export default async function ItemsPage() {
   const capsGate = await getCapabilities();
   if (!capsGate?.can.manageItems) return <BlockedPage capability="manageItems" reason={capsGate?.reason.manageItems} />;
 
-  const [facility, myItems, caps, t] = await Promise.all([
+  const [facility, myItems, caps, t, fieldDefs] = await Promise.all([
     getMyFacility(),
     getMyItemsWithStock(),
     getCapabilities(),
     getTranslations(),
+    getMyFieldDefinitions(),
   ]);
+  const customValues = await getMyItemsCustomValues(myItems.map((i) => i.id));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
@@ -50,12 +54,15 @@ export default async function ItemsPage() {
           </div>
 
           {caps?.can.manageItems ? (
-            <ItemForm />
+            <>
+              <CustomFieldsManager fields={fieldDefs} />
+              <ItemForm />
+            </>
           ) : (
             <p className="text-muted" style={{ fontSize: 12 }}>{t("items.viewOnly")}</p>
           )}
 
-          <ItemsList items={myItems} canManage={!!caps?.can.manageItems} />
+          <ItemsList items={myItems} canManage={!!caps?.can.manageItems} fieldDefs={fieldDefs} customValues={customValues} />
 
           {myItems.length === 0 && (
             <p className="text-muted" style={{ marginTop: 20, textAlign: "center", fontSize: 13 }}>{t("items.noItems")}</p>

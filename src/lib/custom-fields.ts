@@ -8,6 +8,47 @@ import { MAX_FIELD_CHARS } from "@/lib/import-table";
 export type FieldDefinition = typeof itemCustomFieldDefinitions.$inferSelect;
 
 const MAX_OPTIONS = 50;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export type CustomFieldValueError = "required" | "tooLong" | "invalidNumber" | "invalidDate" | "invalidOption";
+export type CustomFieldValueResult = { ok: true; value: string | null } | { ok: false; error: CustomFieldValueError };
+
+// Pure: no i18n, no DB — shared by setItemValues (single item, throws a
+// translated UserError) and the bulk import parser (collects ImportError
+// rows instead), so a value that's valid in one place is valid in the
+// other. `value: null` means "clear this field" (blank + optional),
+// distinct from an empty string, which is never actually stored — a value
+// row exists only for a field an item actually has one for.
+//
+// Dates are required in plain ISO (YYYY-MM-DD): the edit form's
+// `<input type="date">` only ever emits that shape, and accepting
+// anything Date.parse() tolerates would make a pasted "01.02.2026" from a
+// spreadsheet silently ambiguous between 1 Feb and 2 Jan.
+export function validateCustomFieldValue(def: FieldDefinition, raw: string): CustomFieldValueResult {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    if (def.required) return { ok: false, error: "required" };
+    return { ok: true, value: null };
+  }
+  if (trimmed.length > MAX_FIELD_CHARS) return { ok: false, error: "tooLong" };
+
+  if (def.type === "number") {
+    return Number.isFinite(Number(trimmed)) ? { ok: true, value: trimmed } : { ok: false, error: "invalidNumber" };
+  }
+  if (def.type === "date") {
+    return ISO_DATE.test(trimmed) && !Number.isNaN(Date.parse(trimmed)) ? { ok: true, value: trimmed } : { ok: false, error: "invalidDate" };
+  }
+  if (def.type === "boolean") {
+    const normalized = trimmed.toLowerCase();
+    if (["true", "1", "po", "yes", "y"].includes(normalized)) return { ok: true, value: "true" };
+    if (["false", "0", "jo", "no", "n"].includes(normalized)) return { ok: true, value: "false" };
+    return { ok: false, error: "invalidOption" };
+  }
+  if (def.type === "select") {
+    return (def.options ?? []).includes(trimmed) ? { ok: true, value: trimmed } : { ok: false, error: "invalidOption" };
+  }
+  return { ok: true, value: trimmed };
+}
 
 // Turns a label into a stable key: lowercase, diacritics stripped, anything
 // that isn't a-z0-9 collapsed to underscores. Values key off this, not the
@@ -135,6 +176,14 @@ export async function getValuesForItems(itemIds: string[]): Promise<Map<string, 
 // defined (missing/blank means "clear this field", not "leave it alone") —
 // the caller always sends the full set, the same way a form submits every
 // field it renders.
+function throwForError(t: Awaited<ReturnType<typeof getTranslations>>, label: string, error: CustomFieldValueError, max: number): never {
+  if (error === "required") throw new UserError(t("errorFieldRequired", { label }));
+  if (error === "tooLong") throw new UserError(t("errorValueTooLong", { label, max }));
+  if (error === "invalidNumber") throw new UserError(t("errorInvalidNumber", { label }));
+  if (error === "invalidDate") throw new UserError(t("errorInvalidDate", { label }));
+  throw new UserError(t("errorInvalidOption", { label }));
+}
+
 export async function setItemValues(itemId: string, organizationId: string, values: Record<string, string>) {
   const t = await getTranslations("customFields");
   const definitions = await getFieldDefinitions(organizationId);
@@ -143,18 +192,10 @@ export async function setItemValues(itemId: string, organizationId: string, valu
   const toClear: string[] = [];
 
   for (const def of definitions) {
-    const trimmed = (values[def.id] ?? "").trim();
-    if (!trimmed) {
-      if (def.required) throw new UserError(t("errorFieldRequired", { label: def.label }));
-      toClear.push(def.id);
-      continue;
-    }
-    if (trimmed.length > MAX_FIELD_CHARS) throw new UserError(t("errorValueTooLong", { label: def.label, max: MAX_FIELD_CHARS }));
-    if (def.type === "number" && !Number.isFinite(Number(trimmed))) throw new UserError(t("errorInvalidNumber", { label: def.label }));
-    if (def.type === "date" && Number.isNaN(Date.parse(trimmed))) throw new UserError(t("errorInvalidDate", { label: def.label }));
-    if (def.type === "boolean" && trimmed !== "true" && trimmed !== "false") throw new UserError(t("errorInvalidOption", { label: def.label }));
-    if (def.type === "select" && !(def.options ?? []).includes(trimmed)) throw new UserError(t("errorInvalidOption", { label: def.label }));
-    toUpsert.push({ fieldDefinitionId: def.id, value: trimmed });
+    const result = validateCustomFieldValue(def, values[def.id] ?? "");
+    if (!result.ok) throwForError(t, def.label, result.error, MAX_FIELD_CHARS);
+    if (result.value === null) toClear.push(def.id);
+    else toUpsert.push({ fieldDefinitionId: def.id, value: result.value });
   }
 
   await db.transaction(async (tx) => {

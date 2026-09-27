@@ -6,7 +6,9 @@ import { AppHeader } from "@/components/app-header";
 import { BlockedPage } from "@/components/blocked-page";
 import { getCapabilities } from "@/lib/capabilities";
 import { PasteImport } from "@/components/paste-import";
+import { getFieldDefinitions } from "@/lib/custom-fields";
 import { IMPORT_COLUMNS } from "@/lib/import-items";
+import { requireOrgId } from "@/lib/session";
 import { commitItemsImport, previewItemsImport } from "./actions";
 
 export default async function ItemsImportPage() {
@@ -15,7 +17,10 @@ export default async function ItemsImportPage() {
   const caps = await getCapabilities();
   if (!caps?.can.manageItems) return <BlockedPage capability="manageItems" reason={caps?.reason.manageItems} />;
 
-  const [facility, t] = await Promise.all([getMyFacility(), getTranslations()]);
+  const organizationId = await requireOrgId();
+  const [facility, t, fieldDefs] = await Promise.all([getMyFacility(), getTranslations(), getFieldDefinitions(organizationId)]);
+  const columns = [...IMPORT_COLUMNS, ...fieldDefs.map((f) => f.id)];
+  const columnLabels = Object.fromEntries(fieldDefs.map((f) => [f.id, f.label]));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
@@ -33,7 +38,8 @@ export default async function ItemsImportPage() {
           <p className="text-muted" style={{ fontSize: 13, marginTop: 0, marginBottom: 16 }}>{t("items.import.intro")}</p>
           <PasteImport
             ns="items.import"
-            columns={IMPORT_COLUMNS}
+            columns={columns}
+            columnLabels={columnLabels}
             templateHref="/items/import/template"
             backHref="/items"
             preview={previewItemsImport}

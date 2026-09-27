@@ -113,6 +113,13 @@
       "when": 1790001295442,
       "tag": "0015_blue_scarecrow",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790515293725,
+      "tag": "0016_add_item_custom_fields",
+      "breakpoints": true
     }
   ]
 }

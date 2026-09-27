@@ -116,7 +116,7 @@ function isSkuTaken(e: unknown) {
   return (e as { cause?: { code?: string } })?.cause?.code === "23505";
 }
 
-async function requireOwnedItem(itemId: string, organizationId: string) {
+export async function requireOwnedItem(itemId: string, organizationId: string) {
   const [item] = await db.select().from(items).where(and(eq(items.id, itemId), eq(items.organizationId, organizationId)));
   if (!item) {
     const t = await getTranslations("items");

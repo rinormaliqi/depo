@@ -330,6 +330,60 @@ export const items = pgTable(
   ],
 );
 
+// A customer's products are never the same shape — one company tracks
+// brand/model, another a serial number and an expiry date. Rather than
+// growing `items` with columns most tenants never use, each org defines
+// its own fields here and every item gets a value row per field it has one
+// for (missing = never set, not the same as an empty string).
+export const customFieldTypes = ["text", "number", "date", "select", "boolean"] as const;
+export type CustomFieldType = (typeof customFieldTypes)[number];
+
+export const itemCustomFieldDefinitions = pgTable(
+  "item_custom_field_definitions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    // Stable, never shown — what values key off; `label` is what the admin
+    // typed and can rename freely without orphaning existing values.
+    key: text("key").notNull(),
+    label: text("label").notNull(),
+    type: text("type", { enum: customFieldTypes }).notNull(),
+    // Choices for `select` fields only; null otherwise.
+    options: jsonb("options").$type<string[] | null>(),
+    required: boolean("required").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("item_custom_field_definitions_org_idx").on(table.organizationId),
+    uniqueIndex("item_custom_field_definitions_org_key_idx").on(table.organizationId, table.key),
+  ],
+);
+
+export const itemCustomFieldValues = pgTable(
+  "item_custom_field_values",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    fieldDefinitionId: uuid("field_definition_id")
+      .notNull()
+      .references(() => itemCustomFieldDefinitions.id, { onDelete: "cascade" }),
+    // Kept as text regardless of the field's type (a "number" is stored as
+    // "42", a "boolean" as "true") — one column, one index, and the type
+    // enum on the definition is what tells a reader how to parse it back.
+    value: text("value").notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("item_custom_field_values_item_field_idx").on(table.itemId, table.fieldDefinitionId),
+    index("item_custom_field_values_field_idx").on(table.fieldDefinitionId),
+  ],
+);
+
 export const stock = pgTable(
   "stock",
   {

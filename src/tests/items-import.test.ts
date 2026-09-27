@@ -6,6 +6,7 @@ import { createItem } from "@/app/items/actions";
 import { commitItemsImport, previewItemsImport } from "@/app/items/import/actions";
 import { db } from "@/db";
 import { items } from "@/db/schema";
+import { createFieldDefinition, getValuesForItems } from "@/lib/custom-fields";
 import { addMember, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
 
@@ -108,5 +109,66 @@ describe("items import", () => {
     assert.ok(fresh?.created);
     const [row] = await db.select().from(items).where(and(eq(items.organizationId, a.org.id), eq(items.sku, "NDR-3")));
     assert.equal(row.name, "Tjetër");
+  });
+});
+
+// The bulk path picks up whatever custom fields the org has defined
+// (Epic #5's import follow-up) as extra columns, validated the same way
+// setItemValues validates a single item's edit.
+describe("items import with custom fields", () => {
+  let org: Awaited<ReturnType<typeof createOrg>>;
+  let manager: Awaited<ReturnType<typeof addMember>>;
+  let brand: Awaited<ReturnType<typeof createFieldDefinition>>;
+
+  before(async () => {
+    await freshDatabase();
+    org = await createOrg();
+    manager = await addMember(org.org.id, "manager");
+    brand = await createFieldDefinition(org.org.id, { label: "Brand", type: "text", required: false });
+    actAs(manager);
+  });
+
+  async function itemBySku(sku: string) {
+    const [row] = await db.select().from(items).where(and(eq(items.organizationId, org.org.id), eq(items.sku, sku)));
+    return row;
+  }
+
+  test("preview reports a required custom field left blank as an error, and writes nothing", async () => {
+    // Its own org: a required field created here must not leak into the
+    // later tests in this block, which only ever send a "Brand" column.
+    const other = await createOrg();
+    actAs(await addMember(other.org.id, "manager"));
+    await createFieldDefinition(other.org.id, { label: "Serial", type: "text", required: true });
+    const preview = await previewItemsImport("name;unit;sku;category;Serial\nA;pcs;S-1;;\n");
+    assert.ok(preview.ok);
+    assert.equal(preview.value.errors.length, 1);
+    assert.equal(preview.value.errors[0].code, "customField.required");
+    actAs(manager);
+  });
+
+  test("commit stores the custom field value alongside a newly created item", async () => {
+    const result = await commitItemsImport("name;unit;sku;category;Brand\nKabllo;m;K-1;Kabllo;Acme\n");
+    assert.ok(result.ok);
+    const item = await itemBySku("K-1");
+    const values = await getValuesForItems([item.id]);
+    assert.equal(values.get(item.id)?.[brand.id], "Acme");
+  });
+
+  test("a second import updating the same SKU with a blank custom column clears it", async () => {
+    const result = await commitItemsImport("name;unit;sku;category;Brand\nKabllo;m;K-1;Kabllo;\n");
+    assert.ok(result.ok);
+    assert.deepEqual(result.value, { created: 0, updated: 1 });
+    const item = await itemBySku("K-1");
+    const values = await getValuesForItems([item.id]);
+    assert.equal(brand.id in (values.get(item.id) ?? {}), false, "a blank cell overwrites the existing value, same as category already does");
+  });
+
+  test("an invalid value for a custom field is refused at commit too, not just preview", async () => {
+    const beforeRows = await db.select().from(items).where(eq(items.organizationId, org.org.id));
+    await createFieldDefinition(org.org.id, { label: "Qty", type: "number", required: false });
+    const result = await commitItemsImport("name;unit;sku;category;Brand;Qty\nBad;pcs;K-2;;Acme;abc\n");
+    assert.equal(result.ok, false);
+    const afterRows = await db.select().from(items).where(eq(items.organizationId, org.org.id));
+    assert.equal(afterRows.length, beforeRows.length, "nothing was written");
   });
 });

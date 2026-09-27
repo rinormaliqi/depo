@@ -24,13 +24,16 @@ export type PastePreview = {
 type Props = {
   ns: "items.import" | "stock.import" | "builder.import";
   columns: readonly string[];
+  // A column whose header/label isn't a translation key — an org's own
+  // custom field, shown as typed rather than looked up under `ns.field.*`.
+  columnLabels?: Record<string, string>;
   templateHref: string;
   backHref: string;
   preview: (text: string) => Promise<ActionResult<PastePreview>>;
   commit: (text: string) => Promise<ActionResult<Record<string, number>>>;
 };
 
-export function PasteImport({ ns, columns, templateHref, backHref, preview: rawPreview, commit: rawCommit }: Props) {
+export function PasteImport({ ns, columns, columnLabels, templateHref, backHref, preview: rawPreview, commit: rawCommit }: Props) {
   const t = useTranslations(ns);
   const notify = useNotify();
   const router = useRouter();
@@ -72,6 +75,7 @@ export function PasteImport({ ns, columns, templateHref, backHref, preview: rawP
 
   const total = current ? Object.values(current.counts).reduce((a, b) => a + b, 0) : 0;
   const canCommit = current !== null && current.errors.length === 0 && current.sample.length > 0;
+  const columnLabel = (key: string) => columnLabels?.[key] ?? t(`field.${key}`);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -139,7 +143,7 @@ export function PasteImport({ ns, columns, templateHref, backHref, preview: rawP
                 {current.errors.map((e, i) => (
                   <li key={i}>
                     <span className="text-muted">{t("line", { line: e.line })}</span> —{" "}
-                    {t(`error.${e.code}`, { field: e.field ? t(`field.${e.field}`) : "", value: e.value ?? "" })}
+                    {t(`error.${e.code}`, { field: e.field ? columnLabel(e.field) : "", value: e.value ?? "" })}
                   </li>
                 ))}
               </ul>
@@ -154,7 +158,7 @@ export function PasteImport({ ns, columns, templateHref, backHref, preview: rawP
                   <thead>
                     <tr>
                       {columns.map((c) => (
-                        <th key={c}>{t(`field.${c}`)}</th>
+                        <th key={c}>{columnLabel(c)}</th>
                       ))}
                     </tr>
                   </thead>

@@ -15,7 +15,14 @@ async function itemById(id: string) {
   return row;
 }
 
-const patch = (over: Partial<Parameters<typeof updateItem>[1]> = {}) => ({ name: "Çimento 50kg", unitOfMeasure: "thes", sku: "", category: "", ...over });
+const patch = (over: Partial<Parameters<typeof updateItem>[1]> = {}) => ({
+  name: "Çimento 50kg",
+  unitOfMeasure: "thes",
+  sku: "",
+  category: "",
+  minStockLevel: "",
+  ...over,
+});
 
 // #90: a typo is fixed in place; an item goes only while nothing ever
 // happened to it — stock on the floor and movements in the history both
@@ -60,6 +67,27 @@ describe("items edit and delete", () => {
     const blank = await updateItem(cement.id, patch({ unitOfMeasure: " " }));
     assert.equal(blank.ok, false);
     assert.match(blank.ok ? "" : blank.error, /errorRequired/);
+  });
+
+  test("min stock: blank clears the threshold, a whole number ≥ 0 sets it, anything else is refused", async () => {
+    const set = await updateItem(cement.id, patch({ minStockLevel: "10" }));
+    assert.ok(set.ok);
+    assert.equal((await itemById(cement.id)).minStockLevel, 10);
+
+    const zero = await updateItem(cement.id, patch({ minStockLevel: "0" }));
+    assert.ok(zero.ok);
+    assert.equal((await itemById(cement.id)).minStockLevel, 0);
+
+    const cleared = await updateItem(cement.id, patch({ minStockLevel: "" }));
+    assert.ok(cleared.ok);
+    assert.equal((await itemById(cement.id)).minStockLevel, null);
+
+    for (const bad of ["-1", "1.5", "abc"]) {
+      const result = await updateItem(cement.id, patch({ minStockLevel: bad }));
+      assert.equal(result.ok, false, `"${bad}" should be refused`);
+      assert.match(result.ok ? "" : result.error, /errorMinStockLevel/);
+    }
+    assert.equal((await itemById(cement.id)).minStockLevel, null, "a refused update changes nothing");
   });
 
   test("a worker, and another company's manager, can't touch it", async () => {

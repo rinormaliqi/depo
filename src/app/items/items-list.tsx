@@ -122,6 +122,11 @@ function ItemRow({
         {item.inStock > 0 ? ` · ${t("stockNote", { count: item.inStock })}` : ""}
         {customSummary ? ` · ${customSummary}` : ""}
       </span>
+      {item.minStockLevel !== null && item.inStock < item.minStockLevel && (
+        <span className="tag" style={{ background: "var(--color-danger-100)", color: "var(--color-danger-700)", fontSize: 11 }}>
+          {t("lowStock", { min: item.minStockLevel })}
+        </span>
+      )}
       {canManage && (
         <span style={{ display: "flex", gap: 4 }}>
           <button type="button" className="btn btn-ghost" onClick={onEdit} style={{ fontSize: 11 }}>
@@ -189,7 +194,13 @@ function ItemEditor({
   const t = useTranslations("items");
   const notify = useNotify();
   const [isPending, startTransition] = useTransition();
-  const [patch, setPatch] = useState<ItemPatch>({ name: item.name, unitOfMeasure: item.unitOfMeasure, sku: item.sku ?? "", category: item.category ?? "" });
+  const [patch, setPatch] = useState<ItemPatch>({
+    name: item.name,
+    unitOfMeasure: item.unitOfMeasure,
+    sku: item.sku ?? "",
+    category: item.category ?? "",
+    minStockLevel: item.minStockLevel === null ? "" : String(item.minStockLevel),
+  });
   const [customDraft, setCustomDraft] = useState<Record<string, string>>(() => Object.fromEntries(fieldDefs.map((f) => [f.id, values[f.id] ?? ""])));
   const set = (key: keyof ItemPatch) => (e: React.ChangeEvent<HTMLInputElement>) => setPatch((p) => ({ ...p, [key]: e.target.value }));
 
@@ -219,6 +230,10 @@ function ItemEditor({
         <input className="input" value={patch.unitOfMeasure} onChange={set("unitOfMeasure")} maxLength={MAX_FIELD_CHARS} placeholder={t("unitPlaceholder")} required style={{ width: 120 }} />
         <input className="input" value={patch.sku} onChange={set("sku")} maxLength={MAX_FIELD_CHARS} placeholder={t("skuPlaceholder")} style={{ width: 120 }} />
         <input className="input" value={patch.category} onChange={set("category")} maxLength={MAX_FIELD_CHARS} placeholder={t("categoryPlaceholder")} style={{ width: 140 }} />
+        <label style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 11 }}>
+          <span className="text-muted">{t("minStockLevelLabel")}</span>
+          <input className="input" type="number" min={0} step={1} value={patch.minStockLevel} onChange={set("minStockLevel")} placeholder={t("minStockLevelPlaceholder")} style={{ width: 110 }} />
+        </label>
       </div>
       {fieldDefs.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>

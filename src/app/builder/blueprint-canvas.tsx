@@ -144,7 +144,7 @@ function levelRow(entity: LocationRow, all: LocationRow[], selectedLevel: number
 export type BinStockEntry = {
   locationId: string;
   totalQuantity: number;
-  items: { name: string; quantity: number; unitOfMeasure: string }[];
+  items: { itemId: string; name: string; quantity: number; unitOfMeasure: string; belowMinimum: boolean }[];
 };
 
 export function BlueprintCanvas({
@@ -152,6 +152,7 @@ export function BlueprintCanvas({
   initialLocations,
   initialOccupiedBinIds,
   initialBinStock,
+  initialLowStockBinIds,
   initialLevels,
   initialUnderlay = null,
   initialHighlightBinId,
@@ -161,6 +162,7 @@ export function BlueprintCanvas({
   initialLocations: LocationRow[];
   initialOccupiedBinIds: string[];
   initialBinStock: BinStockEntry[];
+  initialLowStockBinIds: string[];
   initialLevels: FacilityLevel[];
   initialUnderlay?: UnderlayMeta | null;
   initialHighlightBinId?: string;
@@ -175,6 +177,7 @@ export function BlueprintCanvas({
   const [locations, setLocations] = useState(initialLocations);
   const [occupied, setOccupied] = useState(new Set(initialOccupiedBinIds));
   const [binStock, setBinStock] = useState(new Map(initialBinStock.map((b) => [b.locationId, b])));
+  const [lowStockBins, setLowStockBins] = useState(new Set(initialLowStockBinIds));
   const [levels, setLevels] = useState<FacilityLevel[]>(initialLevels);
   const [underlay, setUnderlay] = useState<UnderlayMeta | null>(initialUnderlay);
   // Two-point scale calibration of the underlay: the floor points clicked so far.
@@ -414,6 +417,7 @@ export function BlueprintCanvas({
     setLocations(data.locations);
     setOccupied(new Set(data.occupiedBinIds));
     setBinStock(new Map(data.binStock.map((b) => [b.locationId, b])));
+    setLowStockBins(new Set(data.lowStockBinIds));
     setLevels(data.levels);
     setUnderlay(data.underlay);
   }
@@ -1261,7 +1265,9 @@ export function BlueprintCanvas({
   function binTooltip(ids: string[], fallbackCode: string) {
     const contents = ids.flatMap((id) => binStock.get(id)?.items ?? []);
     if (contents.length === 0) return `${fallbackCode} — ${t("empty")}`;
-    return `${fallbackCode} — ${contents.map((it) => `${it.name}: ${it.quantity} ${it.unitOfMeasure}`).join(", ")}`;
+    return `${fallbackCode} — ${contents
+      .map((it) => `${it.name}: ${it.quantity} ${it.unitOfMeasure}${it.belowMinimum ? ` (${t("lowStock")})` : ""}`)
+      .join(", ")}`;
   }
 
   const composition = PALETTE_KINDS.map((k) => ({
@@ -1720,6 +1726,7 @@ export function BlueprintCanvas({
                             },
                             { occupied: false, intensity: 0 },
                           );
+                          const hasLowStock = ids.some((id) => lowStockBins.has(id));
                           const targetId = ids[0];
                           const cellCode =
                             ids.length === 1
@@ -1737,7 +1744,8 @@ export function BlueprintCanvas({
                               title={binTooltip(ids, cellCode)}
                               className={pulseBinId && ids.includes(pulseBinId) ? "locate-ping" : undefined}
                               style={{
-                                border: "1px solid var(--color-neutral-300)",
+                                position: "relative",
+                                border: hasLowStock ? "1px solid var(--color-danger-500)" : "1px solid var(--color-neutral-300)",
                                 // Unoccupied cells stay translucent so the parent's kind
                                 // pattern (rack tint, platform crosshatch, …) still reads
                                 // through the bay grid instead of being papered over.
@@ -1757,6 +1765,12 @@ export function BlueprintCanvas({
                               }}
                             >
                               {showBayNumbers ? bay : null}
+                              {hasLowStock && (
+                                <span
+                                  aria-hidden
+                                  style={{ position: "absolute", top: -3, right: -3, width: 7, height: 7, borderRadius: "50%", background: "var(--color-danger-500)", border: "1px solid #fff" }}
+                                />
+                              )}
                             </Link>
                           );
                         })}
@@ -1768,14 +1782,24 @@ export function BlueprintCanvas({
                         title={binTooltip([e.id], e.code ?? e.name)}
                         className={pulseBinId === e.id ? "locate-ping" : undefined}
                         style={{
+                          position: "relative",
                           display: "block",
                           width: "100%",
                           height: "100%",
+                          outline: lowStockBins.has(e.id) ? "2px solid var(--color-danger-500)" : undefined,
+                          outlineOffset: -2,
                           background: binFill(e.id).occupied
                             ? `color-mix(in srgb, var(--color-accent-700) ${Math.round(20 + binFill(e.id).intensity * 45)}%, #fff)`
                             : undefined,
                         }}
-                      />
+                      >
+                        {lowStockBins.has(e.id) && (
+                          <span
+                            aria-hidden
+                            style={{ position: "absolute", top: -3, right: -3, width: 8, height: 8, borderRadius: "50%", background: "var(--color-danger-500)", border: "1px solid #fff" }}
+                          />
+                        )}
+                      </Link>
                     ) : null}
 
                     {isSel && (
@@ -1865,6 +1889,12 @@ export function BlueprintCanvas({
                   />
                   <span style={{ fontSize: 9, color: "color-mix(in srgb,var(--color-text) 50%,transparent)" }}>{t("full")}</span>
                 </div>
+                {lowStockBins.size > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 3 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", flex: "none", background: "var(--color-danger-500)", border: "1px solid #fff", boxShadow: "0 0 0 1px var(--color-neutral-300)" }} />
+                    <span>{t("lowStock")}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

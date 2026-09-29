@@ -454,7 +454,14 @@ export const movements = pgTable(
       .references(() => users.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [index("movements_org_idx").on(table.organizationId)],
+  (table) => [
+    index("movements_org_idx").on(table.organizationId),
+    // Epic A4: the platform overview's "most active organizations" ranks
+    // by movement count in a recent window across every org, not one —
+    // the existing org-scoped index doesn't help a query that filters by
+    // createdAt before grouping by organizationId.
+    index("movements_created_idx").on(table.createdAt),
+  ],
 );
 
 // Messages from the public contact form. Kept as rows as well as sent as

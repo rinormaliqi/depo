@@ -5,6 +5,7 @@ import { listOrganizations } from "./actions";
 import { AuditLogView } from "./audit-log-view";
 import { InternalClient } from "./internal-client";
 import { InternalShell } from "./internal-shell";
+import { OverviewView } from "./overview-view";
 import { listContactMessages } from "./support-actions";
 import { SupportView } from "./support-view";
 import { listUsersForAdmin } from "./user-actions";
@@ -33,6 +34,7 @@ export default async function InternalPage() {
         Cross-tenant controls for the founder. Not linked from anywhere in the app.
       </p>
       <InternalShell
+        overviewTab={<OverviewView />}
         organizationsTab={<InternalClient organizations={organizations} plans={plans} />}
         usersTab={<UsersClient users={platformUsers} />}
         supportTab={<SupportView messages={contactMessages} />}

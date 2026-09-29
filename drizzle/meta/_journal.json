@@ -162,6 +162,13 @@
       "when": 1790707343203,
       "tag": "0022_add_view_as_and_contact_handled",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790720066789,
+      "tag": "0023_add_movements_created_index",
+      "breakpoints": true
     }
   ]
 }

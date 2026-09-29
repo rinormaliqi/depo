@@ -3,6 +3,7 @@
 import { type ReactNode, useState } from "react";
 
 const TABS = [
+  { key: "overview", label: "Overview" },
   { key: "organizations", label: "Organizations" },
   { key: "users", label: "Users" },
   { key: "support", label: "Support" },
@@ -15,17 +16,19 @@ type TabKey = (typeof TABS)[number]["key"];
 // each tab's own state (e.g. an org row mid-edit) instead of losing it,
 // and the audit log was already fetched once server-side, not re-fetched.
 export function InternalShell({
+  overviewTab,
   organizationsTab,
   usersTab,
   supportTab,
   auditLogTab,
 }: {
+  overviewTab: ReactNode;
   organizationsTab: ReactNode;
   usersTab: ReactNode;
   supportTab: ReactNode;
   auditLogTab: ReactNode;
 }) {
-  const [tab, setTab] = useState<TabKey>("organizations");
+  const [tab, setTab] = useState<TabKey>("overview");
 
   return (
     <div>
@@ -49,6 +52,7 @@ export function InternalShell({
           </button>
         ))}
       </div>
+      <div style={{ display: tab === "overview" ? "block" : "none" }}>{overviewTab}</div>
       <div style={{ display: tab === "organizations" ? "block" : "none" }}>{organizationsTab}</div>
       <div style={{ display: tab === "users" ? "block" : "none" }}>{usersTab}</div>
       <div style={{ display: tab === "support" ? "block" : "none" }}>{supportTab}</div>

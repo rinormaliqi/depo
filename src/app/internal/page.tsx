@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { isPlatformAdmin } from "@/lib/platform-admin";
 import { listOrganizations } from "./actions";
+import { AuditLogView } from "./audit-log-view";
 import { InternalClient } from "./internal-client";
+import { InternalShell } from "./internal-shell";
 
 // Founder-only console for the manual-activation billing model (see
 // docs/pricing.md and docs/architecture.md): turning a trialing org into a
@@ -24,9 +26,12 @@ export default async function InternalPage() {
     <div style={{ padding: 26, maxWidth: 960, margin: "0 auto" }}>
       <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, marginBottom: 4 }}>Platform admin</div>
       <p className="text-muted" style={{ fontSize: 13, marginBottom: 20 }}>
-        Manually activate or change an organization&apos;s plan. Not linked from anywhere in the app.
+        Cross-tenant controls for the founder. Not linked from anywhere in the app.
       </p>
-      <InternalClient organizations={organizations} plans={plans} />
+      <InternalShell
+        organizationsTab={<InternalClient organizations={organizations} plans={plans} />}
+        auditLogTab={<AuditLogView />}
+      />
     </div>
   );
 }

@@ -134,6 +134,13 @@
       "when": 1790543233465,
       "tag": "0018_add_items_min_stock_level",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790701398847,
+      "tag": "0019_add_admin_audit_log",
+      "breakpoints": true
     }
   ]
 }

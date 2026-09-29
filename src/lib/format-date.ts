@@ -13,3 +13,12 @@ export function formatDate(d: Date | string) {
   const year = date.getUTCFullYear();
   return `${day}/${month}/${year}`;
 }
+
+// Same hydration-safety reasoning as formatDate(), with a time component —
+// for logs and audit trails where "which of several events that day" matters.
+export function formatDateTime(d: Date | string) {
+  const date = new Date(d);
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${formatDate(date)} ${hours}:${minutes} UTC`;
+}

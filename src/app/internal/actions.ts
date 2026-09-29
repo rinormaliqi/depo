@@ -3,9 +3,10 @@
 import { desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { memberships, organizations, payments, plans } from "@/db/schema";
+import { adminAuditLog, memberships, organizations, payments, plans } from "@/db/schema";
 import { BILLING_CURRENCY, applyPaidPayment, priceForPeriod } from "@/lib/billing";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
+import { recordAdminAction } from "@/lib/admin-audit";
 import { attempt } from "@/lib/action-result";
 import { UserError } from "@/lib/user-error";
 
@@ -50,7 +51,17 @@ async function updateOrgBillingImpl(
   if (patch.paidUntil !== undefined) values.paidUntil = patch.paidUntil ? new Date(patch.paidUntil) : null;
 
   if (Object.keys(values).length > 0) {
+    const [before] = await db.select().from(organizations).where(eq(organizations.id, orgId));
     await db.update(organizations).set(values).where(eq(organizations.id, orgId));
+    await recordAdminAction({
+      action: "org.billing.update",
+      targetType: "organization",
+      targetId: orgId,
+      metadata: {
+        before: before ? { planId: before.planId, subscriptionStatus: before.subscriptionStatus, trialEndsAt: before.trialEndsAt, paidUntil: before.paidUntil } : null,
+        after: values,
+      },
+    });
   }
   revalidatePath("/internal");
 }
@@ -79,12 +90,23 @@ async function recordManualPaymentImpl(orgId: string, input: { planId: string; m
     })
     .returning();
   await applyPaidPayment(payment.id);
+  await recordAdminAction({
+    action: "org.payment.manual",
+    targetType: "organization",
+    targetId: orgId,
+    metadata: { planKey: plan.key, months: input.months, amountCents: payment.amountCents, note: input.note },
+  });
   revalidatePath("/internal");
 }
 
 export async function listRecentPayments() {
   await requirePlatformAdmin();
   return db.select().from(payments).orderBy(desc(payments.createdAt)).limit(50);
+}
+
+export async function listAuditLog() {
+  await requirePlatformAdmin();
+  return db.select().from(adminAuditLog).orderBy(desc(adminAuditLog.createdAt)).limit(100);
 }
 
 export async function updateOrgBilling(

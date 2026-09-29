@@ -571,3 +571,26 @@ export const facilityUnderlays = pgTable("facility_underlays", {
   visible: boolean("visible").notNull().default(true),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const adminAuditTargetTypes = ["organization", "user"] as const;
+export type AdminAuditTargetType = (typeof adminAuditTargetTypes)[number];
+
+// Epic A0 (superadmin dashboard): every sensitive action taken from
+// /internal — billing overrides, and from here on org suspension, user
+// disabling, view-as — gets one durable row. No FK to organizations/users:
+// the trail must survive the target being deleted later, and actorEmail is
+// read from the session doing the write, never accepted as input, so this
+// table can't be used to forge who did something.
+export const adminAuditLog = pgTable(
+  "admin_audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorEmail: text("actor_email").notNull(),
+    action: text("action").notNull(),
+    targetType: text("target_type", { enum: adminAuditTargetTypes }).notNull(),
+    targetId: uuid("target_id").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("admin_audit_log_created_idx").on(table.createdAt), index("admin_audit_log_target_idx").on(table.targetType, table.targetId)],
+);

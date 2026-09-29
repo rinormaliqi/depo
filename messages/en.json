@@ -304,7 +304,11 @@
     "errorHasStock": "{name} still has stock in a bin — pick it first",
     "errorHasHistory": "{name} has movements in the history and stays in the catalog; rename it if it's wrong",
     "stockNote": "{count} in stock",
-    "errorTooLong": "An item's fields cannot be longer than {max} characters"
+    "errorTooLong": "An item's fields cannot be longer than {max} characters",
+    "minStockLevelLabel": "Min stock",
+    "minStockLevelPlaceholder": "No threshold",
+    "errorMinStockLevel": "Min stock must be a whole number, 0 or more",
+    "lowStock": "Below minimum ({min})"
   },
   "customFields": {
     "title": "Custom fields",
@@ -695,6 +699,7 @@
     "empty": "empty",
     "fillLevel": "Fill level",
     "full": "fullest bin",
+    "lowStock": "Below minimum stock",
     "nothingSelected": "Nothing selected",
     "nothingSelectedBody": "Click an object to select it — drag to move, drag the corner to resize, or edit exact numbers on the right.",
     "composition": "Composition",

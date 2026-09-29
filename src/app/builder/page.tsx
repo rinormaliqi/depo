@@ -32,7 +32,7 @@ export default async function BuilderPage({
     );
   }
 
-  const [{ locations, occupiedBinIds, binStock, levels, underlay }, caps] = await Promise.all([getBlueprint(facility.id), getCapabilities()]);
+  const [{ locations, occupiedBinIds, binStock, lowStockBinIds, levels, underlay }, caps] = await Promise.all([getBlueprint(facility.id), getCapabilities()]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
@@ -50,6 +50,7 @@ export default async function BuilderPage({
         initialLocations={locations}
         initialOccupiedBinIds={occupiedBinIds}
         initialBinStock={binStock}
+        initialLowStockBinIds={lowStockBinIds}
         initialLevels={levels}
         initialUnderlay={underlay}
         initialHighlightBinId={bin}

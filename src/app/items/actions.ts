@@ -30,6 +30,7 @@ export async function getMyItemsWithStock() {
       sku: items.sku,
       category: items.category,
       unitOfMeasure: items.unitOfMeasure,
+      minStockLevel: items.minStockLevel,
       inStock: sql<number>`coalesce(sum(${stock.quantity}), 0)::int`,
     })
     .from(items)
@@ -125,7 +126,18 @@ export async function requireOwnedItem(itemId: string, organizationId: string) {
   return item;
 }
 
-export type ItemPatch = { name: string; unitOfMeasure: string; sku: string; category: string };
+export type ItemPatch = { name: string; unitOfMeasure: string; sku: string; category: string; minStockLevel: string };
+
+// Blank clears the threshold (never flagged low); anything else must be a
+// whole number ≥ 0 — a negative or fractional reorder point isn't a real
+// quantity of anything.
+function parseMinStockLevel(raw: string, t: Awaited<ReturnType<typeof getTranslations>>): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  if (!Number.isInteger(n) || n < 0) throw new UserError(t("errorMinStockLevel"));
+  return n;
+}
 
 async function updateItemImpl(itemId: string, patch: ItemPatch) {
   const { organizationId } = await requirePermission("manageItems");
@@ -138,11 +150,12 @@ async function updateItemImpl(itemId: string, patch: ItemPatch) {
   const category = patch.category.trim();
   if (!name || !unitOfMeasure) throw new UserError(t("errorRequired"));
   if (tooLong(name, unitOfMeasure, sku, category)) throw new UserError(t("errorTooLong", { max: MAX_FIELD_CHARS }));
+  const minStockLevel = parseMinStockLevel(patch.minStockLevel, t);
 
   try {
     await db
       .update(items)
-      .set({ name, unitOfMeasure, sku: sku || null, category: category || null })
+      .set({ name, unitOfMeasure, sku: sku || null, category: category || null, minStockLevel })
       .where(eq(items.id, itemId));
   } catch (e) {
     if (isSkuTaken(e)) throw new UserError(t("errorSkuTaken", { sku }));

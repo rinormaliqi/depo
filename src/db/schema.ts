@@ -316,6 +316,12 @@ export const items = pgTable(
     sku: text("sku"),
     category: text("category"),
     unitOfMeasure: text("unit_of_measure").notNull(),
+    // Null means "no threshold set" — never flagged low, not "flagged at
+    // zero". The reorder point every warehouse actually has, regardless of
+    // whether it uses custom fields for anything else (Epic #2's schema
+    // "low stock" indicator reads this, not a custom field, since it's a
+    // structural inventory concept every tenant needs the same shape for).
+    minStockLevel: integer("min_stock_level"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

@@ -304,7 +304,11 @@
     "errorHasStock": "{name} ka ende stok në një kuti — nxirre fillimisht",
     "errorHasHistory": "{name} ka lëvizje në historik dhe mbetet në katalog; riemërtoje nëse është gabim",
     "stockNote": "{count} në stok",
-    "errorTooLong": "Fushat e artikullit nuk mund të kalojnë {max} karaktere"
+    "errorTooLong": "Fushat e artikullit nuk mund të kalojnë {max} karaktere",
+    "minStockLevelLabel": "Stoku minimal",
+    "minStockLevelPlaceholder": "Pa prag",
+    "errorMinStockLevel": "Stoku minimal duhet të jetë numër i plotë, 0 ose më shumë",
+    "lowStock": "Nën minimum ({min})"
   },
   "customFields": {
     "title": "Fusha të personalizuara",
@@ -695,6 +699,7 @@
     "empty": "bosh",
     "fillLevel": "Niveli i mbushjes",
     "full": "kutia më e mbushur",
+    "lowStock": "Nën stokun minimal",
     "nothingSelected": "Asgjë e zgjedhur",
     "nothingSelectedBody": "Kliko një objekt për ta zgjedhur — tërhiqe për ta lëvizur, tërhiq qoshen për ta ripërmasuar, ose redakto numrat e saktë në të djathtë.",
     "composition": "Përbërja",

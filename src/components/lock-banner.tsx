@@ -17,6 +17,10 @@ export function LockBanner() {
   const isAdmin = caps.role === "admin";
   const href = reason === "unverified" ? "/verify-email" : "/billing";
   const admins = caps.admins ?? [];
+  // Every other lock is self-fixable by an admin (verify the email, sort
+  // out billing); suspension is a platform-admin decision, so there's
+  // nothing to click here — same split as BlockedPage's canFix.
+  const canFix = reason === "unverified" || caps.can.manageBilling;
 
   return (
     <div className="lock-banner" role="status">
@@ -38,7 +42,7 @@ export function LockBanner() {
           </>
         )}
       </span>
-      {isAdmin && (
+      {isAdmin && canFix && (
         <Link href={href} className="btn btn-primary" style={{ flex: "none", fontSize: 12, padding: "4px 10px", marginTop: 0 }}>
           {reason === "unverified" ? t("verifyCta") : t("billingCta")}
         </Link>

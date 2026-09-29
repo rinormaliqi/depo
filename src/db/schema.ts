@@ -471,6 +471,9 @@ export const contactMessages = pgTable(
     ip: text("ip"),
     userId: uuid("user_id").references(() => users.id),
     sentAt: timestamp("sent_at"),
+    // Epic A3: the founder marks a message as dealt with from the /internal
+    // support inbox — nothing more than a checkbox, so no reason/note field.
+    handledAt: timestamp("handled_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("contact_messages_ip_idx").on(table.ip, table.createdAt)],
@@ -587,7 +590,7 @@ export const facilityUnderlays = pgTable("facility_underlays", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const adminAuditTargetTypes = ["organization", "user"] as const;
+export const adminAuditTargetTypes = ["organization", "user", "contactMessage"] as const;
 export type AdminAuditTargetType = (typeof adminAuditTargetTypes)[number];
 
 // Epic A0 (superadmin dashboard): every sensitive action taken from
@@ -608,4 +611,29 @@ export const adminAuditLog = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("admin_audit_log_created_idx").on(table.createdAt), index("admin_audit_log_target_idx").on(table.targetType, table.targetId)],
+);
+
+// Epic A3: a time-boxed, read-only "view as this organization" grant for
+// the founder — its own table rather than reusing memberships, since it
+// must never be mistaken for real membership by anything that checks
+// permissions. src/lib/view-as.ts is the only code that reads/writes this;
+// every write server action stays gated by the real session's own
+// organization (requireOwnedFacility() etc.), which the admin's real org
+// essentially never matches, so a view-as page reusing those read queries
+// can never mutate the organization it's viewing.
+export const adminViewAsSessions = pgTable(
+  "admin_view_as_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    adminUserId: uuid("admin_user_id")
+      .notNull()
+      .references(() => users.id),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at").notNull().defaultNow(),
+    expiresAt: timestamp("expires_at").notNull(),
+    endedAt: timestamp("ended_at"),
+  },
+  (table) => [index("admin_view_as_sessions_admin_idx").on(table.adminUserId)],
 );

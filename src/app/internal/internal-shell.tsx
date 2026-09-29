@@ -5,6 +5,7 @@ import { type ReactNode, useState } from "react";
 const TABS = [
   { key: "organizations", label: "Organizations" },
   { key: "users", label: "Users" },
+  { key: "support", label: "Support" },
   { key: "audit", label: "Audit log" },
 ] as const;
 
@@ -13,7 +14,17 @@ type TabKey = (typeof TABS)[number]["key"];
 // display:none rather than conditional rendering — switching tabs keeps
 // each tab's own state (e.g. an org row mid-edit) instead of losing it,
 // and the audit log was already fetched once server-side, not re-fetched.
-export function InternalShell({ organizationsTab, usersTab, auditLogTab }: { organizationsTab: ReactNode; usersTab: ReactNode; auditLogTab: ReactNode }) {
+export function InternalShell({
+  organizationsTab,
+  usersTab,
+  supportTab,
+  auditLogTab,
+}: {
+  organizationsTab: ReactNode;
+  usersTab: ReactNode;
+  supportTab: ReactNode;
+  auditLogTab: ReactNode;
+}) {
   const [tab, setTab] = useState<TabKey>("organizations");
 
   return (
@@ -40,6 +51,7 @@ export function InternalShell({ organizationsTab, usersTab, auditLogTab }: { org
       </div>
       <div style={{ display: tab === "organizations" ? "block" : "none" }}>{organizationsTab}</div>
       <div style={{ display: tab === "users" ? "block" : "none" }}>{usersTab}</div>
+      <div style={{ display: tab === "support" ? "block" : "none" }}>{supportTab}</div>
       <div style={{ display: tab === "audit" ? "block" : "none" }}>{auditLogTab}</div>
     </div>
   );

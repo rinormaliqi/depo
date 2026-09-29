@@ -5,6 +5,8 @@ import { listOrganizations } from "./actions";
 import { AuditLogView } from "./audit-log-view";
 import { InternalClient } from "./internal-client";
 import { InternalShell } from "./internal-shell";
+import { listUsersForAdmin } from "./user-actions";
+import { UsersClient } from "./users-client";
 
 // Founder-only console for the manual-activation billing model (see
 // docs/pricing.md and docs/architecture.md): turning a trialing org into a
@@ -20,7 +22,7 @@ export default async function InternalPage() {
   if (!session?.user) redirect("/login");
   if (!(await isPlatformAdmin())) redirect("/builder");
 
-  const { organizations, plans } = await listOrganizations();
+  const [{ organizations, plans }, platformUsers] = await Promise.all([listOrganizations(), listUsersForAdmin()]);
 
   return (
     <div style={{ padding: 26, maxWidth: 960, margin: "0 auto" }}>
@@ -30,6 +32,7 @@ export default async function InternalPage() {
       </p>
       <InternalShell
         organizationsTab={<InternalClient organizations={organizations} plans={plans} />}
+        usersTab={<UsersClient users={platformUsers} />}
         auditLogTab={<AuditLogView />}
       />
     </div>

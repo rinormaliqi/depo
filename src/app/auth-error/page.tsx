@@ -6,10 +6,10 @@ import { NOINDEX } from "@/lib/seo";
 export const metadata = NOINDEX;
 
 // Auth.js sends every failure here (auth.config.ts `pages.error`) with
-// `?error=<code>`; our own signIn callback adds GoogleUnverified and
-// GoogleNoEmail. Each code gets a plain sentence and a way forward instead
-// of the library's default screen.
-const KNOWN = ["GoogleUnverified", "GoogleNoEmail", "AccessDenied", "OAuthCallbackError", "OAuthAccountNotLinked", "Configuration", "Verification", "CredentialsSignin"] as const;
+// `?error=<code>`; our own signIn callback adds GoogleUnverified,
+// GoogleNoEmail and AccountDisabled. Each code gets a plain sentence and a
+// way forward instead of the library's default screen.
+const KNOWN = ["GoogleUnverified", "GoogleNoEmail", "AccountDisabled", "AccessDenied", "OAuthCallbackError", "OAuthAccountNotLinked", "Configuration", "Verification", "CredentialsSignin"] as const;
 type Known = (typeof KNOWN)[number];
 
 export default async function AuthErrorPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {

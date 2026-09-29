@@ -148,6 +148,13 @@
       "when": 1790703307616,
       "tag": "0020_add_org_suspension",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790705726460,
+      "tag": "0021_add_user_disabled",
+      "breakpoints": true
     }
   ]
 }

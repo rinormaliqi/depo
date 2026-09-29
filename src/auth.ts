@@ -18,6 +18,13 @@ class GoogleOnlySignin extends CredentialsSignin {
   code = "google_only";
 }
 
+// Epic A2: a platform-admin disabled this account (src/db/schema.ts
+// users.disabledAt). Distinct from a wrong password so the login page can
+// say so rather than implying the person mistyped something.
+class AccountDisabledSignin extends CredentialsSignin {
+  code = "account_disabled";
+}
+
 export function isGoogleSignInEnabled() {
   return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
@@ -41,6 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const valid = await compare(password, user.passwordHash);
         if (!valid) return null;
+        if (user.disabledAt) throw new AccountDisabledSignin();
 
         return { id: user.id, email: user.email, name: user.name };
       },
@@ -68,7 +76,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const user = await ensureUserFromGoogle({ email, name: profile?.name, emailVerified: profile?.email_verified === true });
       // A refusal lands on our own error page with a specific reason,
       // not Auth.js's default AccessDenied screen.
-      return user ? true : "/auth-error?error=GoogleUnverified";
+      if (!user) return "/auth-error?error=GoogleUnverified";
+      if (user.disabledAt) return "/auth-error?error=AccountDisabled";
+      return true;
     },
     // The JWT carries *our* user id. Credentials returns it from
     // authorize(); for Google the `user` object is the OAuth profile, so

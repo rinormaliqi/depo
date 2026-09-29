@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { emailChanges, memberships, organizations, users } from "@/db/schema";
 import { changePassword, confirmEmailChange, deleteAccount, requestEmailChange, signOutEverywhere, updateName } from "@/lib/account";
-import { getMySession } from "@/lib/session";
+import { getMySession, getValidUserId } from "@/lib/session";
 import { addMember, createOrg, createUser, seedPlans } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
 
@@ -70,6 +70,23 @@ describe("account settings", () => {
     assert.equal(await getMySession(), null, "old session version → signed out");
     actAs({ ...u, sessionVersion: 2 } as never);
     assert.ok(await getMySession(), "a fresh sign-in carries the new version");
+  });
+
+  // Regression: /welcome used to check only that a JWT was present, not
+  // that its session_version was still current, so a force-signed-out or
+  // disabled user (Epic A2) with no organization yet — the exact state
+  // getMySession() also returns null for — bounced forever between
+  // /start (session-version-aware) and /welcome (JWT-presence-only).
+  // getValidUserId() is the piece both now share: valid or not, with no
+  // opinion on whether an organization exists.
+  test("getValidUserId refuses a stale session even with no organization at all", async () => {
+    const u = await createUser();
+    actAs({ ...u, sessionVersion: 1 } as never);
+    assert.equal(await getValidUserId(), u.id, "valid session, no org needed");
+    await signOutEverywhere(u.id);
+    assert.equal(await getValidUserId(), null, "stale version refused even with no membership");
+    actAs({ ...u, sessionVersion: 2 } as never);
+    assert.equal(await getValidUserId(), u.id, "a fresh sign-in carries the new version");
   });
 
   test("deleting an account erases the person, deletes sole-member companies, and refuses the only admin of a shared one", async () => {

@@ -175,8 +175,11 @@ export async function getCapabilities(): Promise<Capabilities | null> {
 // `unverified` is not one of those: that trial hasn't started, there is
 // nothing to renew, and the way out is the verification link the banner
 // already points at — so billing stays shut until the address is real.
+// `suspended` is not one of those either: it's a platform-admin decision,
+// not a billing state, so paying more doesn't lift it — only an admin
+// reactivating the org does.
 function survivesLock(permission: Permission, lock: NonNullable<OrgLockReason>) {
-  return permission === "manageBilling" && lock !== "unverified";
+  return permission === "manageBilling" && lock !== "unverified" && lock !== "suspended";
 }
 
 export async function blockMessage(reason: BlockReason, capability: Capability): Promise<string> {

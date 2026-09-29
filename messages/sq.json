@@ -601,7 +601,8 @@
     "pastDue": "Pagesa e kësaj organizate është e vonuar. Vizito Faturimin për ta zgjidhur.",
     "canceled": "Plani i kësaj organizate u anulua. Vizito Faturimin për ta riaktivizuar.",
     "unverified": "Verifiko adresën e email-it për të filluar provën dhe për të bërë ndryshime.",
-    "expired": "Periudha e paguar ka mbaruar. Shko te Faturimi për ta rinovuar."
+    "expired": "Periudha e paguar ka mbaruar. Shko te Faturimi për ta rinovuar.",
+    "suspended": "Kjo organizatë është pezulluar. Kontaktoni mbështetjen për ta zgjidhur."
   },
   "builder": {
     "entities": "Elementet",
@@ -1364,21 +1365,24 @@
       "trialEnded": "Prova mbaroi.",
       "expired": "Plani skadoi.",
       "pastDue": "Pagesa e vonuar.",
-      "canceled": "Plani u anulua."
+      "canceled": "Plani u anulua.",
+      "suspended": "Organizata e pezulluar."
     },
     "admin": {
       "unverified": "Verifiko email-in për të filluar provën 30-ditëshe — deri atëherë asgjë s'ruhet.",
       "trialEnded": "Gjithçka është vetëm-lexim derisa të aktivizohet një plan. Asgjë s'është fshirë.",
       "expired": "Gjithçka është vetëm-lexim derisa të rinovohet plani. Asgjë s'është fshirë.",
       "pastDue": "Gjithçka është vetëm-lexim derisa të rregullohet pagesa.",
-      "canceled": "Gjithçka është vetëm-lexim derisa të riaktivizohet plani."
+      "canceled": "Gjithçka është vetëm-lexim derisa të riaktivizohet plani.",
+      "suspended": "Kjo organizatë është pezulluar nga SmartDepo. Kontaktoni mbështetjen për ta zgjidhur."
     },
     "member": {
       "unverified": "Pronari i llogarisë s'e ka verifikuar ende email-in, prandaj asgjë s'ruhet.",
       "trialEnded": "Prova e kompanisë ka mbaruar — stoku shihet, por s'ndryshohet.",
       "expired": "Plani i kompanisë ka skaduar — stoku shihet, por s'ndryshohet.",
       "pastDue": "Pagesa e kompanisë është vonuar — stoku shihet, por s'ndryshohet.",
-      "canceled": "Plani i kompanisë u anulua — stoku shihet, por s'ndryshohet."
+      "canceled": "Plani i kompanisë u anulua — stoku shihet, por s'ndryshohet.",
+      "suspended": "Kjo organizatë është pezulluar — stoku shihet, por s'ndryshohet."
     },
     "askAdmins": "Kërkoji",
     "verifyCta": "Verifiko email-in",

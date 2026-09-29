@@ -53,6 +53,14 @@ export const organizations = pgTable("organizations", {
   // send exactly one mail per period without a scheduler.
   expiryReminderSentFor: timestamp("expiry_reminder_sent_for"),
   stripeCustomerId: text("stripe_customer_id"),
+  // Epic A1 (superadmin dashboard): a platform-admin override, independent
+  // of subscriptionStatus — an org can be fully paid up and still
+  // suspended (abuse, a dispute) or trialing and suspended before it ever
+  // reaches billing. Checked first in getOrgLockReason(), and unlike every
+  // other lock reason, paying doesn't lift it — only an admin reactivating
+  // it does.
+  suspendedAt: timestamp("suspended_at"),
+  suspendedReason: text("suspended_reason"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

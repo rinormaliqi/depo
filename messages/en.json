@@ -601,7 +601,8 @@
     "pastDue": "This organization's payment is past due. Visit Billing to resolve it.",
     "canceled": "This organization's plan was canceled. Visit Billing to reactivate.",
     "unverified": "Verify your email address to start your trial and make changes.",
-    "expired": "Your paid period has ended. Visit Billing to renew."
+    "expired": "Your paid period has ended. Visit Billing to renew.",
+    "suspended": "This organization has been suspended. Contact support to resolve this."
   },
   "builder": {
     "entities": "Entities",
@@ -1364,21 +1365,24 @@
       "trialEnded": "Trial ended.",
       "expired": "Plan expired.",
       "pastDue": "Payment past due.",
-      "canceled": "Plan canceled."
+      "canceled": "Plan canceled.",
+      "suspended": "Organization suspended."
     },
     "admin": {
       "unverified": "Verify your email to start the 30-day trial — until then nothing can be saved.",
       "trialEnded": "Everything is read-only until a plan is active. Nothing has been deleted.",
       "expired": "Everything is read-only until the plan is renewed. Nothing has been deleted.",
       "pastDue": "Everything is read-only until the payment is sorted out.",
-      "canceled": "Everything is read-only until the plan is reactivated."
+      "canceled": "Everything is read-only until the plan is reactivated.",
+      "suspended": "This organization has been suspended by SmartDepo. Contact support to resolve this."
     },
     "member": {
       "unverified": "The account owner hasn't verified their email yet, so nothing can be saved.",
       "trialEnded": "The company's trial is over, so stock can be viewed but not changed.",
       "expired": "The company's plan has run out, so stock can be viewed but not changed.",
       "pastDue": "The company's payment is past due, so stock can be viewed but not changed.",
-      "canceled": "The company's plan was canceled, so stock can be viewed but not changed."
+      "canceled": "The company's plan was canceled, so stock can be viewed but not changed.",
+      "suspended": "This organization has been suspended, so stock can be viewed but not changed."
     },
     "askAdmins": "Ask",
     "verifyCta": "Verify email",

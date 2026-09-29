@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { invites, payments } from "@/db/schema";
+import { invites, organizations, payments } from "@/db/schema";
 import { applyPaidPayment } from "@/lib/billing";
 import { limitsExceeded } from "@/lib/billing-plans";
 import { requirePermission } from "@/lib/permissions";
@@ -101,6 +101,25 @@ describe("lockout", () => {
     const lockedManager = await addMember(locked.org.id, "manager");
     actAs(lockedManager);
     await assert.rejects(requirePermission("manageBilling"), /permission\.manageBilling/);
+  });
+
+  test("suspension locks an org regardless of billing status, and outranks it; billing does not lift it", async () => {
+    const { org } = await createOrg({ status: "active", paidUntil: null }); // fully paid, would otherwise be unlocked
+    assert.equal(await getOrgLockReason(org.id), null);
+
+    await db.update(organizations).set({ suspendedAt: new Date(), suspendedReason: "abuse" }).where(eq(organizations.id, org.id));
+    assert.equal(await getOrgLockReason(org.id), "suspended");
+
+    const admin = await addMember(org.id, "admin");
+    actAs(admin);
+    await assert.rejects(requirePermission("editLayout"), /orgLocked\.suspended/);
+    // Unlike every other lock, billing does not survive a suspension —
+    // paying more doesn't undo an admin decision.
+    await assert.rejects(requirePermission("manageBilling"), /orgLocked\.suspended/);
+
+    await db.update(organizations).set({ suspendedAt: null, suspendedReason: null }).where(eq(organizations.id, org.id));
+    assert.equal(await getOrgLockReason(org.id), null);
+    await assert.doesNotReject(requirePermission("editLayout"));
   });
 });
 

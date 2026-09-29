@@ -62,6 +62,12 @@ test("a locked org keeps read-side features, loses every action, and keeps the w
   expectCan(unverified, ["printLabels", "cameraScanning", "viewMetrics", "multiFacility"]);
   assert.deepEqual(unverified.reason.manageBilling, { kind: "locked", lock: "unverified" });
 
+  // A platform-admin suspension is not a billing state either — paying
+  // doesn't lift it, so billing stays shut here too.
+  const suspended = resolveCapabilities({ role: "admin", plan: business, locked: "suspended", usage });
+  expectCan(suspended, ["printLabels", "cameraScanning", "viewMetrics", "multiFacility"]);
+  assert.deepEqual(suspended.reason.manageBilling, { kind: "locked", lock: "suspended" });
+
   // The exemption is about the lock, not about handing billing to anyone:
   // a manager never had it, locked or not.
   const manager = resolveCapabilities({ role: "manager", plan: business, locked: "trialEnded", usage });

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { formatDate } from "@/lib/format-date";
 import { listOrganizations } from "./actions";
 import * as rawActions from "./actions";
+import { OrgDetailPanel } from "./org-detail-panel";
 import { unwrap } from "@/lib/action-result";
 
 const updateOrgBilling = unwrap(rawActions.updateOrgBilling);
@@ -32,6 +33,7 @@ function OrgRow({ org, plans }: { org: Org; plans: Plan[] }) {
   const [payMonths, setPayMonths] = useState("1");
   const [payNote, setPayNote] = useState("");
   const [payError, setPayError] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const dirty =
     planId !== org.planId ||
@@ -66,7 +68,14 @@ function OrgRow({ org, plans }: { org: Org; plans: Plan[] }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr 1fr auto", gap: 8, alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--color-divider)", fontSize: 13 }}>
       <div>
-        <div>{org.name}</div>
+        <div>
+          {org.name}
+          {org.suspendedAt && (
+            <span className="tag" style={{ marginLeft: 6, background: "var(--color-danger-100)", color: "var(--color-danger-700)", fontSize: 10 }}>
+              suspended
+            </span>
+          )}
+        </div>
         <div style={{ fontSize: 11, color: "color-mix(in srgb,var(--color-text) 50%,transparent)" }}>
           {org.memberCount} member{org.memberCount === 1 ? "" : "s"} · joined {formatDate(org.createdAt)}
         </div>
@@ -90,7 +99,11 @@ function OrgRow({ org, plans }: { org: Org; plans: Plan[] }) {
         <button className="btn btn-ghost" disabled={busy} onClick={() => setPayOpen((o) => !o)} style={{ fontSize: 12 }} title="Record a bank transfer: extends paid-until by N months on the selected plan">
           + Payment
         </button>
+        <button className="btn btn-ghost" onClick={() => setDetailOpen((o) => !o)} style={{ fontSize: 12 }}>
+          {detailOpen ? "Hide" : "Details"}
+        </button>
       </div>
+      {detailOpen && <OrgDetailPanel orgId={org.id} suspendedAt={org.suspendedAt} suspendedReason={org.suspendedReason} />}
       {payOpen && (
         <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8, alignItems: "center", padding: "6px 0 2px", fontSize: 12 }}>
           <span className="text-muted">Record manual payment on the plan selected above:</span>
@@ -141,9 +154,46 @@ function SentryTest() {
   );
 }
 
+const STATUS_FILTERS = ["all", ...STATUSES, "suspended"] as const;
+
 export function InternalClient({ organizations, plans }: { organizations: Org[]; plans: Plan[] }) {
+  const [query, setQuery] = useState("");
+  const [planFilter, setPlanFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("all");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return organizations.filter((org) => {
+      if (planFilter !== "all" && org.planId !== planFilter) return false;
+      if (statusFilter === "suspended" && !org.suspendedAt) return false;
+      if (statusFilter !== "all" && statusFilter !== "suspended" && org.subscriptionStatus !== statusFilter) return false;
+      if (!q) return true;
+      return org.name.toLowerCase().includes(q) || org.memberEmails.some((e) => e.toLowerCase().includes(q));
+    });
+  }, [organizations, query, planFilter, statusFilter]);
+
   return (
     <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        <input
+          className="input"
+          placeholder="Search by name or member email…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ flex: "1 1 260px", fontSize: 13 }}
+        />
+        <select className="input" value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} style={{ fontSize: 13 }}>
+          <option value="all">All plans</option>
+          {plans.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+        <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} style={{ fontSize: 13 }}>
+          {STATUS_FILTERS.map((s) => (
+            <option key={s} value={s}>{s === "all" ? "All statuses" : s}</option>
+          ))}
+        </select>
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr 1fr auto", gap: 8, fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase", color: "color-mix(in srgb,var(--color-text) 55%,transparent)", paddingBottom: 6, borderBottom: "1px solid var(--color-divider)" }}>
         <span>Organization</span>
         <span>Plan</span>
@@ -152,10 +202,10 @@ export function InternalClient({ organizations, plans }: { organizations: Org[];
         <span>Paid until</span>
         <span />
       </div>
-      {organizations.map((org) => (
+      {filtered.map((org) => (
         <OrgRow key={org.id} org={org} plans={plans} />
       ))}
-      {organizations.length === 0 && <p className="text-muted" style={{ fontSize: 13, marginTop: 12 }}>No organizations yet.</p>}
+      {filtered.length === 0 && <p className="text-muted" style={{ fontSize: 13, marginTop: 12 }}>No organizations match.</p>}
       <SentryTest />
     </div>
   );

@@ -1,9 +1,9 @@
 "use server";
 
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { adminAuditLog, memberships, organizations, payments, plans } from "@/db/schema";
+import { adminAuditLog, facilities, items, memberships, movements, organizations, payments, plans, users } from "@/db/schema";
 import { BILLING_CURRENCY, applyPaidPayment, priceForPeriod } from "@/lib/billing";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { recordAdminAction } from "@/lib/admin-audit";
@@ -16,21 +16,80 @@ export async function listOrganizations() {
   const [orgs, allPlans, allMemberships] = await Promise.all([
     db.select().from(organizations).orderBy(organizations.createdAt),
     db.select().from(plans),
-    db.select({ organizationId: memberships.organizationId }).from(memberships),
+    db.select({ organizationId: memberships.organizationId, email: users.email }).from(memberships).innerJoin(users, eq(memberships.userId, users.id)),
   ]);
 
   const planById = new Map(allPlans.map((p) => [p.id, p]));
   const memberCounts = new Map<string, number>();
-  for (const m of allMemberships) memberCounts.set(m.organizationId, (memberCounts.get(m.organizationId) ?? 0) + 1);
+  const memberEmailsByOrg = new Map<string, string[]>();
+  for (const m of allMemberships) {
+    memberCounts.set(m.organizationId, (memberCounts.get(m.organizationId) ?? 0) + 1);
+    const emails = memberEmailsByOrg.get(m.organizationId) ?? [];
+    emails.push(m.email);
+    memberEmailsByOrg.set(m.organizationId, emails);
+  }
 
   return {
     organizations: orgs.map((o) => ({
       ...o,
       planKey: planById.get(o.planId)?.key ?? null,
       memberCount: memberCounts.get(o.id) ?? 0,
+      memberEmails: memberEmailsByOrg.get(o.id) ?? [],
     })),
     plans: allPlans,
   };
+}
+
+async function getOrgDetailImpl(orgId: string) {
+  await requirePlatformAdmin();
+
+  const [members, facilityRows, [itemCountRow], [lastMovement]] = await Promise.all([
+    db
+      .select({ userId: users.id, email: users.email, name: users.name, role: memberships.role, joinedAt: memberships.createdAt })
+      .from(memberships)
+      .innerJoin(users, eq(memberships.userId, users.id))
+      .where(eq(memberships.organizationId, orgId))
+      .orderBy(memberships.createdAt),
+    db.select({ id: facilities.id, name: facilities.name }).from(facilities).where(eq(facilities.organizationId, orgId)),
+    db.select({ n: count() }).from(items).where(eq(items.organizationId, orgId)),
+    db.select({ at: movements.createdAt }).from(movements).where(eq(movements.organizationId, orgId)).orderBy(desc(movements.createdAt)).limit(1),
+  ]);
+
+  return {
+    members,
+    facilities: facilityRows,
+    itemCount: itemCountRow?.n ?? 0,
+    lastActivityAt: lastMovement?.at ?? null,
+  };
+}
+
+export async function getOrgDetail(orgId: string) {
+  return attempt(() => getOrgDetailImpl(orgId), "getOrgDetail");
+}
+
+async function suspendOrganizationImpl(orgId: string, reason: string) {
+  await requirePlatformAdmin();
+  const trimmed = reason.trim();
+  if (!trimmed) throw new UserError("A reason is required to suspend an organization");
+
+  await db.update(organizations).set({ suspendedAt: new Date(), suspendedReason: trimmed }).where(eq(organizations.id, orgId));
+  await recordAdminAction({ action: "org.suspend", targetType: "organization", targetId: orgId, metadata: { reason: trimmed } });
+  revalidatePath("/internal");
+}
+
+export async function suspendOrganization(orgId: string, reason: string) {
+  return attempt(() => suspendOrganizationImpl(orgId, reason), "suspendOrganization");
+}
+
+async function reactivateOrganizationImpl(orgId: string) {
+  await requirePlatformAdmin();
+  await db.update(organizations).set({ suspendedAt: null, suspendedReason: null }).where(eq(organizations.id, orgId));
+  await recordAdminAction({ action: "org.reactivate", targetType: "organization", targetId: orgId });
+  revalidatePath("/internal");
+}
+
+export async function reactivateOrganization(orgId: string) {
+  return attempt(() => reactivateOrganizationImpl(orgId), "reactivateOrganization");
 }
 
 async function updateOrgBillingImpl(

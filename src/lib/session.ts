@@ -56,11 +56,16 @@ export async function requireOrgId() {
 // "expired" is a paid period that ran out without a renewal — same
 // read-only treatment as "pastDue" but a different message, since the
 // fix is "buy another period", not "sort out a failed charge".
-export type OrgLockReason = "unverified" | "trialEnded" | "expired" | "pastDue" | "canceled" | null;
+// "suspended" is a platform-admin override (Epic A1, organizations.suspendedAt)
+// independent of billing entirely — checked first below, since an org can
+// be fully paid up and still suspended, and unlike every other reason
+// here, paying doesn't lift it.
+export type OrgLockReason = "unverified" | "trialEnded" | "expired" | "pastDue" | "canceled" | "suspended" | null;
 
 export async function getOrgLockReason(organizationId: string): Promise<OrgLockReason> {
   const [org] = await db.select().from(organizations).where(eq(organizations.id, organizationId));
   if (!org) return "canceled"; // shouldn't happen — fail locked, not open
+  if (org.suspendedAt) return "suspended";
   if (org.subscriptionStatus === "active") {
     // paid_until null on an active org = the founder's manual "paid
     // indefinitely" override on /internal (see docs/architecture.md).

@@ -43,6 +43,7 @@ export async function login(_prevState: FormState, formData: FormData): Promise<
       // authorize() flags an account that has no password (Google only) —
       // "wrong password" would be true but useless there.
       if ((error as { code?: string }).code === "google_only") return { error: t("errorGoogleOnly"), googleOnly: true, values: { email } };
+      if ((error as { code?: string }).code === "account_disabled") return { error: t("errorDisabled"), values: { email } };
       return { error: t("errorInvalid"), values: { email } };
     }
     throw error;

@@ -1,17 +1,18 @@
 import { PublicLink } from "@/components/public-link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { auth, isGoogleSignInEnabled } from "@/auth";
+import { isGoogleSignInEnabled } from "@/auth";
 import { GoogleButton } from "@/components/google-button";
 import { AuthShell } from "@/components/auth-shell";
+import { getValidUserId } from "@/lib/session";
 import { SignupForm } from "./signup-form";
 import { pageMetadata } from "@/lib/seo";
 
 
 export const generateMetadata = () => pageMetadata("signup", "/signup");
 export default async function SignupPage() {
-  const session = await auth();
-  if (session?.user) redirect("/builder");
+  // getValidUserId(), not a raw JWT-presence check — see login/page.tsx.
+  if (await getValidUserId()) redirect("/builder");
   const t = await getTranslations("auth");
 
   return (

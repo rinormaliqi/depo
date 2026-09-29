@@ -6,10 +6,17 @@ import { organizations, users } from "@/db/schema";
 import { currentOrganization } from "@/lib/organizations";
 import { UserError } from "@/lib/user-error";
 
-// The organization comes from the per-browser choice in
-// src/lib/organizations.ts (cookie, validated against memberships), so a
-// user in several companies acts in the one they picked.
-export async function getMySession() {
+// The JWT's own validity, independent of having an organization yet — a
+// pre-org page (welcome, signup, login) needs exactly this: is the person
+// who owns this cookie still actually signed in. Without it those pages
+// only checked "is a JWT present", which stays true after "sign out
+// everywhere" (self-service or an admin's force-sign-out/disable, Epic A2)
+// bumps session_version — the JWT itself is still parseable, just stale.
+// That mismatch used to send a force-signed-out user into a redirect loop:
+// /start (session-version-aware) sent them to /welcome for having no
+// valid session, while /welcome (JWT-presence-only) saw the same stale
+// JWT as signed in and sent them back to /start.
+export async function getValidUserId(): Promise<string | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
 
@@ -21,10 +28,20 @@ export async function getMySession() {
     if (!row || row.sv !== session.user.sessionVersion) return null;
   }
 
-  const org = await currentOrganization(session.user.id);
+  return session.user.id;
+}
+
+// The organization comes from the per-browser choice in
+// src/lib/organizations.ts (cookie, validated against memberships), so a
+// user in several companies acts in the one they picked.
+export async function getMySession() {
+  const userId = await getValidUserId();
+  if (!userId) return null;
+
+  const org = await currentOrganization(userId);
   if (!org) return null;
 
-  return { userId: session.user.id, organizationId: org.id, role: org.role };
+  return { userId, organizationId: org.id, role: org.role };
 }
 
 export async function requireSession() {

@@ -174,6 +174,7 @@
       "errorRequired": "Email and password are required",
       "errorInvalid": "Invalid email or password",
       "errorGoogleOnly": "This account signs in with Google — use \"Continue with Google\" above, or set a password via \"Forgot password\".",
+      "errorDisabled": "This account has been disabled. Contact support if you think this is a mistake.",
       "afterFailure": "Wrong password?"
     },
     "signup": {
@@ -1407,6 +1408,10 @@
     "GoogleNoEmail": {
       "title": "Google didn't share an email",
       "body": "We need an email address to create or find your account. Try again and allow the email permission, or sign up with a password."
+    },
+    "AccountDisabled": {
+      "title": "This account has been disabled",
+      "body": "A SmartDepo admin has disabled this account. Contact support if you think this is a mistake."
     },
     "AccessDenied": {
       "title": "Sign-in was refused",

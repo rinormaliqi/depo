@@ -118,6 +118,13 @@ export const users = pgTable("users", {
   // Bumped by "sign out everywhere": a JWT carrying an older number is
   // treated as signed out (src/lib/session.ts).
   sessionVersion: integer("session_version").notNull().default(1),
+  // Epic A2 (superadmin dashboard): a platform-admin block on this account
+  // signing in at all, platform-wide — independent of any organization's
+  // own state. Checked in auth.ts at both credentials and Google sign-in;
+  // disabling also bumps sessionVersion so an existing session ends
+  // immediately rather than only blocking the next login.
+  disabledAt: timestamp("disabled_at"),
+  disabledReason: text("disabled_reason"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

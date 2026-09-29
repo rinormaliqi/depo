@@ -1,17 +1,21 @@
 import { PublicLink } from "@/components/public-link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { auth, isGoogleSignInEnabled } from "@/auth";
+import { isGoogleSignInEnabled } from "@/auth";
 import { GoogleButton } from "@/components/google-button";
 import { AuthShell } from "@/components/auth-shell";
+import { getValidUserId } from "@/lib/session";
 import { LoginForm } from "./login-form";
 import { pageMetadata } from "@/lib/seo";
 
 
 export const generateMetadata = () => pageMetadata("login", "/login");
 export default async function LoginPage() {
-  const session = await auth();
-  if (session?.user) redirect("/builder");
+  // getValidUserId(), not a raw JWT-presence check — a force-signed-out or
+  // disabled account (Epic A2) still carries a parseable but stale JWT,
+  // which must not bounce this page away before the person can sign back
+  // in as themselves or someone else.
+  if (await getValidUserId()) redirect("/builder");
   const t = await getTranslations("auth");
 
   return (

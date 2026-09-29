@@ -155,6 +155,13 @@
       "when": 1790705726460,
       "tag": "0021_add_user_disabled",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790707343203,
+      "tag": "0022_add_view_as_and_contact_handled",
+      "breakpoints": true
     }
   ]
 }

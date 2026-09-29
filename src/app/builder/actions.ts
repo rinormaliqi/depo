@@ -153,9 +153,13 @@ export async function getFacilityLocations(facilityId: string) {
   return db.select().from(locations).where(eq(locations.facilityId, facilityId));
 }
 
-export async function getBlueprint(facilityId: string) {
-  await requireOwnedFacility(facilityId);
-
+// The read query itself, with no ownership check — split out so Epic A3's
+// read-only admin view-as (src/app/internal/view-as-actions.ts) can reuse
+// the exact same rendering data for an arbitrary organization's facility
+// without going through requireOwnedFacility(), which is tied to the
+// caller's own session. getBlueprint() below is still what every ordinary
+// page/action calls; this only exists for that one other caller.
+export async function buildBlueprintData(facilityId: string) {
   const rows = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
   const binIds = rows.filter((l) => l.isBin).map((l) => l.id);
 
@@ -210,6 +214,11 @@ export async function getBlueprint(facilityId: string) {
   const levels = await ensureLevels(facilityId);
   const underlay = await getUnderlayMeta(facilityId);
   return { locations: rows, occupiedBinIds: binStock.map((b) => b.locationId), binStock, lowStockBinIds, levels, underlay };
+}
+
+export async function getBlueprint(facilityId: string) {
+  await requireOwnedFacility(facilityId);
+  return buildBlueprintData(facilityId);
 }
 
 // The underlay's placement and viewing settings; the bytes go through

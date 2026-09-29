@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 import { unwrap } from "@/lib/action-result";
 import * as rawActions from "./actions";
+import { startViewAs as rawStartViewAs } from "./view-as-actions";
 
 const getOrgDetail = unwrap(rawActions.getOrgDetail);
 const suspendOrganization = unwrap(rawActions.suspendOrganization);
 const reactivateOrganization = unwrap(rawActions.reactivateOrganization);
+const startViewAs = unwrap(rawStartViewAs);
 
 type Detail = Awaited<ReturnType<typeof getOrgDetail>>;
 
@@ -65,6 +67,20 @@ export function OrgDetailPanel({ orgId, suspendedAt, suspendedReason }: { orgId:
     }
   }
 
+  async function viewAs() {
+    setBusy(true);
+    setError(null);
+    try {
+      await startViewAs(orgId);
+      // startViewAs redirects server-side on success; reaching here means
+      // it didn't (e.g. dev-mode error boundary), so just stop spinning.
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div style={{ gridColumn: "1 / -1", padding: "10px 0", fontSize: 12, borderTop: "1px dashed var(--color-divider)", display: "flex", flexDirection: "column", gap: 10 }}>
       {!detail && !error && <span className="text-muted">Loading…</span>}
@@ -96,6 +112,9 @@ export function OrgDetailPanel({ orgId, suspendedAt, suspendedReason }: { orgId:
         </>
       )}
       <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 6, borderTop: "1px solid var(--color-divider)" }}>
+        <button className="btn btn-secondary" disabled={busy} onClick={viewAs} style={{ fontSize: 12 }} title="Read-only, 30 minutes, logged">
+          View as
+        </button>
         {suspended ? (
           <>
             <span style={{ color: "var(--color-accent-800)" }}>Suspended{reason ? `: ${reason}` : ""}</span>

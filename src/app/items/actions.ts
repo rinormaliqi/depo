@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { items, movements, stock } from "@/db/schema";
 import { attempt } from "@/lib/action-result";
+import { applyItemValues, getFieldDefinitions } from "@/lib/custom-fields";
 import { requirePermission } from "@/lib/permissions";
 import { requireOrgId } from "@/lib/session";
 import { UserError } from "@/lib/user-error";
@@ -81,19 +82,28 @@ export async function createItem(_prevState: FormState, formData: FormData): Pro
     return { error: t("errorTooLong", { max: MAX_FIELD_CHARS }), values };
   }
 
+  // Written in the same transaction as the item row itself — a required
+  // custom field left blank refuses the whole creation and rolls the item
+  // insert back too, rather than creating the item and only then failing
+  // to record the value it was supposed to have from the start (#176).
+  const fieldDefs = await getFieldDefinitions(organizationId);
+  const customValues: Record<string, string> = {};
+  for (const def of fieldDefs) customValues[def.id] = formData.get(`custom_${def.id}`)?.toString() ?? "";
+
   try {
-    await db.insert(items).values({
-      organizationId,
-      name,
-      unitOfMeasure,
-      sku: sku || null,
-      category: category || null,
+    await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(items)
+        .values({ organizationId, name, unitOfMeasure, sku: sku || null, category: category || null })
+        .returning();
+      if (fieldDefs.length > 0) await applyItemValues(tx, row.id, fieldDefs, customValues);
     });
   } catch (e) {
     if (isSkuTaken(e)) {
       const t = await getTranslations("items");
       return { error: t("errorSkuTaken", { sku: sku ?? "" }), values };
     }
+    if (e instanceof UserError) return { error: e.message, values };
     throw e;
   }
 

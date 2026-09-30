@@ -5,6 +5,12 @@ import * as schema from "./schema";
 type Db = ReturnType<typeof drizzle<typeof schema>>;
 type Client = ReturnType<typeof postgres>;
 
+// What `db.transaction(async (tx) => ...)` hands its callback — for
+// functions that write inside a transaction the caller controls (see
+// applyItemValues in src/lib/custom-fields.ts), not `Db` itself, which
+// carries a `$client` a transaction object doesn't have.
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
 // The dev server re-evaluates this module on every HMR reload, which resets
 // module-level state — each reload used to open a fresh pool while the old
 // one stayed connected, until Postgres answered "sorry, too many clients

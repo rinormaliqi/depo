@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 import { useConfirm, useNotify } from "@/components/notifications";
 import { CustomFieldFilterBar, matchesCustomFieldFilter } from "@/components/custom-field-filter";
+import { CustomFieldInput } from "./custom-field-input";
 import { unwrap } from "@/lib/action-result";
 import * as rawActions from "./actions";
 import * as customFieldActions from "./custom-fields-actions";
@@ -139,45 +140,6 @@ function ItemRow({
       )}
     </div>
   );
-}
-
-function CustomFieldInput({
-  def,
-  value,
-  onChange,
-}: {
-  def: FieldDefinition;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const t = useTranslations("customFields");
-
-  if (def.type === "select") {
-    return (
-      <select className="input" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 140 }}>
-        <option value="">{t("selectPlaceholder")}</option>
-        {(def.options ?? []).map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
-      </select>
-    );
-  }
-  if (def.type === "boolean") {
-    return (
-      <select className="input" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 100 }}>
-        <option value="">{t("selectPlaceholder")}</option>
-        <option value="true">{t("yes")}</option>
-        <option value="false">{t("no")}</option>
-      </select>
-    );
-  }
-  if (def.type === "number") {
-    return <input className="input" type="number" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 120 }} />;
-  }
-  if (def.type === "date") {
-    return <input className="input" type="date" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 150 }} />;
-  }
-  return <input className="input" type="text" value={value} onChange={(e) => onChange(e.target.value)} maxLength={MAX_FIELD_CHARS} style={{ width: 140 }} />;
 }
 
 function ItemEditor({

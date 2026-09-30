@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
-import { db } from "@/db";
+import { db, type Tx } from "@/db";
 import { customFieldTypes, itemCustomFieldDefinitions, itemCustomFieldValues, type CustomFieldType } from "@/db/schema";
 import { UserError } from "@/lib/user-error";
 import { MAX_FIELD_CHARS } from "@/lib/import-table";
@@ -184,10 +184,15 @@ function throwForError(t: Awaited<ReturnType<typeof getTranslations>>, label: st
   throw new UserError(t("errorInvalidOption", { label }));
 }
 
-export async function setItemValues(itemId: string, organizationId: string, values: Record<string, string>) {
+// Validates every value against its definition, then applies exactly what
+// changed within the given transaction. Shared by setItemValues (an
+// existing item, its own transaction below) and item creation
+// (src/app/items/actions.ts), which writes an item's first custom values
+// in the *same* transaction as the item row itself — a required field
+// left blank refuses the whole creation and rolls the item insert back
+// too, instead of leaving a half-filled item behind.
+export async function applyItemValues(tx: Tx, itemId: string, definitions: FieldDefinition[], values: Record<string, string>) {
   const t = await getTranslations("customFields");
-  const definitions = await getFieldDefinitions(organizationId);
-
   const toUpsert: { fieldDefinitionId: string; value: string }[] = [];
   const toClear: string[] = [];
 
@@ -198,20 +203,23 @@ export async function setItemValues(itemId: string, organizationId: string, valu
     else toUpsert.push({ fieldDefinitionId: def.id, value: result.value });
   }
 
-  await db.transaction(async (tx) => {
-    if (toClear.length > 0) {
-      await tx
-        .delete(itemCustomFieldValues)
-        .where(and(eq(itemCustomFieldValues.itemId, itemId), inArray(itemCustomFieldValues.fieldDefinitionId, toClear)));
-    }
-    for (const { fieldDefinitionId, value } of toUpsert) {
-      await tx
-        .insert(itemCustomFieldValues)
-        .values({ itemId, fieldDefinitionId, value, updatedAt: new Date() })
-        .onConflictDoUpdate({
-          target: [itemCustomFieldValues.itemId, itemCustomFieldValues.fieldDefinitionId],
-          set: { value, updatedAt: new Date() },
-        });
-    }
-  });
+  if (toClear.length > 0) {
+    await tx
+      .delete(itemCustomFieldValues)
+      .where(and(eq(itemCustomFieldValues.itemId, itemId), inArray(itemCustomFieldValues.fieldDefinitionId, toClear)));
+  }
+  for (const { fieldDefinitionId, value } of toUpsert) {
+    await tx
+      .insert(itemCustomFieldValues)
+      .values({ itemId, fieldDefinitionId, value, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [itemCustomFieldValues.itemId, itemCustomFieldValues.fieldDefinitionId],
+        set: { value, updatedAt: new Date() },
+      });
+  }
+}
+
+export async function setItemValues(itemId: string, organizationId: string, values: Record<string, string>) {
+  const definitions = await getFieldDefinitions(organizationId);
+  await db.transaction((tx) => applyItemValues(tx, itemId, definitions, values));
 }

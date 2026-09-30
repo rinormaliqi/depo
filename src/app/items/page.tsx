@@ -56,7 +56,7 @@ export default async function ItemsPage() {
           {caps?.can.manageItems ? (
             <>
               <CustomFieldsManager fields={fieldDefs} />
-              <ItemForm />
+              <ItemForm fieldDefs={fieldDefs} />
             </>
           ) : (
             <p className="text-muted" style={{ fontSize: 12 }}>{t("items.viewOnly")}</p>

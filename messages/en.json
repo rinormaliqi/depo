@@ -525,7 +525,7 @@
     "bankTransferSending": "Sending…",
     "bankTransferSent": "We've been notified — make the transfer whenever you're ready, quoting the reference above.",
     "contractComingSoon": "12-month contracts are coming soon.",
-    "startContractFlow": "Start 12-month contract",
+    "startContractFlow": "Start {n}-month contract",
     "checkoutCanceled": "Payment canceled — nothing was charged.",
     "history": "Payments",
     "historyLine": "{months, plural, =1 {1 month} other {# months}} · {provider}",
@@ -564,11 +564,13 @@
     }
   },
   "contract": {
-    "title": "12-month contract",
-    "subtitle": "A direct contract with SmartDepo for the {plan} plan — 2 months free, paid by bank transfer.",
-    "errorPlanNotEligible": "12-month contracts are only available for the Business plan right now.",
+    "title": "{n}-month contract",
+    "subtitle": "A direct contract with SmartDepo for the {plan} plan, paid by bank transfer.",
+    "subtitleDiscount": "A direct contract with SmartDepo for the {plan} plan — 2 months free, paid by bank transfer.",
+    "errorPlanNotEligible": "Contracts are only available for the Business plan right now.",
+    "errorPeriodNotEligible": "Contracts are available for 3, 6 or 12 months.",
     "monthlyPrice": "Standard monthly price",
-    "standardTotal": "Standard price for 12 months",
+    "standardTotal": "Standard price for {n} months",
     "discount": "2 months free",
     "finalTotal": "Total due",
     "field": {

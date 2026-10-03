@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { contracts, plans } from "@/db/schema";
-import { CONTRACT_ELIGIBLE_PLAN_KEYS, CONTRACT_MONTHS, contractPriceBreakdown } from "@/lib/billing-plans";
+import { CONTRACT_ELIGIBLE_PLAN_KEYS, contractPriceBreakdown, isContractMonths } from "@/lib/billing-plans";
 import { UserError } from "@/lib/user-error";
 
 export type ClientInfo = { legalName: string; registrationNumber: string; address: string; contactName: string; contactEmail: string };
@@ -15,6 +15,7 @@ export async function getMyContracts(organizationId: string) {
     .select({
       id: contracts.id,
       status: contracts.status,
+      months: contracts.months,
       pricingSnapshot: contracts.pricingSnapshot,
       clientInfo: contracts.clientInfo,
       signedFileName: contracts.signedFileName,
@@ -40,15 +41,17 @@ function trimmedOrThrow(value: string, key: string, t: Awaited<ReturnType<typeof
 // — a later price change must never rewrite a contract someone already
 // downloaded. Only plans in CONTRACT_ELIGIBLE_PLAN_KEYS have a fixed price
 // to freeze at all (Enterprise is negotiated, so it isn't offered here).
+// `months` is 3, 6 or 12 — only 12 carries the 2-months-free discount.
 export async function createContract(
   organizationId: string,
   userId: string,
-  input: { planKey: string; clientInfo: ClientInfo },
+  input: { planKey: string; months: number; clientInfo: ClientInfo },
 ) {
   const t = await getTranslations("contract");
   if (!(CONTRACT_ELIGIBLE_PLAN_KEYS as readonly string[]).includes(input.planKey)) {
     throw new UserError(t("errorPlanNotEligible"));
   }
+  if (!isContractMonths(input.months)) throw new UserError(t("errorPeriodNotEligible"));
   const [plan] = await db.select().from(plans).where(and(eq(plans.key, input.planKey), eq(plans.isActive, true)));
   if (!plan) throw new UserError(t("errorPlanNotEligible"));
 
@@ -60,10 +63,10 @@ export async function createContract(
     registrationNumber: input.clientInfo.registrationNumber.trim(),
   };
 
-  const pricingSnapshot = contractPriceBreakdown(plan);
+  const pricingSnapshot = contractPriceBreakdown(plan, input.months);
   const [row] = await db
     .insert(contracts)
-    .values({ organizationId, planId: plan.id, months: CONTRACT_MONTHS, pricingSnapshot, clientInfo, createdBy: userId })
+    .values({ organizationId, planId: plan.id, months: input.months, pricingSnapshot, clientInfo, createdBy: userId })
     .returning();
   return row;
 }

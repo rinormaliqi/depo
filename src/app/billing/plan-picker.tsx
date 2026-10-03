@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { BANK_TRANSFER_MONTHS, BILLING_PERIODS, CONTRACT_ELIGIBLE_PLAN_KEYS, PAYSERA_MONTHS, type BillingMonths, priceForPeriod } from "@/lib/billing-plans";
+import { BANK_TRANSFER_MONTHS, BILLING_PERIODS, CONTRACT_ELIGIBLE_PLAN_KEYS, PAYSERA_MONTHS, type BillingMonths, contractPriceBreakdown, isContractMonths, priceForPeriod } from "@/lib/billing-plans";
 import { requestBankTransfer, startCheckout } from "./actions";
 import { FormError } from "@/components/form-error";
 
@@ -38,8 +38,13 @@ export function PlanPicker({
   const [planKey, setPlanKey] = useState(options.some((o) => o.plan.key === currentPlanKey && o.blockedBy.length === 0) ? currentPlanKey : firstAllowed);
   const [months, setMonths] = useState<BillingMonths>(1);
   const chosen = options.find((o) => o.plan.key === planKey);
-  const isBankTransfer = (BANK_TRANSFER_MONTHS as readonly number[]).includes(months);
-  const isContract = months === 12;
+  // 3, 6 and 12 months are a contract for an eligible plan (Business);
+  // for any other plan 3 and 6 stay a manually recorded bank transfer and
+  // 12 is "contact us".
+  const contractEligible = !!chosen && (CONTRACT_ELIGIBLE_PLAN_KEYS as readonly string[]).includes(chosen.plan.key);
+  const isContract = isContractMonths(months) && (contractEligible || months === 12);
+  const isBankTransfer = !isContract && (BANK_TRANSFER_MONTHS as readonly number[]).includes(months);
+  const total = chosen && contractEligible && isContractMonths(months) ? contractPriceBreakdown(chosen.plan, months).finalTotalCents : chosen ? priceForPeriod(chosen.plan, months) : 0;
 
   const limit = (n: number | null) => (n === null ? t("unlimited") : String(n));
 
@@ -110,7 +115,7 @@ export function PlanPicker({
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: 12, border: "1px solid var(--color-divider)", background: "#fff", flexWrap: "wrap" }}>
           <div>
             <div style={{ fontFamily: "var(--font-heading)", fontSize: 16 }}>
-              {t("total", { amount: (priceForPeriod(chosen.plan, months) / 100).toFixed(0) })}
+              {t("total", { amount: (total / 100).toFixed(0) })}
             </div>
             <div style={{ fontSize: 11, color: "color-mix(in srgb,var(--color-text) 55%,transparent)" }}>
               {t("totalHint", { plan: chosen.plan.name, n: months })}
@@ -133,8 +138,8 @@ export function PlanPicker({
             ))}
 
           {isContract &&
-            ((CONTRACT_ELIGIBLE_PLAN_KEYS as readonly string[]).includes(chosen.plan.key) ? (
-              <Link href="/billing/contract" className="btn btn-primary">{t("startContractFlow")}</Link>
+            (contractEligible ? (
+              <Link href={`/billing/contract?months=${months}`} className="btn btn-primary">{t("startContractFlow", { n: months })}</Link>
             ) : supportEmail ? (
               <a href={`mailto:${supportEmail}?subject=SmartDepo ${chosen.plan.name} — 12 months`} className="btn btn-secondary">{t("contactUs")}</a>
             ) : (
@@ -149,7 +154,7 @@ export function PlanPicker({
           {bank.iban ? (
             <>
               <p style={{ fontSize: 12, margin: 0, lineHeight: 1.6 }}>
-                {t("bankTransferPanelBody", { amount: (priceForPeriod(chosen.plan, months) / 100).toFixed(0), reference: orgName })}
+                {t("bankTransferPanelBody", { amount: (total / 100).toFixed(0), reference: orgName })}
               </p>
               <dl style={{ fontSize: 12, margin: 0, display: "grid", gridTemplateColumns: "auto 1fr", gap: "2px 10px" }}>
                 {bank.bankName && (<><dt className="text-muted">{t("bankTransferBankName")}</dt><dd style={{ margin: 0 }}>{bank.bankName}</dd></>)}

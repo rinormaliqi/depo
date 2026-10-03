@@ -10,9 +10,10 @@ export const BILLING_CURRENCY = "EUR";
 // yet (docs/pricing.md defers annual pricing) — the price is months ×
 // monthly, this list only decides which buttons /billing shows.
 //
-// Only 1 month goes through Paysera (see startCheckout) — 3 and 6 are a
-// bank transfer the founder records manually on /internal, and 12 is a
-// contract, not a checkout at all. This list is still every period a
+// Only 1 month goes through Paysera (see startCheckout). 3, 6 and 12 are
+// a contract for plans in CONTRACT_ELIGIBLE_PLAN_KEYS; for any other plan
+// 3 and 6 fall back to a bank transfer the founder records manually on
+// /internal, and 12 to "contact us". This list is still every period a
 // customer can pick; how each one is actually paid is decided per period
 // in the UI, not by what's in this array.
 export const BILLING_PERIODS = [1, 3, 6, 12] as const;
@@ -36,13 +37,20 @@ export function priceForPeriod(plan: { priceCents: number }, months: number) {
 // Epic #8: a 12-month contract for a plan on this list pays for 10 months
 // (2 free) instead of 12 — the offer is "10 for the price of 12", not a
 // generic multi-month discount, so it's a separate function from
-// priceForPeriod rather than a branch inside it. Only Business today —
-// Enterprise's price is "from €X", negotiated per customer, so there is
-// no fixed monthly figure to discount off of; a contract for Enterprise
-// still goes through the existing manual "contact us" path.
-export const CONTRACT_MONTHS = 12 as const;
-export const CONTRACT_DISCOUNT_MONTHS = 2;
+// priceForPeriod rather than a branch inside it. 3- and 6-month contracts
+// carry no discount at all: they pay exactly months × monthly, the
+// contract is just the paperwork. Only Business today — Enterprise's price
+// is "from €X", negotiated per customer, so there is no fixed monthly
+// figure to put in a contract; a contract for Enterprise still goes
+// through the existing manual "contact us" path.
+export const CONTRACT_PERIODS = [3, 6, 12] as const;
+export type ContractMonths = (typeof CONTRACT_PERIODS)[number];
+export const CONTRACT_DISCOUNT_MONTHS: Record<ContractMonths, number> = { 3: 0, 6: 0, 12: 2 };
 export const CONTRACT_ELIGIBLE_PLAN_KEYS = ["business"] as const;
+
+export function isContractMonths(n: number): n is ContractMonths {
+  return (CONTRACT_PERIODS as readonly number[]).includes(n);
+}
 
 export type ContractPriceBreakdown = {
   monthlyPriceCents: number;
@@ -51,10 +59,10 @@ export type ContractPriceBreakdown = {
   finalTotalCents: number;
 };
 
-export function contractPriceBreakdown(plan: { priceCents: number }): ContractPriceBreakdown {
+export function contractPriceBreakdown(plan: { priceCents: number }, months: ContractMonths = 12): ContractPriceBreakdown {
   const monthlyPriceCents = plan.priceCents;
-  const standardTotalCents = monthlyPriceCents * CONTRACT_MONTHS;
-  const discountCents = monthlyPriceCents * CONTRACT_DISCOUNT_MONTHS;
+  const standardTotalCents = monthlyPriceCents * months;
+  const discountCents = monthlyPriceCents * CONTRACT_DISCOUNT_MONTHS[months];
   return { monthlyPriceCents, standardTotalCents, discountCents, finalTotalCents: standardTotalCents - discountCents };
 }
 

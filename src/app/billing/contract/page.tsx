@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getMyFacility } from "@/app/builder/actions";
@@ -7,13 +8,13 @@ import { AppHeader } from "@/components/app-header";
 import { BlockedPage } from "@/components/blocked-page";
 import { db } from "@/db";
 import { organizations, plans } from "@/db/schema";
-import { contractPriceBreakdown } from "@/lib/billing-plans";
+import { CONTRACT_PERIODS, contractPriceBreakdown, isContractMonths } from "@/lib/billing-plans";
 import { getCapabilities } from "@/lib/capabilities";
 import { requireSession } from "@/lib/session";
 import { getMyContractsForOrg } from "./actions";
 import { ContractFlow } from "./contract-flow";
 
-export default async function ContractPage() {
+export default async function ContractPage({ searchParams }: { searchParams: Promise<{ months?: string }> }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const capsGate = await getCapabilities();
@@ -21,6 +22,10 @@ export default async function ContractPage() {
 
   const t = await getTranslations();
   const { organizationId } = await requireSession();
+  // The period comes from the button picked on /billing; anything else
+  // (a hand-edited URL, an old bookmark) falls back to the 12-month offer.
+  const requested = Number((await searchParams).months);
+  const months = isContractMonths(requested) ? requested : 12;
   const [facility, [org], [plan], contracts] = await Promise.all([
     getMyFacility(),
     db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, organizationId)),
@@ -36,8 +41,11 @@ export default async function ContractPage() {
     );
   }
 
-  const pricing = contractPriceBreakdown(plan);
-  const existing = contracts[0] ?? null;
+  const pricing = contractPriceBreakdown(plan, months);
+  // One contract per period: a draft or signed 12-month contract doesn't
+  // block starting a 3-month one, but reopening the same period shows the
+  // contract already generated for it instead of a second blank form.
+  const existing = contracts.find((c) => c.months === months) ?? null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
@@ -51,10 +59,24 @@ export default async function ContractPage() {
       )}
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 26 }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, marginBottom: 4 }}>{t("contract.title")}</div>
-          <p className="text-muted" style={{ fontSize: 13, marginBottom: 20 }}>{t("contract.subtitle", { plan: plan.name })}</p>
+          <div style={{ fontFamily: "var(--font-heading)", fontSize: 20, marginBottom: 4 }}>{t("contract.title", { n: months })}</div>
+          <p className="text-muted" style={{ fontSize: 13, marginBottom: 20 }}>{t(months === 12 ? "contract.subtitleDiscount" : "contract.subtitle", { plan: plan.name })}</p>
+          <div className="seg" style={{ marginBottom: 16 }}>
+            {CONTRACT_PERIODS.map((m) => (
+              <Link
+                key={m}
+                href={`/billing/contract?months=${m}`}
+                className="seg-opt"
+                style={{ background: months === m ? "var(--color-accent)" : undefined, color: months === m ? "var(--color-bg)" : undefined }}
+              >
+                {t("billing.months", { n: m })}
+              </Link>
+            ))}
+          </div>
           <ContractFlow
+            key={months}
             planKey="business"
+            months={months}
             planName={plan.name}
             pricing={pricing}
             defaultLegalName={org?.name ?? ""}

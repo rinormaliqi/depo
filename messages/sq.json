@@ -525,7 +525,7 @@
     "bankTransferSending": "Duke dërguar…",
     "bankTransferSent": "U njoftua SmartDepo — bëje transfertën kur të duash, duke cituar referencën më sipër.",
     "contractComingSoon": "Kontratat 12-mujore vijnë së shpejti.",
-    "startContractFlow": "Fillo kontratën 12-mujore",
+    "startContractFlow": "Fillo kontratën {n}-mujore",
     "checkoutCanceled": "Pagesa u anulua — asgjë nuk u faturua.",
     "history": "Pagesat",
     "historyLine": "{months, plural, =1 {1 muaj} other {# muaj}} · {provider}",
@@ -564,11 +564,13 @@
     }
   },
   "contract": {
-    "title": "Kontrata 12-mujore",
-    "subtitle": "Një kontratë direkte me SmartDepo për planin {plan} — 2 muaj falas, e paguar me transfertë bankare.",
-    "errorPlanNotEligible": "Kontratat 12-mujore janë të disponueshme aktualisht vetëm për planin Business.",
+    "title": "Kontrata {n}-mujore",
+    "subtitle": "Një kontratë direkte me SmartDepo për planin {plan}, e paguar me transfertë bankare.",
+    "subtitleDiscount": "Një kontratë direkte me SmartDepo për planin {plan} — 2 muaj falas, e paguar me transfertë bankare.",
+    "errorPlanNotEligible": "Kontratat janë të disponueshme aktualisht vetëm për planin Business.",
+    "errorPeriodNotEligible": "Kontratat janë të disponueshme për 3, 6 ose 12 muaj.",
     "monthlyPrice": "Çmimi standard mujor",
-    "standardTotal": "Çmimi standard për 12 muaj",
+    "standardTotal": "Çmimi standard për {n} muaj",
     "discount": "2 muaj falas",
     "finalTotal": "Totali për pagesë",
     "field": {

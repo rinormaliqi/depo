@@ -1,8 +1,10 @@
-// The body of the 12-month contract PDF (src/lib/contract-pdf.ts), kept as
+// The body of the 3-, 6- and 12-month contract PDF (src/lib/contract-pdf.ts), kept as
 // plain data the same way src/content/legal.ts keeps the Terms — a
 // generic template review shouldn't touch PDF-drawing code. `{token}`
 // placeholders are substituted by the generator from the contract's
-// stored clientInfo/pricingSnapshot and the company's own info.
+// stored clientInfo/pricingSnapshot and the company's own info. A
+// paragraph marked `onlyWithDiscount` is dropped when the contract has no
+// discount (3 and 6 months pay the full months × monthly price).
 //
 // This is a starting template, not reviewed by a lawyer — treat it as a
 // draft to have checked before it's relied on for a real signature.
@@ -11,7 +13,8 @@
 
 import type { Locale } from "@/i18n/locales";
 
-export type ContractClause = { title: string; paragraphs: string[] };
+export type ContractParagraph = string | { text: string; onlyWithDiscount: true };
+export type ContractClause = { title: string; paragraphs: ContractParagraph[] };
 
 export const CONTRACT_TEMPLATE: Record<Locale, ContractClause[]> = {
   sq: [
@@ -36,8 +39,11 @@ export const CONTRACT_TEMPLATE: Record<Locale, ContractClause[]> = {
     {
       title: "4. Çmimi dhe pagesa",
       paragraphs: [
-        "Çmimi standard mujor i planit {planName} është {monthlyPrice}. Çmimi standard për {months} muaj do të ishte {standardTotal}.",
-        "Për këtë kontratë 12-mujore, Klientit i aplikohet zbritje prej {discountMonths} muajsh falas (-{discountAmount}), duke e sjellë shumën totale për pagesë në {finalTotal}.",
+        "Çmimi standard mujor i planit {planName} është {monthlyPrice}. Çmimi për {months} muaj është {standardTotal}.",
+        {
+          text: "Për këtë kontratë {months}-mujore, Klientit i aplikohet zbritje prej {discountMonths} muajsh falas (-{discountAmount}), duke e sjellë shumën totale për pagesë në {finalTotal}.",
+          onlyWithDiscount: true,
+        },
         "Pagesa kryhet me transfertë bankare në llogarinë e SmartDepo: {bankName}, IBAN {bankIban}{bankSwiftLine}, me referencë \"{clientLegalName}\".",
       ],
     },
@@ -79,8 +85,11 @@ export const CONTRACT_TEMPLATE: Record<Locale, ContractClause[]> = {
     {
       title: "4. Price and payment",
       paragraphs: [
-        "The standard monthly price of the {planName} plan is {monthlyPrice}. The standard price for {months} months would be {standardTotal}.",
-        "For this 12-month contract, the Customer receives a discount of {discountMonths} free months (-{discountAmount}), bringing the total amount due to {finalTotal}.",
+        "The standard monthly price of the {planName} plan is {monthlyPrice}. The price for {months} months is {standardTotal}.",
+        {
+          text: "For this {months}-month contract, the Customer receives a discount of {discountMonths} free months (-{discountAmount}), bringing the total amount due to {finalTotal}.",
+          onlyWithDiscount: true,
+        },
         "Payment is made by bank transfer to SmartDepo's account: {bankName}, IBAN {bankIban}{bankSwiftLine}, quoting \"{clientLegalName}\" as reference.",
       ],
     },

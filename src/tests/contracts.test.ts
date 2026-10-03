@@ -33,22 +33,39 @@ describe("createContract", () => {
   test("freezes the business plan's current price into a 2-months-free breakdown", async () => {
     const [business] = await db.select().from(plans).where(eq(plans.key, "business"));
     const admin = await addMember(org.org.id, "admin");
-    const row = await createContract(org.org.id, admin.id, { planKey: "business", clientInfo: CLIENT_INFO });
+    const row = await createContract(org.org.id, admin.id, { planKey: "business", months: 12, clientInfo: CLIENT_INFO });
     assert.deepEqual(row.pricingSnapshot, contractPriceBreakdown(business));
     assert.equal(row.status, "draft");
     assert.equal(row.months, 12);
   });
 
+  test("3- and 6-month contracts freeze the full price, no discount", async () => {
+    const [business] = await db.select().from(plans).where(eq(plans.key, "business"));
+    const admin = await addMember(org.org.id, "admin");
+    for (const months of [3, 6] as const) {
+      const row = await createContract(org.org.id, admin.id, { planKey: "business", months, clientInfo: CLIENT_INFO });
+      assert.equal(row.months, months);
+      assert.equal(row.pricingSnapshot.discountCents, 0);
+      assert.equal(row.pricingSnapshot.finalTotalCents, business.priceCents * months);
+    }
+  });
+
+  test("periods other than 3, 6 or 12 are refused", async () => {
+    const admin = await addMember(org.org.id, "admin");
+    await assert.rejects(createContract(org.org.id, admin.id, { planKey: "business", months: 1, clientInfo: CLIENT_INFO }));
+    await assert.rejects(createContract(org.org.id, admin.id, { planKey: "business", months: 24, clientInfo: CLIENT_INFO }));
+  });
+
   test("starter and enterprise are not eligible for the automated contract flow", async () => {
     const admin = await addMember(org.org.id, "admin");
-    await assert.rejects(createContract(org.org.id, admin.id, { planKey: "starter", clientInfo: CLIENT_INFO }));
-    await assert.rejects(createContract(org.org.id, admin.id, { planKey: "enterprise", clientInfo: CLIENT_INFO }));
+    await assert.rejects(createContract(org.org.id, admin.id, { planKey: "starter", months: 12, clientInfo: CLIENT_INFO }));
+    await assert.rejects(createContract(org.org.id, admin.id, { planKey: "enterprise", months: 12, clientInfo: CLIENT_INFO }));
   });
 
   test("required client fields are enforced; registration number is not", async () => {
     const admin = await addMember(org.org.id, "admin");
-    await assert.rejects(createContract(org.org.id, admin.id, { planKey: "business", clientInfo: { ...CLIENT_INFO, legalName: "  " } }));
-    await assert.doesNotReject(createContract(org.org.id, admin.id, { planKey: "business", clientInfo: { ...CLIENT_INFO, registrationNumber: "" } }));
+    await assert.rejects(createContract(org.org.id, admin.id, { planKey: "business", months: 12, clientInfo: { ...CLIENT_INFO, legalName: "  " } }));
+    await assert.doesNotReject(createContract(org.org.id, admin.id, { planKey: "business", months: 12, clientInfo: { ...CLIENT_INFO, registrationNumber: "" } }));
   });
 });
 
@@ -68,13 +85,13 @@ describe("contract server actions and routes", () => {
 
   test("a worker cannot start a contract", async () => {
     actAs(await addMember(org.org.id, "worker"));
-    const result = await startContract("business", CLIENT_INFO);
+    const result = await startContract("business", 12, CLIENT_INFO);
     assert.equal(result.ok, false);
   });
 
   test("an admin starts a contract and can list it back", async () => {
     actAs(admin);
-    const started = await startContract("business", CLIENT_INFO);
+    const started = await startContract("business", 12, CLIENT_INFO);
     assert.ok(started.ok);
     const list = await getMyContractsForOrg();
     assert.equal(list.length, 1);
@@ -117,7 +134,7 @@ describe("contract server actions and routes", () => {
 
   test("an oversized or wrong-type upload is refused", async () => {
     actAs(admin);
-    const started = await startContract("business", CLIENT_INFO);
+    const started = await startContract("business", 12, CLIENT_INFO);
     assert.ok(started.ok);
     const contractId = started.value.contractId;
 
@@ -138,7 +155,7 @@ describe("contract server actions and routes", () => {
 
   test("a worker cannot upload a signed contract even for their own org", async () => {
     actAs(admin);
-    const started = await startContract("business", CLIENT_INFO);
+    const started = await startContract("business", 12, CLIENT_INFO);
     assert.ok(started.ok);
     const contractId = started.value.contractId;
 

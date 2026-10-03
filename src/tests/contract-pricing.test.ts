@@ -21,4 +21,16 @@ describe("contractPriceBreakdown", () => {
     assert.equal(b.discountCents, 49800);
     assert.equal(b.finalTotalCents, 249000);
   });
+
+  test("3 and 6 months carry no discount — exactly months × monthly", () => {
+    const three = contractPriceBreakdown({ priceCents: 11900 }, 3);
+    assert.equal(three.standardTotalCents, 35700);
+    assert.equal(three.discountCents, 0);
+    assert.equal(three.finalTotalCents, 35700);
+
+    const six = contractPriceBreakdown({ priceCents: 11900 }, 6);
+    assert.equal(six.standardTotalCents, 71400);
+    assert.equal(six.discountCents, 0);
+    assert.equal(six.finalTotalCents, 71400);
+  });
 });

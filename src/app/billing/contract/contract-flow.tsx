@@ -15,6 +15,7 @@ type ClientInfo = { legalName: string; registrationNumber: string; address: stri
 type ContractRow = {
   id: string;
   status: "draft" | "signed";
+  months: number;
   pricingSnapshot: ContractPriceBreakdown;
   clientInfo: ClientInfo;
   signedFileName: string | null;
@@ -24,7 +25,9 @@ function eur(cents: number) {
   return `€${(cents / 100).toFixed(2)}`;
 }
 
-function PricingSummary({ pricing }: { pricing: ContractPriceBreakdown }) {
+// 3- and 6-month contracts carry no discount, so the standard-price and
+// discount rows would only repeat the total — they're shown for 12 only.
+function PricingSummary({ pricing, months }: { pricing: ContractPriceBreakdown; months: number }) {
   const t = useTranslations("contract");
   return (
     <div style={{ padding: 12, border: "1px solid var(--color-divider)", background: "#fff", fontSize: 13, display: "flex", flexDirection: "column", gap: 4 }}>
@@ -32,14 +35,18 @@ function PricingSummary({ pricing }: { pricing: ContractPriceBreakdown }) {
         <span className="text-muted">{t("monthlyPrice")}</span>
         <span>{eur(pricing.monthlyPriceCents)}</span>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <span className="text-muted">{t("standardTotal")}</span>
-        <span>{eur(pricing.standardTotalCents)}</span>
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", color: "var(--color-accent-800)" }}>
-        <span>{t("discount")}</span>
-        <span>-{eur(pricing.discountCents)}</span>
-      </div>
+      {pricing.discountCents > 0 && (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span className="text-muted">{t("standardTotal", { n: months })}</span>
+            <span>{eur(pricing.standardTotalCents)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--color-accent-800)" }}>
+            <span>{t("discount")}</span>
+            <span>-{eur(pricing.discountCents)}</span>
+          </div>
+        </>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-heading)", fontSize: 16, marginTop: 4, paddingTop: 4, borderTop: "1px solid var(--color-divider)" }}>
         <span>{t("finalTotal")}</span>
         <span>{eur(pricing.finalTotalCents)}</span>
@@ -50,11 +57,13 @@ function PricingSummary({ pricing }: { pricing: ContractPriceBreakdown }) {
 
 function NewContractForm({
   planKey,
+  months,
   defaultLegalName,
   defaultContactEmail,
   pricing,
 }: {
   planKey: string;
+  months: number;
   defaultLegalName: string;
   defaultContactEmail: string;
   pricing: ContractPriceBreakdown;
@@ -72,7 +81,7 @@ function NewContractForm({
   async function submit() {
     setBusy(true);
     const done = await notify.run(() =>
-      startContractUnwrapped(planKey, { legalName, registrationNumber, address, contactName, contactEmail }),
+      startContractUnwrapped(planKey, months, { legalName, registrationNumber, address, contactName, contactEmail }),
     );
     setBusy(false);
     if (done !== undefined) router.refresh();
@@ -86,7 +95,7 @@ function NewContractForm({
       }}
       style={{ display: "flex", flexDirection: "column", gap: 10 }}
     >
-      <PricingSummary pricing={pricing} />
+      <PricingSummary pricing={pricing} months={months} />
       <div className="field">
         <label>{t("field.legalName")}</label>
         <input className="input" value={legalName} onChange={(e) => setLegalName(e.target.value)} required />
@@ -159,6 +168,7 @@ function UploadSignedForm({ contractId }: { contractId: string }) {
 
 export function ContractFlow({
   planKey,
+  months,
   planName,
   pricing,
   defaultLegalName,
@@ -166,6 +176,7 @@ export function ContractFlow({
   existing,
 }: {
   planKey: string;
+  months: number;
   planName: string;
   pricing: ContractPriceBreakdown;
   defaultLegalName: string;
@@ -175,12 +186,12 @@ export function ContractFlow({
   const t = useTranslations("contract");
 
   if (!existing) {
-    return <NewContractForm planKey={planKey} defaultLegalName={defaultLegalName} defaultContactEmail={defaultContactEmail} pricing={pricing} />;
+    return <NewContractForm planKey={planKey} months={months} defaultLegalName={defaultLegalName} defaultContactEmail={defaultContactEmail} pricing={pricing} />;
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <PricingSummary pricing={existing.pricingSnapshot} />
+      <PricingSummary pricing={existing.pricingSnapshot} months={existing.months} />
       <a href={`/api/contracts/${existing.id}/pdf`} className="btn btn-secondary" download>
         {t("downloadContract")}
       </a>

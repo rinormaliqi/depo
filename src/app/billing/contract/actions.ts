@@ -11,13 +11,13 @@ export async function getMyContractsForOrg() {
   return getMyContracts(organizationId);
 }
 
-async function startContractImpl(planKey: string, clientInfo: ClientInfo) {
+async function startContractImpl(planKey: string, months: number, clientInfo: ClientInfo) {
   const { organizationId, userId } = await requirePermission("manageBilling");
-  const row = await createContract(organizationId, userId, { planKey, clientInfo });
+  const row = await createContract(organizationId, userId, { planKey, months, clientInfo });
   revalidatePath("/billing/contract");
   return { contractId: row.id };
 }
 
-export async function startContract(planKey: string, clientInfo: ClientInfo) {
-  return attempt(() => startContractImpl(planKey, clientInfo), "startContract");
+export async function startContract(planKey: string, months: number, clientInfo: ClientInfo) {
+  return attempt(() => startContractImpl(planKey, months, clientInfo), "startContract");
 }

@@ -43,9 +43,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
     await sendEmail({
       to: companyInfo().supportEmail,
       replyTo: contract.clientInfo.contactEmail,
-      subject: `[SmartDepo] Signed 12-month contract — ${org?.name ?? organizationId}`,
+      subject: `[SmartDepo] Signed ${contract.months}-month contract — ${org?.name ?? organizationId}`,
       text: [
-        `${org?.name ?? "?"} uploaded a signed 12-month contract.`,
+        `${org?.name ?? "?"} uploaded a signed ${contract.months}-month contract.`,
         `Plan: ${plan?.name ?? contract.planId}`,
         `Total due: €${(finalTotalCents / 100).toFixed(2)}`,
         `Client: ${contract.clientInfo.legalName} (${contract.clientInfo.registrationNumber || "no reg. no."})`,

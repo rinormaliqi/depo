@@ -32,6 +32,19 @@ describe("generateContractPdf", () => {
     }
   });
 
+  test("a 3-month contract without a discount still renders", async () => {
+    const bytes = await generateContractPdf({
+      locale: "sq",
+      planName: "Business",
+      months: 3,
+      pricing: contractPriceBreakdown({ priceCents: 11900 }, 3),
+      clientInfo,
+      generatedAt: new Date("2026-10-03T00:00:00Z"),
+    });
+    const reloaded = await PDFDocument.load(bytes);
+    assert.ok(reloaded.getPageCount() >= 1);
+  });
+
   test("a long clause set still produces a valid multi-page document", async () => {
     // The real template is short enough to fit one page today; this just
     // confirms the pagination path (ensureSpace adding a new page) doesn't

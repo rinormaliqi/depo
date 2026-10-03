@@ -64,7 +64,7 @@ export async function generateContractPdf(input: ContractPdfInput): Promise<Uint
     months: String(months),
     monthlyPrice: eur(pricing.monthlyPriceCents),
     standardTotal: eur(pricing.standardTotalCents),
-    discountMonths: "2",
+    discountMonths: String(pricing.monthlyPriceCents ? Math.round(pricing.discountCents / pricing.monthlyPriceCents) : 0),
     discountAmount: eur(pricing.discountCents),
     finalTotal: eur(pricing.finalTotalCents),
     bankName: bank.bankName || "—",
@@ -106,7 +106,8 @@ export async function generateContractPdf(input: ContractPdfInput): Promise<Uint
     ensureSpace(CLAUSE_TITLE_SIZE * 1.4 + LINE_HEIGHT);
     drawLine(clause.title, bold, CLAUSE_TITLE_SIZE, CLAUSE_TITLE_SIZE * 1.6);
     for (const paragraph of clause.paragraphs) {
-      drawParagraph(substitute(paragraph, tokens), font, BODY_SIZE);
+      if (typeof paragraph !== "string" && pricing.discountCents === 0) continue;
+      drawParagraph(substitute(typeof paragraph === "string" ? paragraph : paragraph.text, tokens), font, BODY_SIZE);
       y -= LINE_HEIGHT * 0.4;
     }
     y -= LINE_HEIGHT * 0.3;

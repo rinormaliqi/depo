@@ -528,8 +528,8 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 export const contractStatuses = ["draft", "signed"] as const;
 export type ContractStatus = (typeof contractStatuses)[number];
 
-// A generated 12-month contract for one organization's chosen plan
-// (Epic #7) — draft the moment it's generated, signed once the customer
+// A generated 3-, 6- or 12-month contract for one organization's chosen
+// plan (Epic #7) — draft the moment it's generated, signed once the customer
 // uploads a signed copy (which is also the moment SmartDepo gets emailed
 // it). `pricingSnapshot` freezes the price breakdown at generation time —
 // Business's monthly price changing later must never retroactively alter

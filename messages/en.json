@@ -817,6 +817,7 @@
     "zoomIn": "Zoom in (+)",
     "zoomOut": "Zoom out (−)",
     "zoomFitHint": "Show the whole floor (1)",
+    "minimap": "Overview of the whole floor — click or drag to move there",
     "navHelp": "Wheel or two fingers: scroll · Shift + wheel: sideways · Ctrl/⌘ + wheel or pinch: zoom · Middle button or Space + drag: pan · Arrows, PageUp/PageDown, Home: scroll by keyboard",
     "wizard": {
       "open": "Build from your building",

@@ -1,11 +1,15 @@
 import "dotenv/config";
 import { hash } from "bcryptjs";
-import { inArray, like } from "drizzle-orm";
+import { inArray, like, or } from "drizzle-orm";
 import { db } from "./index";
 import {
+  adminViewAsSessions,
+  contactMessages,
+  contracts,
   facilities,
   facilityLevels,
   invites,
+  itemCustomFieldDefinitions,
   items,
   locations,
   memberships,
@@ -208,6 +212,18 @@ async function removePreviousRun() {
     .where(inArray(memberships.userId, userIds));
   const orgIds = orgRows.map((o) => o.id);
 
+  // Everything that points at a seed user without ON DELETE CASCADE goes
+  // first, wherever it lives — a contract a seed admin drew up, an invite
+  // they sent, a support message — or the users can't be deleted and the
+  // re-run stops halfway, leaving the accounts without their companies.
+  await db.delete(contracts).where(
+    orgIds.length > 0 ? or(inArray(contracts.organizationId, orgIds), inArray(contracts.createdBy, userIds)) : inArray(contracts.createdBy, userIds),
+  );
+  await db.delete(invites).where(inArray(invites.invitedBy, userIds));
+  await db.delete(movements).where(inArray(movements.performedBy, userIds));
+  await db.delete(adminViewAsSessions).where(inArray(adminViewAsSessions.adminUserId, userIds));
+  await db.update(contactMessages).set({ userId: null }).where(inArray(contactMessages.userId, userIds));
+
   if (orgIds.length > 0) {
     const facilityRows = await db.select({ id: facilities.id }).from(facilities).where(inArray(facilities.organizationId, orgIds));
     const facilityIds = facilityRows.map((f) => f.id);
@@ -221,6 +237,7 @@ async function removePreviousRun() {
       await db.delete(facilities).where(inArray(facilities.id, facilityIds));
     }
     await db.delete(items).where(inArray(items.organizationId, orgIds));
+    await db.delete(itemCustomFieldDefinitions).where(inArray(itemCustomFieldDefinitions.organizationId, orgIds));
     await db.delete(invites).where(inArray(invites.organizationId, orgIds));
     await db.delete(payments).where(inArray(payments.organizationId, orgIds));
     await db.delete(memberships).where(inArray(memberships.organizationId, orgIds));

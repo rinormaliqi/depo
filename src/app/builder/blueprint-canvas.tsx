@@ -3,11 +3,12 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LocationKind } from "@/db/schema";
 import { KIND_APPEARANCE, KIND_COLOR, kindAppearance, kindLabelColor } from "./kind-appearance";
 import { LayoutWizard } from "./layout-wizard";
 import { UnderlayPanel, type Calibration } from "./underlay-panel";
+import { Minimap, ScaleBar, type MinimapShape } from "./minimap";
 import { calibrateUnderlay, underlayUrl, type UnderlayMeta } from "@/lib/underlay-shared";
 import { LOCATION_TYPES, TEMPLATE_KEYS, ZONE_COLORS, alignSnap, bayLayout, clampToFloor, flip, intersects, isOpening, isRotation, pillarGridPositions, rotateBox, snapToWall, turnClockwise, type Box as FloorBox, type Guides, type ParametricLayout, type Rotation, type TemplateKey } from "@/lib/blueprint-types";
 import { getBlueprint, type LocationRow } from "./actions";
@@ -34,6 +35,49 @@ const updateEntity = unwrap(rawActions.updateEntity);
 const updateFacility = unwrap(rawActions.updateFacility);
 
 const PPM = 26;
+// Zoom runs from MIN_ZOOM to MAX_ZOOM, except that a floor too big to fit at
+// MIN_ZOOM may go lower, down to exactly what fits it on screen (#204) — a
+// 1000 m floor at 0.2 is still 5 200 px wide.
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 3;
+const MAX_FIT_ZOOM = 2;
+// The space around the floor inside the scroller: the padding of the floor's
+// wrapper (left/top hold the labels drawn above objects) and its 1.5px border.
+const FLOOR_ORIGIN = { x: 34 + 1.5, y: 30 + 1.5 };
+// Below this many top-level objects every one is drawn; above it, only the
+// ones near the view (see `cull`).
+const CULL_THRESHOLD = 150;
+// Cells narrower than this are not drawn: the rack shows one summary tint.
+const MIN_CELL_PX = 5;
+// Under this many pixels per metre, labels and marks only show where they fit.
+const DETAIL_PX_PER_M = 12;
+
+// Steps of 0.05 where that is fine-grained enough, finer below MIN_ZOOM.
+function roundZoom(z: number, mode: "round" | "floor" = "round") {
+  const f = mode === "floor" ? Math.floor : Math.round;
+  return z >= MIN_ZOOM ? f(z * 20) / 20 : f(z * 1000) / 1000;
+}
+
+// The zoom that shows the whole floor in a viewport of this size, or null
+// while the viewport has no real size yet.
+function fitZoomFor(viewW: number, viewH: number, floor: { widthM: number; heightM: number }) {
+  const w = viewW - 62;
+  const h = viewH - 58;
+  if (w < 80 || h < 80) return null;
+  return Math.min(w / (floor.widthM * PPM), h / (floor.heightM * PPM));
+}
+
+// A grid line every 1, 5, 10, 50 … m: the finest step still 8px apart.
+const GRID_STEPS_M = [1, 5, 10, 50, 100, 500, 1000];
+function gridStepM(pxPerM: number) {
+  return GRID_STEPS_M.find((s) => s * pxPerM >= 8) ?? GRID_STEPS_M[GRID_STEPS_M.length - 1];
+}
+
+// A rough width for a one-line label in the heading font: wide enough to
+// decide whether it fits over its box without measuring the DOM.
+function labelWidthPx(text: string, fontPx: number, letterSpacingEm: number) {
+  return text.length * fontPx * (0.62 + letterSpacingEm);
+}
 const SNAP = 0.25;
 const DEFAULT_LEFT_WIDTH = 214;
 const DEFAULT_RIGHT_WIDTH = 306;
@@ -109,9 +153,8 @@ type UndoEntry = { undo: () => Promise<void>; redo: () => Promise<void> };
 
 // Occupancy across every cell (every level × bay), regardless of which
 // level is currently being viewed — the inspector's aggregate stat.
-function occupancyOf(entity: LocationRow, all: LocationRow[], occupied: Set<string>) {
+function occupancyOf(entity: LocationRow, kids: LocationRow[], occupied: Set<string>) {
   if (entity.bays <= 1 && entity.levels <= 1) return occupied.has(entity.id) ? 1 : 0;
-  const kids = all.filter((l) => l.parentId === entity.id);
   if (kids.length === 0) return 0;
   return kids.filter((k) => occupied.has(k.id)).length / kids.length;
 }
@@ -121,8 +164,7 @@ function occupancyOf(entity: LocationRow, all: LocationRow[], occupied: Set<stri
 // (an entity with fewer levels than the one being viewed still shows its
 // top shelf, rather than going blank). "all" aggregates every level per bay
 // into one cell — occupied if ANY level at that bay has stock.
-function levelRow(entity: LocationRow, all: LocationRow[], selectedLevel: number | "all") {
-  const kids = all.filter((l) => l.parentId === entity.id);
+function levelRow(entity: LocationRow, kids: LocationRow[], selectedLevel: number | "all") {
   if (kids.length === 0) return [] as { bay: number; ids: string[] }[];
 
   if (selectedLevel === "all") {
@@ -245,6 +287,21 @@ export function BlueprintCanvas({
   // read the current rows through this ref rather than a stale closure.
   const locationsRef = useRef(locations);
   locationsRef.current = locations;
+  // Lookups the map does per object and per cell: by id, and each parent's
+  // children. Searching the whole list each time was quadratic — seconds
+  // per render on a floor with thousands of bins (#204).
+  const { byId, kidsByParent } = useMemo(() => {
+    const byId = new Map(locations.map((l) => [l.id, l]));
+    const kidsByParent = new Map<string, LocationRow[]>();
+    for (const l of locations) {
+      if (!l.parentId) continue;
+      const kids = kidsByParent.get(l.parentId);
+      if (kids) kids.push(l);
+      else kidsByParent.set(l.parentId, [l]);
+    }
+    return { byId, kidsByParent };
+  }, [locations]);
+  const kidsOf = (id: string) => kidsByParent.get(id) ?? [];
   // Set at mousedown; the drag only becomes "live" past DRAG_THRESHOLD_PX.
   const dragArmRef = useRef<{ clientX: number; clientY: number; live: boolean } | null>(null);
   const [placing, setPlacing] = useState<Placing | null>(null);
@@ -282,13 +339,7 @@ export function BlueprintCanvas({
   }, [selected]);
 
   useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const w = el.clientWidth - 62;
-    const h = el.clientHeight - 58;
-    if (w < 80 || h < 80) return;
-    const z = Math.min(w / (facility.widthM * PPM), h / (facility.heightM * PPM));
-    setZoom(Math.max(0.3, Math.min(2, Math.round(z * 20) / 20)));
+    fit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -402,14 +453,14 @@ export function BlueprintCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locations]);
 
+  // Rounded down, so the fitted floor never ends up a few pixels too big.
   function fit() {
     const el = wrapRef.current;
     if (!el) return;
-    const w = el.clientWidth - 62;
-    const h = el.clientHeight - 58;
-    if (w < 80 || h < 80) return;
-    const z = Math.min(w / (facility.widthM * PPM), h / (facility.heightM * PPM));
-    setZoom(Math.max(0.3, Math.min(2, Math.round(z * 20) / 20)));
+    const z = fitZoomFor(el.clientWidth, el.clientHeight, facility);
+    if (z === null) return;
+    setZoom(Math.min(MAX_FIT_ZOOM, roundZoom(z, "floor")));
+    el.scrollTo({ left: 0, top: 0 });
   }
 
   async function reload() {
@@ -477,11 +528,70 @@ export function BlueprintCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapOnly, facility.id]);
 
+  // The scroller's size, for the zoom floor: the smallest zoom is whatever
+  // fits the whole floor when that is below MIN_ZOOM.
+  const [viewSize, setViewSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const read = () => setViewSize((v) => (v.w === wrap.clientWidth && v.h === wrap.clientHeight ? v : { w: wrap.clientWidth, h: wrap.clientHeight }));
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, []);
+  const minZoom = useMemo(() => {
+    const fz = fitZoomFor(viewSize.w, viewSize.h, facility);
+    return fz === null ? MIN_ZOOM : Math.min(MIN_ZOOM, roundZoom(fz, "floor"));
+  }, [viewSize, facility]);
+
+  // The stretch of floor (metres) objects are drawn for on a big floor: the
+  // view plus a screen around it. Recomputed only when the view comes within
+  // half a screen of its edge, so scrolling doesn't re-render every frame.
+  const [cull, setCull] = useState<Box | null>(null);
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const pxPerM = zoom * PPM;
+    let raf = 0;
+    const update = (force: boolean) => {
+      raf = 0;
+      const v = {
+        xM: (wrap.scrollLeft - FLOOR_ORIGIN.x) / pxPerM,
+        yM: (wrap.scrollTop - FLOOR_ORIGIN.y) / pxPerM,
+        widthM: wrap.clientWidth / pxPerM,
+        heightM: wrap.clientHeight / pxPerM,
+      };
+      const next = (c: Box | null) => {
+        const inside = c
+          && v.xM >= c.xM + v.widthM / 2 && v.xM + v.widthM <= c.xM + c.widthM - v.widthM / 2
+          && v.yM >= c.yM + v.heightM / 2 && v.yM + v.heightM <= c.yM + c.heightM - v.heightM / 2;
+        if (inside && !force) return c;
+        return { xM: v.xM - v.widthM, yM: v.yM - v.heightM, widthM: v.widthM * 3, heightM: v.heightM * 3 };
+      };
+      // A new zoom or size re-renders anyway, and must never show the old
+      // stretch. A scroll is a transition: React renders the newly-near
+      // objects in slices between frames, so the scroll never stalls on them.
+      if (force) setCull(next);
+      else startTransition(() => setCull(next));
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(() => update(false)); };
+    update(true);
+    wrap.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(() => update(true));
+    ro.observe(wrap);
+    return () => {
+      wrap.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [zoom]);
+
   // Zoom around a point of the wrapper (the cursor, or its centre), keeping
   // that point of the floor under the cursor.
   const zoomAt = useCallback((next: number, clientX?: number, clientY?: number) => {
     const wrap = wrapRef.current;
-    const target = Math.max(0.2, Math.min(3, Math.round(next * 20) / 20));
+    const target = Math.max(minZoom, Math.min(MAX_ZOOM, roundZoom(next)));
     if (!wrap) { setZoom(target); return; }
     const r = wrap.getBoundingClientRect();
     const px = (clientX ?? r.left + r.width / 2) - r.left;
@@ -493,7 +603,7 @@ export function BlueprintCanvas({
       wrap.scrollLeft = floorX * target - px;
       wrap.scrollTop = floorY * target - py;
     });
-  }, [zoom]);
+  }, [zoom, minZoom]);
 
   function startPan(ev: React.MouseEvent) {
     const wrap = wrapRef.current;
@@ -1021,6 +1131,8 @@ export function BlueprintCanvas({
   }
 
   const z = zoom * PPM;
+  const gridMinorPx = gridStepM(z) * z;
+  const gridMajorPx = gridMinorPx * 10;
 
   function pointFromEvent(ev: { clientX: number; clientY: number }) {
     const el = canvasRef.current;
@@ -1271,11 +1383,24 @@ export function BlueprintCanvas({
     return () => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); };
   });
 
-  const topLevel = locations.filter((l) => {
-    if (!l.parentId) return true;
-    const parent = locations.find((p) => p.id === l.parentId);
-    return parent?.kind === "zone";
-  });
+  const topLevel = useMemo(
+    () => locations.filter((l) => !l.parentId || byId.get(l.parentId)?.kind === "zone"),
+    [locations, byId],
+  );
+  // On a big floor only what is near the view is put in the DOM — the view
+  // and one screen around it, refreshed as the view nears that edge (see
+  // the scroll effect above). Zones and the selection are always drawn.
+  const drawn = topLevel.length > CULL_THRESHOLD && cull
+    ? topLevel.filter((e) => e.kind === "zone" || e.id === selectedId || intersects(localOverride[e.id] ?? e, cull))
+    : topLevel;
+  const minimapShapes = useMemo<MinimapShape[]>(
+    () => topLevel.map((e) => ({
+      id: e.id, xM: e.xM, yM: e.yM, widthM: e.widthM, heightM: e.heightM,
+      area: LOCATION_TYPES[e.kind as LocationKind].spatial === "area",
+      color: e.kind === "zone" ? e.color : null,
+    })),
+    [topLevel],
+  );
   // Bins have no declared capacity, so "how full" is shaded relative to the
   // fullest bin in this facility right now — an honest heat-map rather than
   // a percentage of a number nobody entered.
@@ -1457,7 +1582,7 @@ export function BlueprintCanvas({
           </div>
           <div style={{ width: 1, height: 17, background: "var(--color-divider)" }} />
           <button className="btn btn-secondary" onClick={() => zoomAt(zoom - 0.1)} title={t("zoomOut")} aria-label={t("zoomOut")} style={{ minWidth: 26, padding: "1px 7px" }}>−</button>
-          <button className="btn btn-ghost" onClick={() => zoomAt(1)} title={t("zoom100")} style={{ fontSize: 11, fontVariantNumeric: "tabular-nums", minWidth: 40, padding: "1px 4px" }}>{Math.round(zoom * 100)}%</button>
+          <button className="btn btn-ghost" onClick={() => zoomAt(1)} title={t("zoom100")} style={{ fontSize: 11, fontVariantNumeric: "tabular-nums", minWidth: 40, padding: "1px 4px" }}>{zoom < 0.1 ? (zoom * 100).toFixed(1) : Math.round(zoom * 100)}%</button>
           <button className="btn btn-secondary" onClick={() => zoomAt(zoom + 0.1)} title={t("zoomIn")} aria-label={t("zoomIn")} style={{ minWidth: 26, padding: "1px 7px" }}>+</button>
           <button className="btn btn-secondary" onClick={fit} title={t("zoomFitHint")} style={{ padding: "1px 8px", fontSize: 11, letterSpacing: ".08em" }}>{t("zoomFit")}</button>
           {!mapOnly && <button className="btn btn-ghost" onClick={() => setGrid((g) => !g)} style={{ fontSize: 11, letterSpacing: ".08em" }}>{grid ? t("gridOn") : t("gridOff")}</button>}
@@ -1548,10 +1673,13 @@ export function BlueprintCanvas({
               style={{
                 position: "relative", width: facility.widthM * z, height: facility.heightM * z,
                 background: "#fff", border: "1.5px solid var(--color-accent-900)", boxShadow: "var(--shadow-md)",
+                // A line every gridStep metres and a darker one every ten of
+                // them, so the grid stays a grid instead of a grey wash when
+                // zoomed far out (#204).
                 backgroundImage: grid
-                  ? "linear-gradient(to right,var(--color-accent-100) 0 1px,transparent 1px),linear-gradient(to bottom,var(--color-accent-100) 0 1px,transparent 1px)"
+                  ? "linear-gradient(to right,var(--color-accent-200) 0 1px,transparent 1px),linear-gradient(to bottom,var(--color-accent-200) 0 1px,transparent 1px),linear-gradient(to right,var(--color-accent-100) 0 1px,transparent 1px),linear-gradient(to bottom,var(--color-accent-100) 0 1px,transparent 1px)"
                   : undefined,
-                backgroundSize: grid ? `${z}px ${z}px,${z}px ${z}px` : undefined,
+                backgroundSize: grid ? `${gridMajorPx}px ${gridMajorPx}px,${gridMajorPx}px ${gridMajorPx}px,${gridMinorPx}px ${gridMinorPx}px,${gridMinorPx}px ${gridMinorPx}px` : undefined,
               }}
               onMouseDown={(e) => { if (!panActive && e.target === e.currentTarget) setSelectedId(null); }}
             >
@@ -1640,7 +1768,7 @@ export function BlueprintCanvas({
                   </div>
                 );
               })()}
-              {topLevel.map((e) => {
+              {drawn.map((e) => {
                 const type = LOCATION_TYPES[e.kind as LocationKind];
                 const isSel = e.id === selectedId;
                 // Drawn inside the floor even when the stored box isn't, so a
@@ -1665,7 +1793,8 @@ export function BlueprintCanvas({
                 }
                 if (isSel) { box.outline = "1.5px solid var(--color-accent)"; box.outlineOffset = 1; box.zIndex = 6; }
 
-                const rowUpright = type.spatial === "store" && e.bays * e.levels > 1 ? levelRow(e, locations, selectedLevel) : [];
+                const kids = kidsOf(e.id);
+                const rowUpright = type.spatial === "store" && e.bays * e.levels > 1 ? levelRow(e, kids, selectedLevel) : [];
                 const layout = bayLayout(rotationOf(e));
                 const row = layout.reversed ? [...rowUpright].reverse() : rowUpright;
                 // Bay numbers are drawn in the cells when they fit, so which way
@@ -1674,6 +1803,21 @@ export function BlueprintCanvas({
                   ? Math.min((layout.vertical ? live.widthM : live.widthM / row.length) * z, (layout.vertical ? live.heightM / row.length : live.heightM) * z)
                   : 0;
                 const showBayNumbers = cellPx >= 14;
+                // Zoomed far out the cells would be specks: the rack is drawn
+                // as one block tinted by how much of it holds stock (#204).
+                const showCells = cellPx >= MIN_CELL_PX;
+                const boxW = live.widthM * z;
+                const boxH = live.heightM * z;
+                const labelText = e.kind === "zone" ? `${e.code} · ${e.name}` : (type.spatial === "fixture" ? e.name : (e.code ?? ""));
+                const labelFont = type.spatial === "area" ? 11 : 9;
+                const labelSpacing = type.spatial === "area" ? 0.14 : 0.1;
+                // Labels sit above their box. At normal zoom all of them show;
+                // zoomed out, only those that fit over their own box — a zone
+                // falls back to its code — so neighbours' labels never pile up.
+                const zoneCodeOnly = e.kind === "zone" && z < DETAIL_PX_PER_M && labelWidthPx(labelText, labelFont, labelSpacing) > boxW;
+                const shownLabel = zoneCodeOnly ? (e.code ?? "") : labelText;
+                const labelFits = z >= DETAIL_PX_PER_M
+                  || (labelWidthPx(shownLabel, labelFont, labelSpacing) <= boxW + 4 && (type.spatial === "area" || z >= 4));
 
                 return (
                   <div
@@ -1683,7 +1827,7 @@ export function BlueprintCanvas({
                     onMouseDown={(ev) => startDrag("move", ev, e)}
                     title={`${e.code ?? e.name} · ${e.name}`}
                   >
-                    {type.spatial === "store" && e.levels > 1 && (
+                    {type.spatial === "store" && e.levels > 1 && Math.min(boxW, boxH) >= 12 && (
                       // The four upright posts a real second-level platform is
                       // bolted to, shown as corner marks (the footprint's
                       // actual corners, not a spatial subdivision) — a level
@@ -1725,7 +1869,7 @@ export function BlueprintCanvas({
                     {/* A pillar grid or a run of windows would drown the plan in
                         9px labels — small fixtures keep theirs for the tooltip and
                         the inspector, and show it only while selected. */}
-                    {!(type.spatial === "fixture" && live.widthM * live.heightM < 1 && !isSel) && (
+                    {!(type.spatial === "fixture" && live.widthM * live.heightM < 1 && !isSel) && (isSel || labelFits) && (
                     <div
                       onMouseDown={(ev) => startDrag("move", ev, e)}
                       style={{
@@ -1737,7 +1881,7 @@ export function BlueprintCanvas({
                         cursor: "pointer",
                       }}
                     >
-                      <span>{e.kind === "zone" ? `${e.code} · ${e.name}` : (type.spatial === "fixture" ? e.name : e.code)}</span>
+                      <span>{isSel ? labelText : shownLabel}</span>
                       {e.levels > 1 && (
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
                           <svg width="8" height="7" viewBox="0 0 10 8" aria-hidden="true">
@@ -1751,7 +1895,28 @@ export function BlueprintCanvas({
                     </div>
                     )}
 
-                    {row.length > 0 ? (
+                    {row.length > 0 && !showCells ? (() => {
+                      const stocked = kids.filter((k) => binFill(k.id).occupied);
+                      const intensity = stocked.reduce((m, k) => Math.max(m, binFill(k.id).intensity), 0);
+                      const share = kids.length ? stocked.length / kids.length : 0;
+                      const low = kids.some((k) => lowStockBins.has(k.id));
+                      return (
+                        <div
+                          aria-hidden
+                          className={pulseBinId && kids.some((k) => k.id === pulseBinId) ? "locate-ping" : undefined}
+                          style={{
+                            position: "absolute", inset: 0, pointerEvents: "none",
+                            // Stronger with both how much of the rack is stocked
+                            // and how full its fullest bin is.
+                            background: stocked.length
+                              ? `color-mix(in srgb, var(--color-accent-700) ${Math.round(15 + share * 30 + intensity * 20)}%, transparent)`
+                              : undefined,
+                            outline: low ? "1.5px solid var(--color-danger-500)" : undefined,
+                            outlineOffset: -1,
+                          }}
+                        />
+                      );
+                    })() : row.length > 0 ? (
                       <div style={{ display: "grid", [layout.vertical ? "gridTemplateRows" : "gridTemplateColumns"]: `repeat(${row.length},minmax(0,1fr))`, gap: 1, padding: 1, width: "100%", height: "100%" }}>
                         {row.map(({ bay, ids }) => {
                           const fill = ids.reduce(
@@ -1765,7 +1930,7 @@ export function BlueprintCanvas({
                           const targetId = ids[0];
                           const cellCode =
                             ids.length === 1
-                              ? (locations.find((l) => l.id === targetId)?.code ?? `${e.code}-${bay}`)
+                              ? (byId.get(targetId)?.code ?? `${e.code}-${bay}`)
                               : `${e.code}-${bay}`;
                           // Bins have no declared capacity, so the tint's strength (not
                           // just its presence) is relative to the fullest bin here —
@@ -1850,6 +2015,22 @@ export function BlueprintCanvas({
             </div>
           </div>
         </div>
+        {!(mapOnly && selected) && (
+          // Where on the floor the view is, and how long a metre is (#204).
+          <div className="canvas-overview">
+            <Minimap
+              wrapRef={wrapRef}
+              floor={facility}
+              shapes={minimapShapes}
+              pxPerM={z}
+              originX={FLOOR_ORIGIN.x}
+              originY={FLOOR_ORIGIN.y}
+              label={t("minimap")}
+              compact={narrow}
+            />
+            <ScaleBar pxPerM={z} />
+          </div>
+        )}
         {mapOnly && selected && (
           // The phone's inspector: what the tapped object is and where to go
           // from it, without the desktop panel.
@@ -1862,7 +2043,7 @@ export function BlueprintCanvas({
                 <div className="text-muted" style={{ fontSize: 12, marginTop: 2 }}>
                   {selected.name}
                   {LOCATION_TYPES[selected.kind as LocationKind].spatial === "store" && selected.bays * selected.levels > 1 && (
-                    <> · {t("cellCount", { n: selected.bays * selected.levels })} · {Math.round(occupancyOf(selected, locations, occupied) * 100)}% {t("occupied").toLowerCase()}</>
+                    <> · {t("cellCount", { n: selected.bays * selected.levels })} · {Math.round(occupancyOf(selected, kidsOf(selected.id), occupied) * 100)}% {t("occupied").toLowerCase()}</>
                   )}
                 </div>
               </div>
@@ -2039,10 +2220,10 @@ export function BlueprintCanvas({
                 </div>
                 <div style={{ marginTop: 9, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11 }}>
                   <span style={{ color: "color-mix(in srgb,var(--color-text) 60%,transparent)" }}>{t("occupied")}</span>
-                  <span style={{ fontVariantNumeric: "tabular-nums" }}>{Math.round(occupancyOf(selected, locations, occupied) * 100)}%</span>
+                  <span style={{ fontVariantNumeric: "tabular-nums" }}>{Math.round(occupancyOf(selected, kidsOf(selected.id), occupied) * 100)}%</span>
                 </div>
                 <div style={{ marginTop: 5, height: 6, background: "var(--color-neutral-200)" }}>
-                  <div style={{ width: `${Math.round(occupancyOf(selected, locations, occupied) * 100)}%`, height: "100%", background: "var(--color-accent)" }} />
+                  <div style={{ width: `${Math.round(occupancyOf(selected, kidsOf(selected.id), occupied) * 100)}%`, height: "100%", background: "var(--color-accent)" }} />
                 </div>
                 {selected.isBin && (
                   <Link href={`/builder/bin/${selected.id}`} className="btn btn-secondary btn-block" style={{ marginTop: 9 }}>

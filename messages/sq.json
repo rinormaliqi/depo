@@ -817,6 +817,7 @@
     "zoomIn": "Zmadho (+)",
     "zoomOut": "Zvogëlo (−)",
     "zoomFitHint": "Shfaq gjithë planin (1)",
+    "minimap": "Pamja e gjithë planit — kliko ose tërhiq për të lëvizur",
     "navHelp": "Rrota ose dy gishta: lëviz · Shift + rrota: anash · Ctrl/⌘ + rrota ose pinch: zoom · Butoni i mesit ose Space + tërheqje: lëviz · Shigjetat, PageUp/PageDown, Home: lëviz me tastierë",
     "wizard": {
       "open": "Ndërto sipas objektit tënd",

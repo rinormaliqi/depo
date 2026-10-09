@@ -519,21 +519,42 @@ export function BlueprintCanvas({
     return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
   }, []);
 
-  // Wheel: ctrl/⌘ (and any wheel in navigate mode) zooms toward the cursor;
-  // otherwise the wrapper scrolls as usual. Native listener so it can be
-  // non-passive and stop the browser's page zoom.
+  // Wheel: ctrl/⌘ — and a trackpad pinch, which browsers report as a
+  // ctrl-wheel — zooms toward the cursor; any other wheel or two-finger
+  // swipe scrolls the wrapper natively, both axes, in every mode (#203).
+  // Native listener so it can be non-passive and stop the browser's page zoom.
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
     const onWheel = (ev: WheelEvent) => {
-      if (!(ev.ctrlKey || ev.metaKey || effectiveMode === "navigate")) return;
+      if (!(ev.ctrlKey || ev.metaKey)) return;
       ev.preventDefault();
       const factor = Math.exp(-ev.deltaY * 0.0015);
       zoomAt(zoom * factor, ev.clientX, ev.clientY);
     };
     wrap.addEventListener("wheel", onWheel, { passive: false });
     return () => wrap.removeEventListener("wheel", onWheel);
-  }, [effectiveMode, zoom, zoomAt]);
+  }, [zoom, zoomAt]);
+
+  // Keyboard scroll: the arrows step a tenth of the view (shift: half),
+  // PageUp/PageDown a whole screen, Home back to the top-left corner.
+  function scrollCanvas(key: string, shift: boolean) {
+    const wrap = wrapRef.current;
+    if (!wrap) return false;
+    const stepX = wrap.clientWidth * (shift ? 0.5 : 0.1);
+    const stepY = wrap.clientHeight * (shift ? 0.5 : 0.1);
+    const page = wrap.clientHeight * 0.9;
+    const by: Record<string, [number, number]> = {
+      ArrowLeft: [-stepX, 0], ArrowRight: [stepX, 0], ArrowUp: [0, -stepY], ArrowDown: [0, stepY],
+      PageUp: [0, -page], PageDown: [0, page],
+    };
+    if (key === "Home") { wrap.scrollTo({ left: 0, top: 0, behavior: "smooth" }); return true; }
+    if (key === "End") { wrap.scrollTo({ left: wrap.scrollWidth, top: wrap.scrollHeight, behavior: "smooth" }); return true; }
+    const d = by[key];
+    if (!d) return false;
+    wrap.scrollBy({ left: d[0], top: d[1], behavior: "smooth" });
+    return true;
+  }
 
   // Touch: one finger pans in navigate mode (the browser scrolls the wrapper
   // itself), two fingers pinch-zoom in any mode.
@@ -1191,7 +1212,7 @@ export function BlueprintCanvas({
     function isEditableTarget(el: EventTarget | null) {
       if (!(el instanceof HTMLElement)) return false;
       const tag = el.tagName;
-      return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
     }
     function onKeyDown(ev: KeyboardEvent) {
       if (isEditableTarget(ev.target)) return;
@@ -1206,6 +1227,13 @@ export function BlueprintCanvas({
         if (key === "escape") { cancelDrag(); cancelPlacing(); setCalibration(null); return; }
         if (key === "r" && !readOnly && effectiveMode === "edit" && selected) { ev.preventDefault(); handleRotate(); return; }
         if (key === "f" && !readOnly && effectiveMode === "edit" && selected) { ev.preventDefault(); handleFlip(); return; }
+        if (key === "+" || key === "=") { ev.preventDefault(); zoomAt(zoom * 1.25); return; }
+        if (key === "-" || key === "_") { ev.preventDefault(); zoomAt(zoom / 1.25); return; }
+        if (key === "0") { ev.preventDefault(); zoomAt(1); return; }
+        if (key === "1") { ev.preventDefault(); fit(); return; }
+        // Buttons and radio groups keep their own arrow-key behaviour.
+        const focusedControl = ev.target instanceof HTMLElement && ev.target.closest("button,[role=radiogroup],a,[tabindex]") && !wrapRef.current?.contains(ev.target);
+        if (!focusedControl && !ev.altKey && scrollCanvas(ev.key, ev.shiftKey)) { ev.preventDefault(); return; }
       }
       if (readOnly) return;
       if (meta && key === "z") {
@@ -1295,7 +1323,10 @@ export function BlueprintCanvas({
   );
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: mapOnly ? "minmax(0,1fr)" : `${leftWidth}px 6px minmax(360px,1fr) 6px ${rightWidth}px` }}>
+    // The one row is capped at the space left under the header: an `auto` row
+    // would grow to the floor's full height, and the canvas would lose its
+    // vertical scroll — taller floors were cut off at the bottom (#203).
+    <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateRows: "minmax(0,1fr)", gridTemplateColumns: mapOnly ? "minmax(0,1fr)" : `${leftWidth}px 6px minmax(360px,1fr) 6px ${rightWidth}px` }}>
       {!mapOnly && (
       <div style={{ background: "#fff", overflow: "auto", padding: 13 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
@@ -1407,7 +1438,7 @@ export function BlueprintCanvas({
       />
       )}
 
-      <div style={{ minWidth: 0, display: "flex", flexDirection: "column", background: "var(--color-bg)", position: "relative" }}>
+      <div style={{ minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", background: "var(--color-bg)", position: "relative" }}>
         <div style={{ flex: "none", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 7, padding: "7px 11px", background: "#fff", borderBottom: "1px solid var(--color-divider)" }}>
           <div className="seg" role="radiogroup" aria-label={t("mode.label")}>
             {(["navigate", ...(mapOnly ? [] : ["edit" as const]), "inspect"] as CanvasMode[]).map((m) => (
@@ -1425,12 +1456,13 @@ export function BlueprintCanvas({
             ))}
           </div>
           <div style={{ width: 1, height: 17, background: "var(--color-divider)" }} />
-          <button className="btn btn-secondary" onClick={() => zoomAt(zoom - 0.1)} style={{ minWidth: 26, padding: "1px 7px" }}>−</button>
+          <button className="btn btn-secondary" onClick={() => zoomAt(zoom - 0.1)} title={t("zoomOut")} aria-label={t("zoomOut")} style={{ minWidth: 26, padding: "1px 7px" }}>−</button>
           <button className="btn btn-ghost" onClick={() => zoomAt(1)} title={t("zoom100")} style={{ fontSize: 11, fontVariantNumeric: "tabular-nums", minWidth: 40, padding: "1px 4px" }}>{Math.round(zoom * 100)}%</button>
-          <button className="btn btn-secondary" onClick={() => zoomAt(zoom + 0.1)} style={{ minWidth: 26, padding: "1px 7px" }}>+</button>
-          <button className="btn btn-secondary" onClick={fit} style={{ padding: "1px 8px", fontSize: 11, letterSpacing: ".08em" }}>{t("zoomFit")}</button>
+          <button className="btn btn-secondary" onClick={() => zoomAt(zoom + 0.1)} title={t("zoomIn")} aria-label={t("zoomIn")} style={{ minWidth: 26, padding: "1px 7px" }}>+</button>
+          <button className="btn btn-secondary" onClick={fit} title={t("zoomFitHint")} style={{ padding: "1px 8px", fontSize: 11, letterSpacing: ".08em" }}>{t("zoomFit")}</button>
           {!mapOnly && <button className="btn btn-ghost" onClick={() => setGrid((g) => !g)} style={{ fontSize: 11, letterSpacing: ".08em" }}>{grid ? t("gridOn") : t("gridOff")}</button>}
           <button className="btn btn-ghost" onClick={toggleLegend} aria-pressed={legendOpen} style={{ fontSize: 11, letterSpacing: ".08em" }}>{t("legend")}</button>
+          <span role="note" tabIndex={0} title={t("navHelp")} aria-label={t("navHelp")} style={{ display: "inline-grid", placeItems: "center", width: 18, height: 18, border: "1px solid var(--color-divider)", borderRadius: "50%", fontSize: 11, cursor: "help", color: "color-mix(in srgb,var(--color-text) 60%,transparent)" }}>?</span>
 
           <div style={{ width: 1, height: 17, background: "var(--color-divider)" }} />
           {!mapOnly && (
@@ -1483,6 +1515,9 @@ export function BlueprintCanvas({
           // both even over an existing object, which would otherwise start a
           // move drag.
           onMouseDownCapture={(e) => {
+            // The middle button pans whatever the mode, and never reaches an
+            // object underneath to start a move.
+            if (e.button === 1) { e.stopPropagation(); startPan(e); return; }
             if (calibration && e.button === 0) {
               const canvas = canvasRef.current;
               if (!canvas) return;

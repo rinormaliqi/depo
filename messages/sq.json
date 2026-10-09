@@ -807,13 +807,17 @@
     "mode": {
       "label": "Modi i miut",
       "navigate": "Navigo",
-      "navigateHint": "Tërhiq për të lëvizur, rrota për zoom (H, ose mbaj Space)",
+      "navigateHint": "Tërhiq për të lëvizur, Ctrl/⌘ + rrota për zoom (H, ose mbaj Space)",
       "edit": "Edito",
       "editHint": "Zgjidh, lëviz dhe ripërmaso objektet (V)",
       "inspect": "Inspekto",
       "inspectHint": "Kliko një objekt për t'i parë detajet — asgjë s'lëviz (I)"
     },
-    "zoom100": "Zoom 100%",
+    "zoom100": "Zoom 100% (0)",
+    "zoomIn": "Zmadho (+)",
+    "zoomOut": "Zvogëlo (−)",
+    "zoomFitHint": "Shfaq gjithë planin (1)",
+    "navHelp": "Rrota ose dy gishta: lëviz · Shift + rrota: anash · Ctrl/⌘ + rrota ose pinch: zoom · Butoni i mesit ose Space + tërheqje: lëviz · Shigjetat, PageUp/PageDown, Home: lëviz me tastierë",
     "wizard": {
       "open": "Ndërto sipas objektit tënd",
       "openHint": "Përgjigju pesë pyetjeve — doke, hyrje, shtylla, zona — dhe merr një depo të vendosur sipas tyre.",

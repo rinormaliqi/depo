@@ -807,13 +807,17 @@
     "mode": {
       "label": "Mouse mode",
       "navigate": "Navigate",
-      "navigateHint": "Drag to pan, wheel to zoom (H, or hold Space)",
+      "navigateHint": "Drag to pan, Ctrl/⌘ + wheel to zoom (H, or hold Space)",
       "edit": "Edit",
       "editHint": "Select, move and resize objects (V)",
       "inspect": "Inspect",
       "inspectHint": "Click an object to read its details — nothing moves (I)"
     },
-    "zoom100": "Zoom to 100%",
+    "zoom100": "Zoom to 100% (0)",
+    "zoomIn": "Zoom in (+)",
+    "zoomOut": "Zoom out (−)",
+    "zoomFitHint": "Show the whole floor (1)",
+    "navHelp": "Wheel or two fingers: scroll · Shift + wheel: sideways · Ctrl/⌘ + wheel or pinch: zoom · Middle button or Space + drag: pan · Arrows, PageUp/PageDown, Home: scroll by keyboard",
     "wizard": {
       "open": "Build from your building",
       "openHint": "Answer five questions — docks, entrance, columns, zones — and get a depot laid out to match.",

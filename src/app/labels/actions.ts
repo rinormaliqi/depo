@@ -11,6 +11,8 @@ import { requireOwnedBin } from "@/lib/stock";
 import { UserError } from "@/lib/user-error";
 
 export type LabelBin = { id: string; code: string; path: string };
+/** A zone of the facility and how many labels printing it gives. */
+export type LabelGroup = { id: string; label: string; count: number };
 
 export type LabelScope =
   | { kind: "facility" }
@@ -24,7 +26,7 @@ export type LabelScope =
 // one rack at a time, not the whole building in one go.
 export async function getLabelBins(
   scope: LabelScope,
-): Promise<{ facilityId: string; facilityName: string; title: string; bins: LabelBin[] }> {
+): Promise<{ facilityId: string; facilityName: string; title: string; bins: LabelBin[]; zones: LabelGroup[] }> {
   const { organizationId } = await requireCapability("printLabels");
   const t = await getTranslations("labels");
 
@@ -65,11 +67,30 @@ export async function getLabelBins(
     .map((l) => ({ id: l.id, code: l.code as string, path: locationLabel(l.parentId, byId) }))
     .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
 
+  // For the whole facility: each zone with its bin count, so a big floor
+  // can be printed one zone at a time (#207). A bin counts for the nearest
+  // zone above it; bins outside any zone are simply not offered here.
+  const zoneCounts = new Map<string, number>();
+  if (scope.kind === "facility") {
+    for (const b of bins) {
+      let cur = byId.get(b.id) ?? null;
+      while (cur && cur.kind !== "zone") cur = cur.parentId ? (byId.get(cur.parentId) ?? null) : null;
+      if (cur) zoneCounts.set(cur.id, (zoneCounts.get(cur.id) ?? 0) + 1);
+    }
+  }
+  const zones = [...zoneCounts.entries()]
+    .map(([id, count]) => {
+      const z = byId.get(id)!;
+      return { id, label: z.code ? `${z.code} · ${z.name}` : z.name, count };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+
   const rootRow = root ? byId.get(root) : null;
   return {
     facilityId,
     facilityName: facilityRow?.name ?? "",
     title: rootRow ? (rootRow.code ?? rootRow.name) : (facilityRow?.name ?? ""),
     bins,
+    zones,
   };
 }

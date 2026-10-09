@@ -1280,6 +1280,12 @@
     "print": "Printo",
     "backToBin": "← Kthehu te kutia",
     "count": "{n, plural, =1 {1 etiketë} other {# etiketa}}",
+    "pageInfo": "faqja {page} nga {pages} ({total} gjithsej)",
+    "pages": "Faqet e etiketave",
+    "prev": "E mëparshmja",
+    "next": "Tjetra",
+    "pageHint": "Printo printon vetëm faqen e hapur — 240 etiketa, 20 fletë A4.",
+    "byZone": "Ose printo sipas zonës",
     "printWholeFacility": "printo gjithë objektin",
     "empty": "Ende s'ka kuti me kod vendndodhjeje këtu — shto një raft në planimetri së pari.",
     "errorNotFound": "Vendndodhja nuk u gjet"

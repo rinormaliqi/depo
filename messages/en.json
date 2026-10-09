@@ -1280,6 +1280,12 @@
     "print": "Print",
     "backToBin": "← Back to bin",
     "count": "{n, plural, =1 {1 label} other {# labels}}",
+    "pageInfo": "page {page} of {pages} ({total} in all)",
+    "pages": "Label pages",
+    "prev": "Previous",
+    "next": "Next",
+    "pageHint": "Print prints only the open page — 240 labels, 20 A4 sheets.",
+    "byZone": "Or print one zone at a time",
     "printWholeFacility": "print the whole facility",
     "empty": "No bins with a location code here yet — add a rack on the blueprint first.",
     "errorNotFound": "Location not found"

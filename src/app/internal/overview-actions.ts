@@ -12,6 +12,16 @@ const MOST_ACTIVE_LIMIT = 10;
 
 export type SubscriptionStatusCounts = Record<"trialing" | "active" | "past_due" | "canceled", number>;
 
+// The project's own page when the project is known. SENTRY_PROJECT is the
+// slug (what the build's source-map upload needs), and the issues list's
+// ?project= filter takes the numeric id instead — given a slug it showed
+// every project's issues (#195).
+function sentryUrl(org: string | undefined, project: string | undefined) {
+  if (!org?.trim()) return null;
+  const base = `https://${encodeURIComponent(org.trim())}.sentry.io`;
+  return project?.trim() ? `${base}/projects/${encodeURIComponent(project.trim())}/` : `${base}/issues/`;
+}
+
 export async function getPlatformOverview() {
   await requirePlatformAdmin();
 
@@ -82,6 +92,6 @@ export async function getPlatformOverview() {
     mrrCurrency: BILLING_CURRENCY,
     activityWindowDays: ACTIVITY_WINDOW_DAYS,
     mostActive,
-    sentryUrl: process.env.SENTRY_ORG ? `https://${process.env.SENTRY_ORG}.sentry.io/issues/${process.env.SENTRY_PROJECT ? `?project=${process.env.SENTRY_PROJECT}` : ""}` : null,
+    sentryUrl: sentryUrl(process.env.SENTRY_ORG, process.env.SENTRY_PROJECT),
   };
 }

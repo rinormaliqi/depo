@@ -73,7 +73,7 @@ describe("signed contract upload", () => {
   }
   function upload(contractId: string, bytes: Buffer, type: string, name: string) {
     const form = new FormData();
-    form.set("file", new Blob([bytes], { type }), name);
+    form.set("file", new Blob([new Uint8Array(bytes)], { type }), name);
     return postSigned(new Request("http://test.local", { method: "POST", body: form }), { params: Promise.resolve({ contractId }) });
   }
 
@@ -119,7 +119,7 @@ describe("underlay upload", () => {
 
   function upload(bytes: Buffer, type: string, w = 800, h = 600) {
     const form = new FormData();
-    form.set("file", new Blob([bytes], { type }), "plan");
+    form.set("file", new Blob([new Uint8Array(bytes)], { type }), "plan");
     form.set("widthPx", String(w));
     form.set("heightPx", String(h));
     return postUnderlay(new Request("http://test.local", { method: "POST", body: form }), { params: Promise.resolve({ facilityId: org.facility.id }) });

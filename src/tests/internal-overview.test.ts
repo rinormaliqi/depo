@@ -105,4 +105,22 @@ describe("platform overview", () => {
     actAs(outsider);
     await assert.rejects(() => getPlatformOverview(), /Not authorized/);
   });
+
+  // #195: SENTRY_PROJECT is a slug; the issues list's ?project= wants the
+  // numeric id, so the link goes to the project's own page instead.
+  test("links to the Sentry project by slug, or to the org's issues without one", async () => {
+    const saved = { org: process.env.SENTRY_ORG, project: process.env.SENTRY_PROJECT };
+    try {
+      process.env.SENTRY_ORG = "smartdepo";
+      process.env.SENTRY_PROJECT = "smartdepo-web";
+      assert.equal((await getPlatformOverview()).sentryUrl, "https://smartdepo.sentry.io/projects/smartdepo-web/");
+      delete process.env.SENTRY_PROJECT;
+      assert.equal((await getPlatformOverview()).sentryUrl, "https://smartdepo.sentry.io/issues/");
+      delete process.env.SENTRY_ORG;
+      assert.equal((await getPlatformOverview()).sentryUrl, null);
+    } finally {
+      if (saved.org === undefined) delete process.env.SENTRY_ORG; else process.env.SENTRY_ORG = saved.org;
+      if (saved.project === undefined) delete process.env.SENTRY_PROJECT; else process.env.SENTRY_PROJECT = saved.project;
+    }
+  });
 });

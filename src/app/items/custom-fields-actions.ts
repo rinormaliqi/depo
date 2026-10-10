@@ -16,7 +16,7 @@ import {
 import type { CustomFieldType } from "@/db/schema";
 import { requirePermission } from "@/lib/permissions";
 import { requireOrgId } from "@/lib/session";
-import { requireOwnedItem } from "./actions";
+import { requireOwnedItem } from "@/lib/stock";
 
 export async function getMyFieldDefinitions() {
   const organizationId = await requireOrgId();

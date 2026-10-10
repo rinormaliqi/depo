@@ -141,7 +141,15 @@ function UploadSignedForm({ contractId }: { contractId: string }) {
       const body = new FormData();
       body.set("file", file);
       const res = await fetch(`/api/contracts/${contractId}/signed`, { method: "POST", body });
-      if (!res.ok) throw new Error(t("errorUploadFailed"));
+      if (!res.ok) {
+        // 429 carries the translated rate-limit line; 415 means the file's
+        // contents aren't a PDF/PNG/JPEG whatever its name says.
+        const body = (await res.json().catch(() => null)) as { message?: string } | null;
+        if (res.status === 429 && body?.message) throw new Error(body.message);
+        if (res.status === 415) throw new Error(t("errorBadType"));
+        if (res.status === 413) throw new Error(t("errorFileTooLarge"));
+        throw new Error(t("errorUploadFailed"));
+      }
       notify.success(t("uploaded"));
       router.refresh();
     } catch (e) {

@@ -2,5 +2,8 @@
 // signed page, or a PDF) — same shape as underlay-shared.ts's limits for
 // the same reason: a route handler validates a multipart upload, not a
 // server action.
-export const SIGNED_CONTRACT_MAX_BYTES = 8 * 1024 * 1024;
+// 4 MB: Vercel refuses a function request body over 4.5 MB before our code
+// sees it, so anything between that and the old 8 MB failed with a
+// platform error instead of this limit's message (#194).
+export const SIGNED_CONTRACT_MAX_BYTES = 4 * 1024 * 1024;
 export const SIGNED_CONTRACT_MIME = ["application/pdf", "image/png", "image/jpeg"] as const;

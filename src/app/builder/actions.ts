@@ -4,7 +4,7 @@ import { and, eq, gt, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
-import { facilities, items, locations, stock, type LocationKind } from "@/db/schema";
+import { facilities, locations, stock, type LocationKind } from "@/db/schema";
 import {
   bayCode,
   buildTemplate,
@@ -38,8 +38,9 @@ import { currentFacility, listFacilities, rememberFacility } from "@/lib/facilit
 import { getCapabilitiesFor, requireCapability, requireRoom } from "@/lib/capabilities";
 import { getMyOrgId, getMySession, requireOrgId } from "@/lib/session";
 import { attempt } from "@/lib/action-result";
+import { buildBlueprintData } from "@/lib/blueprint-data";
 import { UserError } from "@/lib/user-error";
-import { deleteUnderlay, getUnderlayMeta, patchUnderlay } from "@/lib/underlay";
+import { deleteUnderlay, patchUnderlay } from "@/lib/underlay";
 import { autoLayout, parseLocationsText, type LocationImportError, type LocationRowImport } from "@/lib/import-locations";
 import { MAX_IMPORT_CHARS } from "@/lib/import-table";
 
@@ -151,69 +152,6 @@ async function updateFacilityImpl(
 export async function getFacilityLocations(facilityId: string) {
   await requireOwnedFacility(facilityId);
   return db.select().from(locations).where(eq(locations.facilityId, facilityId));
-}
-
-// The read query itself, with no ownership check — split out so Epic A3's
-// read-only admin view-as (src/app/internal/view-as-actions.ts) can reuse
-// the exact same rendering data for an arbitrary organization's facility
-// without going through requireOwnedFacility(), which is tied to the
-// caller's own session. getBlueprint() below is still what every ordinary
-// page/action calls; this only exists for that one other caller.
-export async function buildBlueprintData(facilityId: string) {
-  const rows = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
-  const binIds = rows.filter((l) => l.isBin).map((l) => l.id);
-
-  // Item breakdown per bin, not just "has stock" — the canvas shades a bin
-  // by how full it is (relative to the fullest bin here, since bins have no
-  // declared capacity) and shows what's in it on hover, so the schema
-  // carries the same "what's actually there" a worker gets from the bin
-  // page itself, without leaving the map.
-  const stockRows = binIds.length
-    ? await db
-        .select({
-          locationId: stock.locationId,
-          quantity: stock.quantity,
-          itemId: stock.itemId,
-          itemName: items.name,
-          unitOfMeasure: items.unitOfMeasure,
-          minStockLevel: items.minStockLevel,
-        })
-        .from(stock)
-        .innerJoin(items, eq(stock.itemId, items.id))
-        .where(and(inArray(stock.locationId, binIds), gt(stock.quantity, 0)))
-    : [];
-
-  const binStockById = new Map<string, { totalQuantity: number; items: { itemId: string; name: string; quantity: number; unitOfMeasure: string; belowMinimum: boolean }[] }>();
-  // "Low stock" is answered per item, across the whole facility, not per
-  // bin — a bin only ever holds part of an item's total. A bin (and each
-  // item row in its tooltip) is flagged if the item's facility-wide total
-  // sits under its own minStockLevel (null = no threshold set = never
-  // flagged) — needs a full pass over every row first, so it's computed
-  // before the per-bin breakdown is built rather than during the same loop.
-  const facilityTotalByItemId = new Map<string, number>();
-  const minStockLevelByItemId = new Map<string, number>();
-  for (const row of stockRows) {
-    facilityTotalByItemId.set(row.itemId, (facilityTotalByItemId.get(row.itemId) ?? 0) + row.quantity);
-    if (row.minStockLevel !== null) minStockLevelByItemId.set(row.itemId, row.minStockLevel);
-  }
-  const lowStockItemIds = new Set(
-    Array.from(minStockLevelByItemId)
-      .filter(([itemId, min]) => (facilityTotalByItemId.get(itemId) ?? 0) < min)
-      .map(([itemId]) => itemId),
-  );
-
-  for (const row of stockRows) {
-    const entry = binStockById.get(row.locationId) ?? { totalQuantity: 0, items: [] };
-    entry.totalQuantity += row.quantity;
-    entry.items.push({ itemId: row.itemId, name: row.itemName, quantity: row.quantity, unitOfMeasure: row.unitOfMeasure, belowMinimum: lowStockItemIds.has(row.itemId) });
-    binStockById.set(row.locationId, entry);
-  }
-  const binStock = Array.from(binStockById, ([locationId, v]) => ({ locationId, ...v }));
-  const lowStockBinIds = [...new Set(stockRows.filter((r) => lowStockItemIds.has(r.itemId)).map((r) => r.locationId))];
-
-  const levels = await ensureLevels(facilityId);
-  const underlay = await getUnderlayMeta(facilityId);
-  return { locations: rows, occupiedBinIds: binStock.map((b) => b.locationId), binStock, lowStockBinIds, levels, underlay };
 }
 
 export async function getBlueprint(facilityId: string) {

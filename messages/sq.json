@@ -590,8 +590,9 @@
     "uploaded": "Kontrata e nënshkruar u mor.",
     "signedReceivedTitle": "Kontrata e nënshkruar u mor",
     "signedReceivedBody": "SmartDepo do t'ju kontaktojë brenda 24 orëve për të finalizuar planin dhe pagesën.",
-    "errorFileTooLarge": "Ky skedar e kalon limitin prej 8 MB.",
+    "errorFileTooLarge": "Ky skedar e kalon limitin prej 4 MB. Për një foto, ul cilësinë ose skano si PDF.",
     "errorUploadFailed": "Nuk u ngarkua dot kontrata e nënshkruar — provo përsëri.",
+    "errorBadType": "Skedari nuk është PDF, PNG ose JPEG — ngarko skanimin ose foton e kontratës së nënshkruar.",
     "errorClientFieldRequired": "{field} është e detyrueshme"
   },
   "planLimit": {

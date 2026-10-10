@@ -127,7 +127,9 @@ function isSkuTaken(e: unknown) {
   return (e as { cause?: { code?: string } })?.cause?.code === "23505";
 }
 
-export async function requireOwnedItem(itemId: string, organizationId: string) {
+// Not exported: every export of a "use server" file is a callable action,
+// and this one trusts the organizationId it is given (#194).
+async function requireOwnedItem(itemId: string, organizationId: string) {
   const [item] = await db.select().from(items).where(and(eq(items.id, itemId), eq(items.organizationId, organizationId)));
   if (!item) {
     const t = await getTranslations("items");

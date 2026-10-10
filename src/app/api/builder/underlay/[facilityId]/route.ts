@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCapabilities } from "@/lib/capabilities";
 import { getUnderlayImage, ownedFacility, putUnderlay, UNDERLAY_MAX_BYTES, UNDERLAY_MIME } from "@/lib/underlay";
+import { UNDERLAY_MAX_SIDE_PX } from "@/lib/underlay-shared";
+import { declaredTooLarge, sniffType } from "@/lib/upload-check";
 
 // The underlay's bytes. A route handler rather than a server action: the
 // image is fetched by an <img>, not by code, and an upload of a few MB is
@@ -27,6 +29,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ facilit
   const caps = await getCapabilities();
   if (!caps?.can.editLayout) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
+  if (declaredTooLarge(req, UNDERLAY_MAX_BYTES)) return NextResponse.json({ error: "tooLarge" }, { status: 413 });
   const form = await req.formData();
   const file = form.get("file");
   const widthPx = Number(form.get("widthPx"));
@@ -34,13 +37,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ facilit
   if (!(file instanceof Blob)) return NextResponse.json({ error: "noFile" }, { status: 400 });
   if (!(UNDERLAY_MIME as readonly string[]).includes(file.type)) return NextResponse.json({ error: "badType" }, { status: 415 });
   if (file.size > UNDERLAY_MAX_BYTES) return NextResponse.json({ error: "tooLarge" }, { status: 413 });
-  if (!Number.isFinite(widthPx) || !Number.isFinite(heightPx) || widthPx < 16 || heightPx < 16) {
+  if (!Number.isFinite(widthPx) || !Number.isFinite(heightPx) || widthPx < 16 || heightPx < 16 || widthPx > UNDERLAY_MAX_SIDE_PX || heightPx > UNDERLAY_MAX_SIDE_PX) {
     return NextResponse.json({ error: "badDimensions" }, { status: 400 });
   }
 
+  // The bytes must be the image type claimed, or it is not stored (#194).
+  const data = Buffer.from(await file.arrayBuffer());
+  if (sniffType(data) !== file.type) return NextResponse.json({ error: "badType" }, { status: 415 });
+
   await putUnderlay(facility, {
     mimeType: file.type,
-    data: Buffer.from(await file.arrayBuffer()),
+    data,
     widthPx: Math.round(widthPx),
     heightPx: Math.round(heightPx),
   });

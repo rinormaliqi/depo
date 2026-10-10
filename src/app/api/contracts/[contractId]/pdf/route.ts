@@ -4,6 +4,7 @@ import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { plans } from "@/db/schema";
 import { generateContractPdf } from "@/lib/contract-pdf";
+import { getCapabilities } from "@/lib/capabilities";
 import { getOwnedContract } from "@/lib/contracts";
 import { getMyOrgId } from "@/lib/session";
 
@@ -16,6 +17,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ contrac
   const { contractId } = await params;
   const organizationId = await getMyOrgId();
   if (!organizationId) return new NextResponse(null, { status: 401 });
+  // The contract carries the price and the company's legal details: the
+  // same people who may open the contract page, not every member (#194).
+  const caps = await getCapabilities();
+  if (!caps?.can.manageBilling) return new NextResponse(null, { status: 403 });
 
   const contract = await getOwnedContract(contractId, organizationId);
   if (!contract) return new NextResponse(null, { status: 404 });

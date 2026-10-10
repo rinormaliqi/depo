@@ -3,6 +3,9 @@
 
 export const UNDERLAY_MAX_BYTES = 4 * 1024 * 1024;
 export const UNDERLAY_MIME = ["image/png", "image/jpeg", "image/webp"] as const;
+// The longest side the browser sends (a PDF page is rendered to it, a bigger
+// photo is scaled down to it); the server refuses dimensions past it.
+export const UNDERLAY_MAX_SIDE_PX = 2500;
 
 // Everything the canvas needs to draw the underlay — never the bytes, which
 // are served separately by /api/builder/underlay/[facilityId] so a

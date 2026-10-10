@@ -7,7 +7,10 @@ import { companyInfo } from "@/lib/company";
 import { getOwnedContract, markContractSigned } from "@/lib/contracts";
 import { SIGNED_CONTRACT_MAX_BYTES, SIGNED_CONTRACT_MIME } from "@/lib/contracts-shared";
 import { sendEmail } from "@/lib/email";
+import { LIMITS, assertNotLimited, record } from "@/lib/rate-limit";
 import { getMyOrgId } from "@/lib/session";
+import { declaredTooLarge, safeFileName, sniffType } from "@/lib/upload-check";
+import { UserError } from "@/lib/user-error";
 
 // Step 3→4 of Epic #7 in one request: the customer uploads their signed
 // copy, it's stored, and SmartDepo is emailed it immediately — a route
@@ -25,15 +28,32 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
   const contract = await getOwnedContract(contractId, organizationId);
   if (!contract) return NextResponse.json({ error: "notFound" }, { status: 404 });
 
+  // Every upload emails support with the file attached: a few per hour per
+  // company is plenty for re-uploading a better scan, and keeps the inbox
+  // from being flooded (#194).
+  const rateKey = `signed-contract:${organizationId}`;
+  try {
+    await assertNotLimited(rateKey, LIMITS.signedContract);
+  } catch (e) {
+    if (e instanceof UserError) return NextResponse.json({ error: "rateLimited", message: e.message }, { status: 429 });
+    throw e;
+  }
+  if (declaredTooLarge(req, SIGNED_CONTRACT_MAX_BYTES)) return NextResponse.json({ error: "tooLarge" }, { status: 413 });
+
   const form = await req.formData();
   const file = form.get("file");
   if (!(file instanceof Blob)) return NextResponse.json({ error: "noFile" }, { status: 400 });
   if (!(SIGNED_CONTRACT_MIME as readonly string[]).includes(file.type)) return NextResponse.json({ error: "badType" }, { status: 415 });
   if (file.size > SIGNED_CONTRACT_MAX_BYTES) return NextResponse.json({ error: "tooLarge" }, { status: 413 });
 
-  const fileName = file instanceof File && file.name ? file.name : "kontrata-nenshkruar";
+  // The bytes decide the type, and the stored/emailed name carries that
+  // type's extension — whatever the sender called the file (#194).
   const data = Buffer.from(await file.arrayBuffer());
-  await markContractSigned(contractId, { name: fileName, mimeType: file.type, data });
+  const type = sniffType(data);
+  if (type === null || type !== file.type) return NextResponse.json({ error: "badType" }, { status: 415 });
+  const fileName = safeFileName(file instanceof File ? file.name : "", type, "kontrata-nenshkruar");
+  await markContractSigned(contractId, { name: fileName, mimeType: type, data });
+  await record(rateKey);
 
   const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, organizationId));
   const [plan] = await db.select({ name: plans.name }).from(plans).where(eq(plans.id, contract.planId));
@@ -54,7 +74,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
         `Contract id: ${contractId}`,
         `Organization id: ${organizationId}`,
       ].join("\n"),
-      attachments: [{ filename: fileName, content: data, contentType: file.type }],
+      attachments: [{ filename: fileName, content: data, contentType: type }],
     });
   } catch (e) {
     // The signed copy is already stored either way — a failed notice email

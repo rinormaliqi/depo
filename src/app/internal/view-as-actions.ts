@@ -3,7 +3,7 @@
 import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { attempt } from "@/lib/action-result";
-import { buildBlueprintData } from "@/app/builder/actions";
+import { buildBlueprintData } from "@/lib/blueprint-data";
 import { db } from "@/db";
 import { items, stock } from "@/db/schema";
 import { listFacilities } from "@/lib/facilities";

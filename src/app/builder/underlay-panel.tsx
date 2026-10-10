@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useNotify } from "@/components/notifications";
-import { UNDERLAY_MAX_BYTES, underlayUrl, type UnderlayMeta } from "@/lib/underlay-shared";
+import { UNDERLAY_MAX_BYTES, underlayUrl, type UnderlayMeta, UNDERLAY_MAX_SIDE_PX } from "@/lib/underlay-shared";
 import * as rawActions from "./actions";
 import { unwrap } from "@/lib/action-result";
 
@@ -12,7 +12,7 @@ const removeUnderlay = unwrap(rawActions.removeUnderlay);
 
 // Longest side an uploaded drawing is kept at. Plenty to trace a wall from,
 // and it keeps a phone photo or an A0 scan under the 4 MB cap.
-const MAX_SIDE_PX = 2500;
+const MAX_SIDE_PX = UNDERLAY_MAX_SIDE_PX;
 
 // Turns whatever the user picked into an image the server accepts: a PDF's
 // first page is rasterised here (pdf.js in the browser, so the server never

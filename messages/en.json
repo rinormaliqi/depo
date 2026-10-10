@@ -590,8 +590,9 @@
     "uploaded": "Signed contract received.",
     "signedReceivedTitle": "Signed contract received",
     "signedReceivedBody": "SmartDepo will contact you within 24 hours to finalize the plan and payment.",
-    "errorFileTooLarge": "That file is larger than the 8 MB limit.",
+    "errorFileTooLarge": "That file is larger than the 4 MB limit. For a photo, lower its quality or scan it as a PDF.",
     "errorUploadFailed": "Couldn't upload the signed contract — try again.",
+    "errorBadType": "That file isn't a PDF, PNG or JPEG — upload the scan or photo of the signed contract.",
     "errorClientFieldRequired": "{field} is required"
   },
   "planLimit": {

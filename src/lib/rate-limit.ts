@@ -26,6 +26,8 @@ export const LIMITS = {
   emailChange: { max: 1, windowSeconds: 10 * 60 },
   inviteRenew: { max: 1, windowSeconds: 60 * 60 },
   contact: { max: 5, windowSeconds: 60 * 60 },
+  // Each signed-contract upload emails support with the file attached.
+  signedContract: { max: 5, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, Limit>;
 
 export async function clientIp(): Promise<string> {

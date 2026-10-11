@@ -6,6 +6,8 @@ import { securityHeaders } from "./src/lib/security-headers";
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
+  // No "x-powered-by: Next.js" — nothing gains from knowing the stack (#194).
+  poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders({ dev: process.env.NODE_ENV !== "production" }) }];
   },

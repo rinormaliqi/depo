@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getBillingSummary } from "@/app/billing/actions";
 import { useCapabilities } from "@/components/capabilities";
 import { LockBanner } from "@/components/lock-banner";
@@ -53,7 +53,10 @@ export function AppHeader({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [billing, setBilling] = useState<BillingSummary | null>(null);
+  // Phones: the ⋯ menu (search, links, plan pill). Desktop: the account
+  // menu under the avatar button. One state — only one toggle is visible.
   const [open, setOpen] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
   const caps = useCapabilities();
   // Navigation follows capabilities (src/lib/navigation.ts): a worker gets
   // find / scan / labels / map and no management links at all.
@@ -75,6 +78,17 @@ export function AppHeader({
     };
   }, []);
 
+  // The menu closes on navigation, Escape, and a click anywhere outside it.
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onDown = (e: MouseEvent) => { if (!headerRef.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onDown); };
+  }, [open]);
+
   useEffect(() => {
     if (!showBilling) return;
     getBillingSummary().then(setBilling).catch(() => {});
@@ -82,6 +96,7 @@ export function AppHeader({
 
   return (
     <div
+      ref={headerRef}
       className={open ? "app-header is-open" : "app-header"}
       style={{
         flex: "none",
@@ -184,20 +199,37 @@ export function AppHeader({
         })}
       </div>
 
-      <div className="app-header-secondary" style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-        <input
-          className="input"
-          type="search"
-          placeholder={t("common.searchPlaceholder")}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && query.trim()) {
-              router.push(`/stock?q=${encodeURIComponent(query.trim())}`);
-            }
-          }}
-          style={{ flex: "1 1 160px", minWidth: 120, maxWidth: 250 }}
-        />
+      {/* Search stays in the row; everything else (items, team, billing,
+          account, company, language, sign out) is one click away in the
+          account menu, so the header fits one row from 1024px. */}
+      <input
+        className="input app-header-search"
+        type="search"
+        placeholder={t("common.searchPlaceholder")}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && query.trim()) {
+            router.push(`/stock?q=${encodeURIComponent(query.trim())}`);
+          }
+        }}
+      />
+
+      <button
+        type="button"
+        className="btn btn-secondary app-header-account"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={t("common.menu")}
+        title={userEmail}
+      >
+        <span className="app-header-avatar" aria-hidden>{(userEmail[0] ?? "?").toUpperCase()}</span>
+        <span className="app-header-account-email">{userEmail}</span>
+        <span aria-hidden style={{ fontSize: 10, opacity: 0.6 }}>▾</span>
+      </button>
+
+      <div className="app-header-secondary">
         {caps && <OrganizationSwitcher currentId={caps.organizationId} />}
         {secondary.map((n) => (
           <Link key={n.href} href={n.href} className="btn btn-secondary">

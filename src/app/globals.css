@@ -29,6 +29,31 @@ input[type="number"] {
 
 .app-header { position: relative; }
 .app-header-toggle { display: none; }
+
+/* Desktop header: one row from 1024px. The search shrinks first;
+   the secondary links live in a dropdown under the account button. */
+.app-header-search { flex: 1 1 140px; min-width: 100px; max-width: 260px; margin-left: auto; }
+.app-header-account { display: inline-flex; align-items: center; gap: 7px; padding: 3px 9px 3px 4px; flex: none; }
+.app-header-avatar {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--color-accent); color: var(--color-bg); font-family: var(--font-heading); font-size: 13px;
+}
+.app-header-account-email {
+  display: none; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px; color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.app-header-facility .facility-select { max-width: 220px; }
+@media (min-width: 1440px) { .app-header-account-email { display: inline; } }
+@media (min-width: 769px) {
+  .app-header .app-header-secondary {
+    display: none; position: absolute; top: calc(100% + 4px); right: 14px; z-index: 60;
+    flex-direction: column; align-items: stretch; gap: 6px; min-width: 230px; padding: 10px;
+    background: #fff; border: 1px solid var(--color-divider); box-shadow: var(--shadow-lg);
+  }
+  .app-header.is-open .app-header-secondary { display: flex; }
+  .app-header .app-header-secondary .btn { justify-content: flex-start; text-align: left; }
+  .app-header .app-header-secondary .app-header-email { order: -1; padding: 2px 2px 6px; border-bottom: 1px solid var(--color-divider); }
+}
 .app-nav-bottom { display: none; }
 
 .stock-layout { display: grid; grid-template-columns: minmax(0, 280px) 1fr; }
@@ -81,9 +106,13 @@ input[type="number"] {
   /* Room for the bar on the pages that scroll inside a 100vh column. */
   .bin-page, .scan-page, .stock-zones-pane, .labels-page, .team-page, .items-page, .billing-page, .metrics-page, .account-page { padding-bottom: calc(24px + 54px + env(safe-area-inset-bottom, 0px)) !important; }
   /* !important: the markup sets display:flex inline for the desktop row. */
-  .app-header .app-header-secondary { order: 11; flex: 1 1 100%; display: none !important; margin-left: 0 !important; }
+  .app-header .app-header-secondary { order: 11; flex: 1 1 100%; display: none !important; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: 0 !important; }
   .app-header.is-open .app-header-secondary { display: flex !important; }
   .app-header .app-header-secondary .input { flex: 1 1 100%; max-width: none; }
+  /* Phones: search joins the ⋯ menu; the account button is desktop-only. */
+  .app-header .app-header-search { display: none; order: 10; flex: 1 1 100%; max-width: none; margin-left: 0; }
+  .app-header.is-open .app-header-search { display: block; }
+  .app-header .app-header-account { display: none; }
   .app-header .app-header-secondary .btn { flex: 1 1 30%; }
   .app-header .app-header-email { display: none; }
 

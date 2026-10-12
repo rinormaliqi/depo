@@ -50,7 +50,9 @@ export default async function BinPage({
       <div className="bin-page" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <div style={{ marginBottom: 6 }}>
-            <Link href="/builder" style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>
+            {/* Back to the map with this bin found and green on it (#215) — the
+                way back from a scanned label, too. */}
+            <Link href={`/builder?bin=${locationId}`} style={{ fontSize: 12, color: "color-mix(in srgb, var(--color-text) 55%, transparent)" }}>
               {t("common.backToBlueprint")}
             </Link>
           </div>

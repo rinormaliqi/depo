@@ -609,6 +609,7 @@
     "suspended": "This organization has been suspended. Contact support to resolve this."
   },
   "builder": {
+    "found": { "dismiss": "Clear the highlight" },
     "entities": "Entities",
     "paletteGroup": {
       "areas": "Areas",

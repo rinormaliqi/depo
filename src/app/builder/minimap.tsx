@@ -19,6 +19,7 @@ export function Minimap({
   originY,
   label,
   compact = false,
+  marker = null,
 }: {
   wrapRef: RefObject<HTMLDivElement | null>;
   floor: { widthM: number; heightM: number };
@@ -31,6 +32,8 @@ export function Minimap({
   label: string;
   /** A phone: a smaller thumbnail. */
   compact?: boolean;
+  /** A found location (#215), drawn as a green dot so it can be found off-screen. */
+  marker?: { xM: number; yM: number } | null;
 }) {
   const [view, setView] = useState<{ x: number; y: number; w: number; h: number; overflow: boolean } | null>(null);
   const dragging = useRef(false);
@@ -131,6 +134,9 @@ export function Minimap({
       )}
       {vw > 0 && vh > 0 && (
         <rect x={vx} y={vy} width={vw} height={vh} fill="color-mix(in srgb,var(--color-accent) 12%,transparent)" stroke="var(--color-accent)" strokeWidth={1.5} />
+      )}
+      {marker && (
+        <circle cx={marker.xM * k} cy={marker.yM * k} r={4.5} fill="var(--color-success-500)" stroke="#fff" strokeWidth={1.5} className="minimap-found" />
       )}
       <rect x={0.5} y={0.5} width={w - 1} height={h - 1} fill="none" stroke="var(--color-accent-900)" strokeWidth={1} />
     </svg>

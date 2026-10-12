@@ -609,6 +609,7 @@
     "suspended": "Kjo organizatë është pezulluar. Kontaktoni mbështetjen për ta zgjidhur."
   },
   "builder": {
+    "found": { "dismiss": "Mbyll theksimin" },
     "entities": "Elementet",
     "paletteGroup": {
       "areas": "Hapësira",

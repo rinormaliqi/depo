@@ -350,6 +350,40 @@ textarea.input { min-height: 90px; resize: vertical; }
 }
 .locate-ping { animation: locate-ping 0.85s ease-in-out 3; position: relative; z-index: 30; }
 
+/* — found location (#215): the bin a search pointed at, on the blueprint.
+     Green so it can't be mistaken for a rack (blue) or low stock (red), a
+     white ring between it and whatever blue it sits in, and a pin above it
+     so colour isn't the only cue. !important: cells carry their own inline
+     border/background/outline. Stays until dismissed; .found-ping is the
+     first few seconds' pulse. */
+@keyframes found-ping {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+  50% { transform: scale(1.25); filter: drop-shadow(0 0 7px color-mix(in srgb, var(--color-success-500) 85%, transparent)); }
+}
+.found-ping { animation: found-ping 0.85s ease-in-out 3; }
+.is-found {
+  position: relative; z-index: 31; overflow: visible !important;
+  outline: none !important;
+  background-color: color-mix(in srgb, var(--color-success-500) 55%, #fff) !important;
+  background-image: none !important;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 5px var(--color-success-500) !important;
+}
+.is-found::after {
+  content: "📍"; position: absolute; left: 50%; bottom: calc(100% + 4px); transform: translateX(-50%);
+  font-size: 15px; line-height: 1; pointer-events: none; filter: drop-shadow(0 1px 1px rgb(0 0 0 / .35));
+}
+.is-found-parent { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--color-success-500) !important; z-index: 6 !important; }
+.found-banner {
+  flex: none; display: flex; align-items: center; gap: 8px; padding: 5px 8px 5px 12px;
+  background: var(--color-success-100); border-bottom: 1px solid var(--color-success-200);
+  color: var(--color-success-800); font-size: 12px; min-width: 0;
+}
+.found-banner-items { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.found-banner .btn { padding: 0 8px; font-size: 16px; line-height: 1; min-height: 0; margin-left: auto; color: inherit; }
+@media (prefers-reduced-motion: reduce) {
+  .found-ping, .locate-ping { animation: none; }
+}
+
 /* — resize handle: a slim drag grip between the builder's palette/inspector
      panels and the canvas — a hairline by default (the same divider a fixed
      border would have drawn), widening into a visible band on hover or

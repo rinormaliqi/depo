@@ -273,6 +273,10 @@ export function BlueprintCanvas({
   const [panning, setPanning] = useState(false);
   const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
   const [pulseBinId, setPulseBinId] = useState<string | null>(null);
+  // The bin a search (or any ?bin= link) pointed at. Unlike the pulse it
+  // stays green until dismissed — Esc, a click on the empty floor, the
+  // banner's ×, or the next search — so it can't be lost (#215).
+  const [foundBinId, setFoundBinId] = useState<string | null>(null);
   // The value itself drives no rendering directly — bumping it just forces a
   // re-render so the undo/redo buttons re-read the (ref-backed) stacks.
   const [, setHistoryVersion] = useState(0);
@@ -338,7 +342,11 @@ export function BlueprintCanvas({
     });
   }, [selected]);
 
+  // Opens fitted to the floor — unless it opened to show one bin (?bin=),
+  // where fitting a big floor would shrink the found bin to a speck right
+  // after the highlight zoomed in on it (#215).
   useEffect(() => {
+    if (pendingHighlightRef.current) return;
     fit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -437,6 +445,7 @@ export function BlueprintCanvas({
     if (bin.level && bin.level > 1) setSelectedLevel(bin.level);
     if (zoom < 0.8) setZoom(1);
     setPulseBinId(bin.id);
+    setFoundBinId(bin.id);
     router.replace("/builder", { scroll: false });
 
     const scrollTimer = setTimeout(() => {
@@ -522,7 +531,7 @@ export function BlueprintCanvas({
   const effectiveMode: CanvasMode = mapOnly && mode === "edit" ? "inspect" : mode;
   // Map-only opens fitted to the floor once the wrapper has a size.
   useEffect(() => {
-    if (!mapOnly) return;
+    if (!mapOnly || pendingHighlightRef.current) return;
     const id = requestAnimationFrame(() => fit());
     return () => cancelAnimationFrame(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1336,7 +1345,7 @@ export function BlueprintCanvas({
         if (key === "v" && !readOnly) { setMode("edit"); return; }
         if (key === "i") { setMode("inspect"); return; }
         if (key === " ") { ev.preventDefault(); setSpacePan(true); return; }
-        if (key === "escape") { cancelDrag(); cancelPlacing(); setCalibration(null); return; }
+        if (key === "escape") { cancelDrag(); cancelPlacing(); setCalibration(null); setFoundBinId(null); return; }
         if (key === "r" && !readOnly && effectiveMode === "edit" && selected) { ev.preventDefault(); handleRotate(); return; }
         if (key === "f" && !readOnly && effectiveMode === "edit" && selected) { ev.preventDefault(); handleFlip(); return; }
         if (key === "+" || key === "=") { ev.preventDefault(); zoomAt(zoom * 1.25); return; }
@@ -1390,8 +1399,13 @@ export function BlueprintCanvas({
   // On a big floor only what is near the view is put in the DOM — the view
   // and one screen around it, refreshed as the view nears that edge (see
   // the scroll effect above). Zones and the selection are always drawn.
+  // The top-level box holding the found bin (the rack, or the bin itself).
+  const foundRow = foundBinId ? byId.get(foundBinId) ?? null : null;
+  const foundBox = foundRow
+    ? topLevel.find((e) => e.id === foundRow.id || e.id === foundRow.parentId) ?? null
+    : null;
   const drawn = topLevel.length > CULL_THRESHOLD && cull
-    ? topLevel.filter((e) => e.kind === "zone" || e.id === selectedId || intersects(localOverride[e.id] ?? e, cull))
+    ? topLevel.filter((e) => e.kind === "zone" || e.id === selectedId || e.id === foundBox?.id || intersects(localOverride[e.id] ?? e, cull))
     : topLevel;
   const minimapShapes = useMemo<MinimapShape[]>(
     () => topLevel.map((e) => ({
@@ -1405,6 +1419,14 @@ export function BlueprintCanvas({
   // fullest bin in this facility right now — an honest heat-map rather than
   // a percentage of a number nobody entered.
   const maxBinQuantity = Math.max(1, ...Array.from(binStock.values(), (b) => b.totalQuantity));
+
+  // The classes of a drawn bin (or a rack drawn as one block): green and
+  // pinned while it holds the found bin, pulsing for its first seconds.
+  function foundClass(ids: string[]) {
+    const found = !!foundBinId && ids.includes(foundBinId);
+    const pulse = !!pulseBinId && ids.includes(pulseBinId);
+    return [found && "is-found", pulse && "found-ping"].filter(Boolean).join(" ") || undefined;
+  }
 
   function binFill(locationId: string) {
     const entry = binStock.get(locationId);
@@ -1631,6 +1653,21 @@ export function BlueprintCanvas({
           {status && <span style={{ fontSize: 11, color: "var(--color-accent-700)", marginLeft: 8 }}>{status}</span>}
         </div>
 
+        {foundRow && (() => {
+          // What was found and where, pinned above the map until dismissed.
+          const contents = binStock.get(foundRow.id)?.items ?? [];
+          const summary = contents.length
+            ? contents.slice(0, 2).map((it) => `${it.name} (${it.quantity} ${it.unitOfMeasure})`).join(", ") + (contents.length > 2 ? ` +${contents.length - 2}` : "")
+            : t("empty");
+          return (
+            <div className="found-banner" role="status">
+              <span aria-hidden>📍</span>
+              <strong style={{ fontFamily: "var(--font-heading)", letterSpacing: ".04em" }}>{foundRow.code ?? foundRow.name}</strong>
+              <span className="found-banner-items">{summary}</span>
+              <button type="button" className="btn btn-ghost" onClick={() => setFoundBinId(null)} aria-label={t("found.dismiss")} title={t("found.dismiss")}>×</button>
+            </div>
+          );
+        })()}
         <div
           ref={wrapRef}
           className={`canvas-wrap canvas-mode-${panActive ? "navigate" : effectiveMode}${panning ? " is-panning" : ""}${placing ? " is-placing" : ""}${calibration ? " is-calibrating" : ""}`}
@@ -1661,7 +1698,7 @@ export function BlueprintCanvas({
           }}
           onMouseDown={(e) => {
             if (panActive) { startPan(e); return; }
-            if (e.target === e.currentTarget) setSelectedId(null);
+            if (e.target === e.currentTarget) { setSelectedId(null); setFoundBinId(null); }
           }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
@@ -1681,7 +1718,7 @@ export function BlueprintCanvas({
                   : undefined,
                 backgroundSize: grid ? `${gridMajorPx}px ${gridMajorPx}px,${gridMajorPx}px ${gridMajorPx}px,${gridMinorPx}px ${gridMinorPx}px,${gridMinorPx}px ${gridMinorPx}px` : undefined,
               }}
-              onMouseDown={(e) => { if (!panActive && e.target === e.currentTarget) setSelectedId(null); }}
+              onMouseDown={(e) => { if (!panActive && e.target === e.currentTarget) { setSelectedId(null); setFoundBinId(null); } }}
             >
               {topLevel.length === 0 && (
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center", padding: 20 }}>
@@ -1823,6 +1860,7 @@ export function BlueprintCanvas({
                   <div
                     key={e.id}
                     ref={(el) => { boxRefs.current[e.id] = el; }}
+                    className={foundBox?.id === e.id && foundBinId !== e.id ? "is-found-parent" : undefined}
                     style={box}
                     onMouseDown={(ev) => startDrag("move", ev, e)}
                     title={`${e.code ?? e.name} · ${e.name}`}
@@ -1903,7 +1941,7 @@ export function BlueprintCanvas({
                       return (
                         <div
                           aria-hidden
-                          className={pulseBinId && kids.some((k) => k.id === pulseBinId) ? "locate-ping" : undefined}
+                          className={foundClass(kids.map((k) => k.id))}
                           style={{
                             position: "absolute", inset: 0, pointerEvents: "none",
                             // Stronger with both how much of the rack is stocked
@@ -1942,7 +1980,8 @@ export function BlueprintCanvas({
                               href={`/builder/bin/${targetId}`}
                               onMouseDown={(ev) => ev.stopPropagation()}
                               title={binTooltip(ids, cellCode)}
-                              className={pulseBinId && ids.includes(pulseBinId) ? "locate-ping" : undefined}
+                              className={foundClass(ids)}
+                              aria-current={foundBinId && ids.includes(foundBinId) ? "location" : undefined}
                               style={{
                                 position: "relative",
                                 border: hasLowStock ? "1px solid var(--color-danger-500)" : "1px solid var(--color-neutral-300)",
@@ -1980,7 +2019,8 @@ export function BlueprintCanvas({
                         href={`/builder/bin/${e.id}`}
                         onMouseDown={(ev) => ev.stopPropagation()}
                         title={binTooltip([e.id], e.code ?? e.name)}
-                        className={pulseBinId === e.id ? "locate-ping" : undefined}
+                        className={foundClass([e.id])}
+                        aria-current={foundBinId === e.id ? "location" : undefined}
                         style={{
                           position: "relative",
                           display: "block",
@@ -2027,6 +2067,7 @@ export function BlueprintCanvas({
               originY={FLOOR_ORIGIN.y}
               label={t("minimap")}
               compact={narrow}
+              marker={foundBox ? { xM: foundBox.xM + foundBox.widthM / 2, yM: foundBox.yM + foundBox.heightM / 2 } : null}
             />
             <ScaleBar pxPerM={z} />
           </div>

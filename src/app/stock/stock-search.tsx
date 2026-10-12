@@ -9,6 +9,31 @@ import { searchStock } from "./actions";
 
 type Result = Awaited<ReturnType<typeof searchStock>>[number];
 
+// The part of a result that matched what was typed, marked green so the eye
+// lands on why this row is here (#215). Case- and accent-insensitive, like
+// the search itself reads to a person: "kabllo" marks "Kabllo", "c" marks "ç".
+function fold(text: string) {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+function Highlight({ text, query }: { text: string; query: string }) {
+  const q = fold(query.trim());
+  if (!q) return <>{text}</>;
+  // Positions in the folded string are cut out of the original, which only
+  // lines up while folding kept the length — true for ë, ç and the rest of
+  // precomposed Latin; anything else just isn't marked.
+  const folded = fold(text);
+  if (folded.length !== text.length) return <>{text}</>;
+  const parts: React.ReactNode[] = [];
+  let from = 0;
+  for (let i = folded.indexOf(q); i >= 0; i = folded.indexOf(q, i + q.length)) {
+    if (i > from) parts.push(text.slice(from, i));
+    parts.push(<mark key={i} className="search-hit">{text.slice(i, i + q.length)}</mark>);
+    from = i + q.length;
+  }
+  if (from < text.length) parts.push(text.slice(from));
+  return <>{parts}</>;
+}
+
 export function StockSearch({
   initialQuery,
   initialResults,
@@ -101,7 +126,9 @@ export function StockSearch({
       {results.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {results.map((r, i) => (
-            <div key={i} style={{ border: "1px solid var(--color-divider)" }}>
+            // The first result is the one the person most likely wants: it
+            // gets the green frame the map uses for a found location.
+            <div key={i} className={i === 0 && query.trim() ? "stock-result is-top" : "stock-result"} style={{ border: "1px solid var(--color-divider)" }}>
               <Link
                 href={`/builder?bin=${r.locationId}`}
                 className="stock-result-primary"
@@ -113,7 +140,7 @@ export function StockSearch({
                 }}
               >
                 <div className="stock-result-main" style={{ fontSize: 12, lineHeight: 1.25 }}>
-                  {r.itemName} · {r.quantity} {r.unitOfMeasure}
+                  <Highlight text={r.itemName} query={query} /> · {r.quantity} {r.unitOfMeasure}
                 </div>
                 <div
                   className="stock-result-meta"
@@ -127,8 +154,8 @@ export function StockSearch({
                     color: "color-mix(in srgb, var(--color-text) 55%, transparent)",
                   }}
                 >
-                  <span>{r.sku ?? "—"}</span>
-                  <span style={{ color: "var(--color-accent-700)" }}>{r.path}</span>
+                  <span>{r.sku ? <Highlight text={r.sku} query={query} /> : "—"}</span>
+                  <span style={{ color: "var(--color-accent-700)" }}><Highlight text={r.path} query={query} /></span>
                 </div>
               </Link>
               <Link

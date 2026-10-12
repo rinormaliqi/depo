@@ -3,26 +3,35 @@ import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
 import { getCapabilities } from "@/lib/capabilities";
-import { getMySession } from "@/lib/session";
+import { getMyOrgId, getMySession } from "@/lib/session";
+import { requireOwnedBin } from "@/lib/stock";
 import { getBlueprint, getMyFacility } from "./actions";
 import { BlueprintCanvas } from "./blueprint-canvas";
 
 export default async function BuilderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ bin?: string }>;
+  searchParams: Promise<{ bin?: string; switched?: string }>;
 }) {
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
   }
 
-  const { bin } = await searchParams;
+  const { bin, switched } = await searchParams;
   // Signed in but not yet in any organization (a Google sign-in that
   // hasn't named its company): finish onboarding first.
   if (!(await getMySession())) redirect("/welcome");
   const facility = await getMyFacility();
   const t = await getTranslations();
+
+  // A bin in another of the company's facilities (search covers them all):
+  // switch to that facility first, once — see ./locate/route.ts (#215).
+  if (bin && facility && !switched && /^[0-9a-f-]{36}$/i.test(bin)) {
+    const organizationId = await getMyOrgId();
+    const location = organizationId ? await requireOwnedBin(bin, organizationId).catch(() => null) : null;
+    if (location && location.facilityId !== facility.id) redirect(`/builder/locate?bin=${bin}`);
+  }
 
   if (!facility) {
     return (

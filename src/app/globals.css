@@ -58,6 +58,9 @@ input[type="number"] {
 
 .stock-layout { display: grid; grid-template-columns: minmax(0, 280px) 1fr; }
 .stock-search-pane { border-right: 1px solid var(--color-divider); padding: 13px; }
+/* #215: what matched, and the likeliest result, in the found-location green. */
+.search-hit { background: color-mix(in srgb, var(--color-success-500) 28%, #fff); color: var(--color-success-800); padding: 0 1px; border-radius: 2px; }
+.stock-result.is-top { border-color: var(--color-success-500) !important; box-shadow: inset 3px 0 0 var(--color-success-500); }
 .stock-zones-pane { padding: 22px; }
 
 .scan-page { padding: 26px; }

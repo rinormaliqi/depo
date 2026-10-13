@@ -14,7 +14,7 @@ name: Weekly database backup
 #   gpg --decrypt smartdepo-YYYY-MM-DD.dump.gpg > smartdepo.dump
 #   pg_restore --no-owner --no-acl -d "$TARGET_URL" smartdepo.dump
 # Restoring into Postgres 16 reports one ignored error about
-# "transaction_timeout" (a 17-only setting) — harmless.
+# "transaction_timeout" (a 17+ setting) — harmless.
 
 on:
   schedule:
@@ -40,8 +40,8 @@ jobs:
             exit 1
           fi
           name="smartdepo-$(date -u +%F).dump"
-          # pg_dump must be at least the server's major version; 17 reads 16 and 17.
-          docker run --rm -e DATABASE_URL postgres:17-alpine \
+          # pg_dump must be at least the server's major version (Neon runs 18).
+          docker run --rm -e DATABASE_URL postgres:18-alpine \
             sh -c 'pg_dump --format=custom --no-owner --no-acl "$DATABASE_URL"' > "$name"
           test -s "$name"
           gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \

@@ -173,8 +173,15 @@
     {
       "idx": 24,
       "version": "7",
-      "when": 1791887595146,
-      "tag": "0024_add_movements_indexes",
+      "when": 1791887215033,
+      "tag": "0024_add_inventory_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791889115479,
+      "tag": "0025_add_movements_indexes",
       "breakpoints": true
     }
   ]

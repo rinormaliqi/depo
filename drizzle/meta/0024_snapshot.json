@@ -1,5 +1,5 @@
 {
-  "id": "f77eb58d-db8b-4c29-a74b-33f6b6ca1430",
+  "id": "d5854c20-94c4-4df0-813a-62c5d32c4fe5",
   "prevId": "919be9c3-2c11-45af-8b04-e911af3ab639",
   "version": "7",
   "dialect": "postgresql",
@@ -900,6 +900,74 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.inventory_settings": {
+      "name": "inventory_settings",
+      "schema": "",
+      "columns": {
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "consumption_window_days": {
+          "name": "consumption_window_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 30
+        },
+        "warn_cover_days": {
+          "name": "warn_cover_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 14
+        },
+        "fallback_warn_ratio": {
+          "name": "fallback_warn_ratio",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1.5
+        },
+        "outflow_reasons": {
+          "name": "outflow_reasons",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[\"sale\",\"pick\",\"remove\"]'::jsonb"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "inventory_settings_organization_id_organizations_id_fk": {
+          "name": "inventory_settings_organization_id_organizations_id_fk",
+          "tableFrom": "inventory_settings",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.invites": {
       "name": "invites",
       "schema": "",
@@ -1294,6 +1362,18 @@
         },
         "min_stock_level": {
           "name": "min_stock_level",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "max_stock_level": {
+          "name": "max_stock_level",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "warn_days": {
+          "name": "warn_days",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -1763,62 +1843,11 @@
         }
       },
       "indexes": {
-        "movements_org_created_idx": {
-          "name": "movements_org_created_idx",
+        "movements_org_idx": {
+          "name": "movements_org_idx",
           "columns": [
             {
               "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "movements_from_location_idx": {
-          "name": "movements_from_location_idx",
-          "columns": [
-            {
-              "expression": "from_location_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "movements_to_location_idx": {
-          "name": "movements_to_location_idx",
-          "columns": [
-            {
-              "expression": "to_location_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "movements_item_idx": {
-          "name": "movements_item_idx",
-          "columns": [
-            {
-              "expression": "item_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

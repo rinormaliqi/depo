@@ -337,6 +337,11 @@ export const items = pgTable(
     // "low stock" indicator reads this, not a custom field, since it's a
     // structural inventory concept every tenant needs the same shape for).
     minStockLevel: integer("min_stock_level"),
+    // Above this the item counts as overstocked (🟣); null = no ceiling (#218).
+    maxStockLevel: integer("max_stock_level"),
+    // Overrides the company's inventory_settings.warn_cover_days for this
+    // item: how many days of cover before the minimum turns it 🟡.
+    warnDays: integer("warn_days"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
@@ -404,6 +409,23 @@ export const itemCustomFieldValues = pgTable(
     index("item_custom_field_values_field_idx").on(table.fieldDefinitionId),
   ],
 );
+
+// The company's rules for an item's stock status (#217/#218). No row means
+// the defaults below — the table only holds what an admin changed.
+export const inventorySettings = pgTable("inventory_settings", {
+  organizationId: uuid("organization_id")
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  // Days of movements the consumption rate is averaged over.
+  consumptionWindowDays: integer("consumption_window_days").notNull().default(30),
+  // An item reaching its minimum within this many days is 🟡 "draining".
+  warnCoverDays: integer("warn_cover_days").notNull().default(14),
+  // With no consumption history yet, 🟡 means below min × this.
+  fallbackWarnRatio: real("fallback_warn_ratio").notNull().default(1.5),
+  // Which movement reasons count as stock being used up.
+  outflowReasons: jsonb("outflow_reasons").$type<string[]>().notNull().default(["sale", "pick", "remove"]),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
 
 export const stock = pgTable(
   "stock",

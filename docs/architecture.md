@@ -23,8 +23,23 @@ marketing site) actually shows up — not before.
 ## Data layer
 
 - **Postgres**, single database, multi-tenant via an `organization_id` column scoped in every
-  query (row-level scoping in app code; Postgres RLS is a hardening option for later, not
-  MVP).
+  query in app code, with Postgres row-level security being added underneath it (#228, below).
+- **Row-level security (#228), phased.** Phase 1 (`drizzle/0026_rls_policies.sql`): a
+  `NOLOGIN` role `app_user` and a `tenant_isolation` policy on the 14 company tables, either
+  by their own `organization_id` (`facilities`, `items`, `movements`, `item_custom_field_definitions`,
+  `inventory_settings`, `invites`, `payments`, `contracts`, `memberships`) or through their
+  facility/item (`locations`, `facility_levels`, `facility_underlays`, `item_custom_field_values`,
+  `stock`). The policies read the company from `app.org_id` (`app_current_org_id()`), set per
+  transaction after `SET LOCAL ROLE app_user`. Unset means no rows: deny by default.
+  `memberships` also shows a person their own rows in other companies (`app.user_id`), for the
+  company switcher. **Nothing changes for the app yet:** it connects as the tables' owner, and an
+  owner bypasses RLS (not `FORCE`d). Phase 2 routes company-scoped code through a transaction
+  helper that switches to `app_user`. Phase 3 makes `app_user` the app's login, and only the
+  paths that legitimately work across companies (`/internal`, sign-in/up, invites by token, the
+  Paysera callback, migrations) keep the owner connection. Tables without a company
+  (`users`, `organizations`, `plans`, `rate_limit_events`, `contact_messages`,
+  `admin_audit_log`, `admin_view_as_sessions`, `email_*`, `password_resets`) stay outside RLS.
+  `src/tests/rls.test.ts` checks every policy, both reads and writes.
 - **Location tree:** plain adjacency list (`locations.parent_id`), queried with a recursive
   CTE. Handles thousands of nodes per company with no special extension. Explicitly rejected:
   `ltree`, nested sets, closure tables — solving a scale problem this product doesn't have.

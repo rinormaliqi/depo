@@ -183,6 +183,13 @@
       "when": 1791889115479,
       "tag": "0025_add_movements_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791901796478,
+      "tag": "0026_rls_policies",
+      "breakpoints": true
     }
   ]
 }

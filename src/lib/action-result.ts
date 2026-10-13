@@ -19,13 +19,19 @@ import { UserError } from "@/lib/user-error";
 // failure.
 export type ActionResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
+// redirect() and notFound() work by throwing; these are navigations, not
+// failures, and must reach Next untouched.
+export function isNavigationError(e: unknown): boolean {
+  const digest = (e as { digest?: unknown })?.digest;
+  return typeof digest === "string" && (digest.startsWith("NEXT_REDIRECT") || digest === "NEXT_NOT_FOUND" || digest.startsWith("NEXT_HTTP_ERROR_FALLBACK"));
+}
+
 export async function attempt<T>(fn: () => Promise<T>, actionName?: string): Promise<ActionResult<T>> {
   try {
     return { ok: true, value: await fn() };
   } catch (e) {
     // redirect()/notFound() work by throwing; those must keep propagating.
-    const digest = (e as { digest?: unknown })?.digest;
-    if (typeof digest === "string" && (digest.startsWith("NEXT_REDIRECT") || digest === "NEXT_NOT_FOUND")) throw e;
+    if (isNavigationError(e)) throw e;
     if (e instanceof UserError) return { ok: false, error: e.message };
     Sentry.captureException(e, { tags: { action: actionName ?? "unknown" } });
     console.error(`[action${actionName ? ` ${actionName}` : ""}]`, e);

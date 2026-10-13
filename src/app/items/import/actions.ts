@@ -10,6 +10,7 @@ import { getFieldDefinitions, type FieldDefinition } from "@/lib/custom-fields";
 import { MAX_IMPORT_CHARS, parseItemsText, type ImportError, type ImportRow } from "@/lib/import-items";
 import { requirePermission } from "@/lib/permissions";
 import { UserError } from "@/lib/user-error";
+import { inOrg } from "@/lib/tenant";
 
 // Two steps on purpose: the preview is the only confirmation there is,
 // so nothing may be written until the user has seen "N new, M updated,
@@ -64,7 +65,7 @@ async function previewItemsImportImpl(text: string): Promise<ImportPreview> {
 }
 
 export async function previewItemsImport(text: string) {
-  return attempt(() => previewItemsImportImpl(text), "previewItemsImport");
+  return attempt(() => inOrg(() => previewItemsImportImpl(text)), "previewItemsImport");
 }
 
 const CHUNK = 500;
@@ -138,5 +139,5 @@ async function commitItemsImportImpl(text: string) {
 }
 
 export async function commitItemsImport(text: string) {
-  return attempt(() => commitItemsImportImpl(text), "commitItemsImport");
+  return attempt(() => inOrg(() => commitItemsImportImpl(text)), "commitItemsImport");
 }

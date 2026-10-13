@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { organizations, users } from "@/db/schema";
+import { activeTenant } from "@/db/tenant-context";
 import { currentOrganization } from "@/lib/organizations";
 import { UserError } from "@/lib/user-error";
 
@@ -35,6 +36,11 @@ export async function getValidUserId(): Promise<string | null> {
 // src/lib/organizations.ts (cookie, validated against memberships), so a
 // user in several companies acts in the one they picked.
 export async function getMySession() {
+  // Inside withOrg() (src/lib/tenant.ts) the session was resolved on the
+  // way in, and the transaction is scoped to it — answer from there.
+  const tenant = activeTenant();
+  if (tenant) return { userId: tenant.userId, organizationId: tenant.organizationId, role: tenant.role };
+
   const userId = await getValidUserId();
   if (!userId) return null;
 

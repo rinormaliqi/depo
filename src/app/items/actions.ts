@@ -11,34 +11,39 @@ import { requirePermission } from "@/lib/permissions";
 import { requireOrgId } from "@/lib/session";
 import { UserError } from "@/lib/user-error";
 import { MAX_FIELD_CHARS } from "@/lib/import-table";
+import { inOrg } from "@/lib/tenant";
 
 export type ItemRow = typeof items.$inferSelect;
 
 export async function getMyItems() {
-  const organizationId = await requireOrgId();
-  return db.select().from(items).where(eq(items.organizationId, organizationId)).orderBy(items.name);
+  return inOrg(async () => {
+    const organizationId = await requireOrgId();
+    return db.select().from(items).where(eq(items.organizationId, organizationId)).orderBy(items.name);
+  });
 }
 
 // The catalogue page's list: each item with what's on the floor across
 // the company's facilities, so "can I remove this?" is answered before
 // the click.
 export async function getMyItemsWithStock() {
-  const organizationId = await requireOrgId();
-  return db
-    .select({
-      id: items.id,
-      name: items.name,
-      sku: items.sku,
-      category: items.category,
-      unitOfMeasure: items.unitOfMeasure,
-      minStockLevel: items.minStockLevel,
-      inStock: sql<number>`coalesce(sum(${stock.quantity}), 0)::int`,
-    })
-    .from(items)
-    .leftJoin(stock, eq(stock.itemId, items.id))
-    .where(eq(items.organizationId, organizationId))
-    .groupBy(items.id)
-    .orderBy(items.name);
+  return inOrg(async () => {
+    const organizationId = await requireOrgId();
+    return db
+      .select({
+        id: items.id,
+        name: items.name,
+        sku: items.sku,
+        category: items.category,
+        unitOfMeasure: items.unitOfMeasure,
+        minStockLevel: items.minStockLevel,
+        inStock: sql<number>`coalesce(sum(${stock.quantity}), 0)::int`,
+      })
+      .from(items)
+      .leftJoin(stock, eq(stock.itemId, items.id))
+      .where(eq(items.organizationId, organizationId))
+      .groupBy(items.id)
+      .orderBy(items.name);
+  });
 }
 export type ItemWithStock = Awaited<ReturnType<typeof getMyItemsWithStock>>[number];
 
@@ -60,56 +65,58 @@ type ItemValues = { name?: string; unitOfMeasure?: string; sku?: string; categor
 type FormState = { error?: string; created?: { name: string; at: number }; values?: ItemValues } | undefined;
 
 export async function createItem(_prevState: FormState, formData: FormData): Promise<FormState> {
-  let organizationId: string;
-  try {
-    organizationId = (await requirePermission("manageItems")).organizationId;
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : String(e), values: readValues(formData) };
-  }
-
-  const name = formData.get("name")?.toString().trim();
-  const unitOfMeasure = formData.get("unitOfMeasure")?.toString().trim();
-  const sku = formData.get("sku")?.toString().trim();
-  const category = formData.get("category")?.toString().trim();
-  const values: ItemValues = { name, unitOfMeasure, sku, category };
-
-  if (!name || !unitOfMeasure) {
-    const t = await getTranslations("items");
-    return { error: t("errorRequired"), values };
-  }
-  if (tooLong(name, unitOfMeasure, sku, category)) {
-    const t = await getTranslations("items");
-    return { error: t("errorTooLong", { max: MAX_FIELD_CHARS }), values };
-  }
-
-  // Written in the same transaction as the item row itself — a required
-  // custom field left blank refuses the whole creation and rolls the item
-  // insert back too, rather than creating the item and only then failing
-  // to record the value it was supposed to have from the start (#176).
-  const fieldDefs = await getFieldDefinitions(organizationId);
-  const customValues: Record<string, string> = {};
-  for (const def of fieldDefs) customValues[def.id] = formData.get(`custom_${def.id}`)?.toString() ?? "";
-
-  try {
-    await db.transaction(async (tx) => {
-      const [row] = await tx
-        .insert(items)
-        .values({ organizationId, name, unitOfMeasure, sku: sku || null, category: category || null })
-        .returning();
-      if (fieldDefs.length > 0) await applyItemValues(tx, row.id, fieldDefs, customValues);
-    });
-  } catch (e) {
-    if (isSkuTaken(e)) {
-      const t = await getTranslations("items");
-      return { error: t("errorSkuTaken", { sku: sku ?? "" }), values };
+  return inOrg(async () => {
+    let organizationId: string;
+    try {
+      organizationId = (await requirePermission("manageItems")).organizationId;
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : String(e), values: readValues(formData) };
     }
-    if (e instanceof UserError) return { error: e.message, values };
-    throw e;
-  }
 
-  revalidatePath("/items");
-  // `at` makes each success distinct, so the form's toast fires per submit.
-  return { created: { name, at: Date.now() } };
+    const name = formData.get("name")?.toString().trim();
+    const unitOfMeasure = formData.get("unitOfMeasure")?.toString().trim();
+    const sku = formData.get("sku")?.toString().trim();
+    const category = formData.get("category")?.toString().trim();
+    const values: ItemValues = { name, unitOfMeasure, sku, category };
+
+    if (!name || !unitOfMeasure) {
+      const t = await getTranslations("items");
+      return { error: t("errorRequired"), values };
+    }
+    if (tooLong(name, unitOfMeasure, sku, category)) {
+      const t = await getTranslations("items");
+      return { error: t("errorTooLong", { max: MAX_FIELD_CHARS }), values };
+    }
+
+    // Written in the same transaction as the item row itself — a required
+    // custom field left blank refuses the whole creation and rolls the item
+    // insert back too, rather than creating the item and only then failing
+    // to record the value it was supposed to have from the start (#176).
+    const fieldDefs = await getFieldDefinitions(organizationId);
+    const customValues: Record<string, string> = {};
+    for (const def of fieldDefs) customValues[def.id] = formData.get(`custom_${def.id}`)?.toString() ?? "";
+
+    try {
+      await db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(items)
+          .values({ organizationId, name, unitOfMeasure, sku: sku || null, category: category || null })
+          .returning();
+        if (fieldDefs.length > 0) await applyItemValues(tx, row.id, fieldDefs, customValues);
+      });
+    } catch (e) {
+      if (isSkuTaken(e)) {
+        const t = await getTranslations("items");
+        return { error: t("errorSkuTaken", { sku: sku ?? "" }), values };
+      }
+      if (e instanceof UserError) return { error: e.message, values };
+      throw e;
+    }
+
+    revalidatePath("/items");
+    // `at` makes each success distinct, so the form's toast fires per submit.
+    return { created: { name, at: Date.now() } };
+  });
 }
 
 function readValues(formData: FormData): ItemValues {
@@ -178,7 +185,7 @@ async function updateItemImpl(itemId: string, patch: ItemPatch) {
 }
 
 export async function updateItem(itemId: string, patch: ItemPatch) {
-  return attempt(() => updateItemImpl(itemId, patch), "updateItem");
+  return attempt(() => inOrg(() => updateItemImpl(itemId, patch)), "updateItem");
 }
 
 // An item is only removable while nothing ever happened to it: stock on
@@ -210,5 +217,5 @@ async function deleteItemImpl(itemId: string) {
 }
 
 export async function deleteItem(itemId: string) {
-  return attempt(() => deleteItemImpl(itemId), "deleteItem");
+  return attempt(() => inOrg(() => deleteItemImpl(itemId)), "deleteItem");
 }

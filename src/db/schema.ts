@@ -477,7 +477,17 @@ export const movements = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
-    index("movements_org_idx").on(table.organizationId),
+    // Every history list (scanner, bin panel, metrics) is "this org's
+    // movements, newest first", so org + createdAt together lets Postgres
+    // read them in order instead of sorting the org's whole history. It
+    // also covers the org-only lookups the old single-column index served.
+    index("movements_org_created_idx").on(table.organizationId, table.createdAt),
+    // The bin filters (from OR to a set of bins) and the item "has it ever
+    // moved" check — and the FKs themselves: deleting a location sets these
+    // to null, which without an index is a scan of the whole table.
+    index("movements_from_location_idx").on(table.fromLocationId),
+    index("movements_to_location_idx").on(table.toLocationId),
+    index("movements_item_idx").on(table.itemId),
     // Epic A4: the platform overview's "most active organizations" ranks
     // by movement count in a recent window across every org, not one —
     // the existing org-scoped index doesn't help a query that filters by

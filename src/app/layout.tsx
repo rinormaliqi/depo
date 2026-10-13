@@ -1,4 +1,5 @@
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
@@ -49,6 +50,10 @@ export default async function RootLayout({
             cross-site identifier — declared in the privacy policy
             (src/content/legal.ts). Renders nothing outside Vercel. */}
         <Analytics />
+        {/* Vercel Speed Insights: Web Vitals per route, same terms as
+            above (no cookies, declared in the privacy policy). Served from
+            /_vercel on our own origin, so the CSP needs no new host. */}
+        <SpeedInsights />
       </body>
     </html>
   );

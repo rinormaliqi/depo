@@ -545,7 +545,11 @@ async function addSectorImpl(facilityId: string) {
   return created;
 }
 
+// facilityId comes from the caller, not from the existing bins: a rack
+// reduced to 1×1 has no bins left, so growing it again had nothing to
+// read it from and the insert failed on a null facility_id.
 async function reshapeGrid(
+  facilityId: string,
   parentId: string,
   code: string,
   currentLevels: number,
@@ -587,7 +591,7 @@ async function reshapeGrid(
     for (let bay = 1; bay <= newBays; bay++) {
       if (!existingKeys.has(`${level}-${bay}`)) {
         toAdd.push({
-          facilityId: children[0]?.facilityId,
+          facilityId,
           parentId,
           kind: "bin" as LocationKind,
           name: binLabel,
@@ -601,7 +605,7 @@ async function reshapeGrid(
           levels: 1,
           bay,
           level,
-        } as typeof locations.$inferInsert);
+        });
       }
     }
   }
@@ -738,7 +742,7 @@ async function updateEntityImpl(
       await assertCanAddBins(location.organizationId, binDelta);
     }
 
-    await reshapeGrid(id, code, location.levels, newBays, newLevels);
+    await reshapeGrid(location.facilityId, id, code, location.levels, newBays, newLevels);
 
     values.bays = newBays;
     values.levels = newLevels;
@@ -1066,7 +1070,7 @@ async function addLevelImpl(facilityId: string, extendRacks: boolean) {
     const storeRacks = racks.filter((r) => LOCATION_TYPES[r.kind as LocationKind].spatial === "store" && !r.isBin);
     await assertCanAddBins(facility.organizationId, storeRacks.reduce((n, r) => n + r.bays, 0));
     for (const rack of storeRacks) {
-      await reshapeGrid(rack.id, rack.code ?? rack.name, rack.levels, rack.bays, level.index);
+      await reshapeGrid(facilityId, rack.id, rack.code ?? rack.name, rack.levels, rack.bays, level.index);
       await db.update(locations).set({ levels: level.index }).where(eq(locations.id, rack.id));
     }
   }
@@ -1092,7 +1096,7 @@ async function removeTopLevelImpl(facilityId: string) {
     .from(locations)
     .where(and(eq(locations.facilityId, facilityId), eq(locations.levels, removed.index)));
   for (const rack of racks) {
-    await reshapeGrid(rack.id, rack.code ?? rack.name, rack.levels, rack.bays, removed.index - 1);
+    await reshapeGrid(facilityId, rack.id, rack.code ?? rack.name, rack.levels, rack.bays, removed.index - 1);
     await db.update(locations).set({ levels: removed.index - 1 }).where(eq(locations.id, rack.id));
   }
   revalidatePath("/builder");

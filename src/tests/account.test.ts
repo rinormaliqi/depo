@@ -4,10 +4,10 @@ import { before, describe, test } from "node:test";
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { emailChanges, memberships, organizations, users } from "@/db/schema";
+import { emailChanges, itemCustomFieldDefinitions, itemCustomFieldValues, memberships, organizations, users } from "@/db/schema";
 import { changePassword, confirmEmailChange, deleteAccount, requestEmailChange, signOutEverywhere, updateName } from "@/lib/account";
 import { getMySession, getValidUserId } from "@/lib/session";
-import { addMember, createOrg, createUser, seedPlans } from "@/test-support/factories";
+import { addMember, createItem, createOrg, createUser, seedPlans } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
 
 describe("account settings", () => {
@@ -107,5 +107,19 @@ describe("account settings", () => {
     assert.match(scrubbed.email, /^deleted-.*@deleted\.invalid$/);
     assert.equal(scrubbed.passwordHash, null);
     assert.equal((await db.select().from(memberships).where(eq(memberships.userId, other.id))).length, 1);
+  });
+
+  test("a sole-member company with custom item fields is deleted too", async () => {
+    const { org } = await createOrg();
+    const me = await addMember(org.id, "admin");
+    const item = await createItem(org.id);
+    const [field] = await db.insert(itemCustomFieldDefinitions).values({ organizationId: org.id, key: "color", label: "Color", type: "text" }).returning();
+    await db.insert(itemCustomFieldValues).values({ itemId: item.id, fieldDefinitionId: field.id, value: "red" });
+
+    await deleteAccount(me.id);
+
+    assert.equal((await db.select().from(organizations).where(eq(organizations.id, org.id))).length, 0);
+    assert.equal((await db.select().from(itemCustomFieldDefinitions).where(eq(itemCustomFieldDefinitions.organizationId, org.id))).length, 0);
+    assert.equal((await db.select().from(itemCustomFieldValues).where(eq(itemCustomFieldValues.fieldDefinitionId, field.id))).length, 0);
   });
 });

@@ -4,7 +4,7 @@ import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import {
-  contactMessages, emailChanges, facilities, invites, items, locations, memberships, movements, organizations, payments, stock, users,
+  contactMessages, emailChanges, facilities, invites, itemCustomFieldDefinitions, items, locations, memberships, movements, organizations, payments, stock, users,
 } from "@/db/schema";
 import { appBaseUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email";
@@ -119,6 +119,9 @@ export async function deleteAccount(userId: string) {
       }
       await tx.delete(facilities).where(eq(facilities.organizationId, orgId));
       await tx.delete(items).where(eq(items.organizationId, orgId));
+      // Not cascaded from organizations, so it has to go before the org row;
+      // the values themselves cascade from items and from the definitions.
+      await tx.delete(itemCustomFieldDefinitions).where(eq(itemCustomFieldDefinitions.organizationId, orgId));
       await tx.delete(invites).where(eq(invites.organizationId, orgId));
       await tx.delete(payments).where(eq(payments.organizationId, orgId));
       await tx.delete(memberships).where(eq(memberships.organizationId, orgId));

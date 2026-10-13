@@ -28,6 +28,11 @@ input[type="number"] {
    desktop rendering is unchanged. */
 
 .app-header { position: relative; }
+/* Builder: the replace dialog's keep-structure choice, and Clear the plan. */
+.keep-structure { display: flex; gap: 9px; align-items: flex-start; margin: 4px 0 12px; font-size: 13px; cursor: pointer; }
+.keep-structure input { margin-top: 3px; flex: none; }
+.keep-structure-hint { display: block; margin-top: 3px; font-size: 11px; color: color-mix(in srgb, var(--color-text) 60%, transparent); }
+.clear-floor-btn { color: var(--color-danger-500); }
 .app-header-toggle { display: none; }
 
 /* Desktop header: one row from 1024px. The search shrinks first;

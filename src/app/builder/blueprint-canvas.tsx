@@ -33,6 +33,7 @@ const duplicateEntity = unwrap(rawActions.duplicateEntity);
 const restoreEntity = unwrap(rawActions.restoreEntity);
 const updateEntity = unwrap(rawActions.updateEntity);
 const updateFacility = unwrap(rawActions.updateFacility);
+const clearFloor = unwrap(rawActions.clearFloor);
 
 const PPM = 26;
 // Zoom runs from MIN_ZOOM to MAX_ZOOM, except that a floor too big to fit at
@@ -245,6 +246,10 @@ export function BlueprintCanvas({
   // Metres, as typed; a real building's column grid is commonly 6–12 m.
   const [pillarDraft, setPillarDraft] = useState({ spacingX: "8", spacingY: "8", size: "0.5", offsetX: "8", offsetY: "8", scope: "floor" as "floor" | "zone" });
   const [confirmTemplate, setConfirmTemplate] = useState<TemplateKey | null>(null);
+  // Whether a template/wizard replace keeps the existing walls, docks, doors
+  // and columns. Off unless chosen: a previous template's structure kept
+  // under a new one is how floors ended up mixed.
+  const [keepStructure, setKeepStructure] = useState(false);
   const [floorDraft, setFloorDraft] = useState({
     name: facility.name,
     widthM: String(facility.widthM),
@@ -1067,17 +1072,18 @@ export function BlueprintCanvas({
     }
   }
 
-  const hasScheme = locations.some((l) => LOCATION_TYPES[l.kind as LocationKind].spatial !== "fixture");
+  const structureCount = locations.filter((l) => LOCATION_TYPES[l.kind as LocationKind].spatial === "fixture").length;
 
+  // Anything on the floor — scheme or only structure — asks first.
   function chooseWizard(layout: ParametricLayout, floor: { widthM: number; heightM: number } | null) {
-    if (hasScheme) { setConfirmWizard({ layout, floor }); return; }
+    if (locations.length > 0) { setKeepStructure(false); setConfirmWizard({ layout, floor }); return; }
     void runWizard(layout, floor, false);
   }
 
   async function runWizard(layout: ParametricLayout, floor: { widthM: number; heightM: number } | null, replace: boolean) {
     setBusy(true);
     try {
-      await applyParametric(facility.id, layout, floor, replace);
+      await applyParametric(facility.id, layout, floor, replace, keepStructure);
       if (floor) setFacility((f) => ({ ...f, ...floor }));
       await reload();
       setLevels(await rawActions.getFacilityLevels(facility.id));
@@ -1095,6 +1101,7 @@ export function BlueprintCanvas({
 
   function chooseTemplate(key: TemplateKey) {
     if (locations.length > 0) {
+      setKeepStructure(false);
       setConfirmTemplate(key);
       return;
     }
@@ -1104,7 +1111,7 @@ export function BlueprintCanvas({
   async function runTemplate(key: TemplateKey, replace: boolean) {
     setBusy(true);
     try {
-      await applyTemplate(facility.id, key, replace);
+      await applyTemplate(facility.id, key, replace, keepStructure);
       await reload();
       setSelectedId(null);
       setTemplatesOpen(false);
@@ -1126,6 +1133,28 @@ export function BlueprintCanvas({
       clearHistory();
     } catch (e) {
       notify.error(e instanceof Error ? e.message : t("error.couldntAdd"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleClearFloor() {
+    const ok = await confirm({
+      title: t("clearFloor.title"),
+      body: t("clearFloor.body", { n: locations.length }),
+      confirmLabel: t("clearFloor.confirm"),
+      danger: true,
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await clearFloor(facility.id);
+      await reload();
+      setSelectedId(null);
+      clearHistory();
+      notify.success(t("clearFloor.done"));
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : t("error.couldntDelete"));
     } finally {
       setBusy(false);
     }
@@ -1558,6 +1587,9 @@ export function BlueprintCanvas({
             <>
               <button className="btn btn-secondary btn-block" onClick={() => setFloorOpen(true)}>{t("editFloor")}</button>
               <button className="btn btn-secondary btn-block" onClick={() => setTemplatesOpen(true)}>{t("templatesButton")}</button>
+              <button className="btn btn-ghost btn-block clear-floor-btn" onClick={handleClearFloor} disabled={busy || locations.length === 0} title={t("clearFloor.hint")}>
+                {t("clearFloor.button")}
+              </button>
               <Link href="/builder/import" className="btn btn-ghost btn-block" style={{ fontSize: 12 }}>{t("importLink")}</Link>
             </>
           )}
@@ -2372,7 +2404,7 @@ export function BlueprintCanvas({
         <LayoutWizard
           floor={{ widthM: facility.widthM, heightM: facility.heightM }}
           structure={locations}
-          hasScheme={hasScheme}
+          hasScheme={locations.length > 0}
           busy={busy}
           onCancel={() => setWizardOpen(false)}
           onGenerate={chooseWizard}
@@ -2384,7 +2416,16 @@ export function BlueprintCanvas({
           <div className="dialog blueprint">
             <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
             <div className="dialog-title">{t("confirmReplaceTitle")}</div>
-            <div className="dialog-body">{t("confirmReplaceBody")}</div>
+            <div className="dialog-body">{t("confirmReplaceBodyClean")}</div>
+            {structureCount > 0 && (
+              <label className="keep-structure">
+                <input type="checkbox" checked={keepStructure} onChange={(e) => setKeepStructure(e.target.checked)} />
+                <span>
+                  {t("keepStructure.label", { n: structureCount })}
+                  <span className="keep-structure-hint">{t("keepStructure.hint")}</span>
+                </span>
+              </label>
+            )}
             <div className="dialog-actions">
               <button className="btn btn-secondary" onClick={() => setConfirmWizard(null)} style={{ flex: 1 }}>{t("cancel")}</button>
               <button className="btn btn-primary" onClick={() => runWizard(confirmWizard.layout, confirmWizard.floor, true)} disabled={busy} style={{ flex: 1 }}>{t("confirmReplace")}</button>
@@ -2450,7 +2491,16 @@ export function BlueprintCanvas({
           <div className="dialog blueprint">
             <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
             <div className="dialog-title">{t("confirmReplaceTitle")}</div>
-            <div className="dialog-body">{t("confirmReplaceBody")}</div>
+            <div className="dialog-body">{t("confirmReplaceBodyClean")}</div>
+            {structureCount > 0 && (
+              <label className="keep-structure">
+                <input type="checkbox" checked={keepStructure} onChange={(e) => setKeepStructure(e.target.checked)} />
+                <span>
+                  {t("keepStructure.label", { n: structureCount })}
+                  <span className="keep-structure-hint">{t("keepStructure.hint")}</span>
+                </span>
+              </label>
+            )}
             <div className="dialog-actions">
               <button className="btn btn-secondary" onClick={() => setConfirmTemplate(null)} style={{ flex: 1 }}>{t("cancel")}</button>
               <button className="btn btn-primary" onClick={() => runTemplate(confirmTemplate, true)} disabled={busy} style={{ flex: 1 }}>{t("confirmReplace")}</button>

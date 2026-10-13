@@ -701,6 +701,9 @@
     "confirmReplaceTitle": "Të zëvendësohet skema aktuale?",
     "confirmReplaceBody": "Abonimi yt i jep kësaj depoje një skemë të vetme. Aplikimi i një shablloni zëvendëson zonat, korridoret dhe ruajtjen në planimetri tani dhe nuk mund të kthehet mbrapsht — vetë objekti (mure, shtylla, doke, dyer, dritare, ventilime) ruhet, dhe raftet e reja vendosen rreth tij. Gjithmonë mund të kthehesh këtu dhe të kalosh te një planimetri bosh ose një shabllon tjetër më vonë.",
     "confirmReplace": "Zëvendëso skemën",
+    "confirmReplaceBodyClean": "Kjo fshin gjithë planin aktual — zonat, korridoret, raftet dhe kutitë — dhe vendos të riun. Nuk mund të kthehet mbrapsht. Vendndodhjet me stok nuk fshihen kurrë: nëse ka, zbatimi refuzohet.",
+    "keepStructure": { "label": "Mbaj strukturën e ndërtesës ({n} elemente: mure, doke, dyer, shtylla…)", "hint": "Zgjidhe vetëm nëse i ke vizatuar vetë sipas ndërtesës reale. Struktura e një shablloni të mëparshëm do të përzihej me të renë." },
+    "clearFloor": { "button": "Pastro planin", "hint": "Fshin të gjitha elementet dhe e lë planimetrinë bosh", "title": "Të pastrohet gjithë plani?", "body": "Fshihen të {n} elementet — zonat, raftet, kutitë, muret, doket, dyert dhe shtyllat. Përmasat, nivelet dhe plani i objektit (underlay) mbeten. Nuk mund të kthehet mbrapsht.", "confirm": "Pastro planin", "done": "Plani u pastrua" },
     "stocked": "me stok",
     "empty": "bosh",
     "fillLevel": "Niveli i mbushjes",
@@ -788,6 +791,7 @@
       "deleteHasStock": "Nuk mund të fshihet — kjo ka ende stok. Hiqe stokun fillimisht.",
       "confirmationRequired": "Kjo planimetri ka tashmë një skemë — konfirmo para se ta zëvendësosh",
       "replaceHasStock": "Nuk mund të zëvendësohet skema — disa vendndodhje kanë ende stok. Pastroje fillimisht.",
+      "clearHasStock": "Plani nuk mund të pastrohet — disa kuti kanë ende stok. Zhvendose ose hiqe stokun fillimisht.",
       "couldntAdd": "Nuk u shtua dot",
       "couldntSave": "Ndryshimi nuk u ruajt dot",
       "couldntDelete": "Nuk u fshi dot",
@@ -869,7 +873,7 @@
         "spacingX": "Hapësira horizontalisht (m)",
         "spacingY": "Hapësira vertikalisht (m)",
         "size": "Madhësia e shtyllës (m)",
-        "kept": "{n} elemente strukturore që janë tashmë në planimetri ruhen dhe ndërtohet rreth tyre."
+        "kept": "Në planimetri ka {n} elemente strukturore (mure, doke, dyer…). Para gjenerimit zgjedh nëse mbahen apo fshihen."
       },
       "storage": {
         "body": "Si ndahet ruajtja. Çdo zonë mbushet me aq rreshta raftesh sa hyjnë realisht.",

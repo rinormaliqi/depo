@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
+import { activeTenant } from "./tenant-context";
 
 type Db = ReturnType<typeof drizzle<typeof schema>>;
 type Client = ReturnType<typeof postgres>;
@@ -44,22 +45,38 @@ export async function closeDb() {
 // route module while collecting page data, on a machine that has no
 // DATABASE_URL, and used to fail right there. Nothing touches the
 // database until a request actually runs a query.
-export const db: Db = new Proxy({} as Db, {
+function poolInstance(): Db {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is not set");
+  }
+  // Editing .env reloads the dev server too; a cached pool would otherwise
+  // keep talking to the database named by the previous value. The old pool
+  // is closed in the background so its connections are not leaked either.
+  if (cache.instance && cache.url !== connectionString) {
+    void cache.client?.end();
+    cache.instance = null;
+    cache.client = null;
+  }
+  return (cache.instance ??= connect(connectionString));
+}
+
+// The pool itself, never a company transaction — for withOrg() to open one
+// on, and for code that must work across companies.
+export const pool: Db = new Proxy({} as Db, {
   get(_target, prop) {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error("DATABASE_URL is not set");
-    }
-    // Editing .env reloads the dev server too; a cached pool would otherwise
-    // keep talking to the database named by the previous value. The old pool
-    // is closed in the background so its connections are not leaked either.
-    if (cache.instance && cache.url !== connectionString) {
-      void cache.client?.end();
-      cache.instance = null;
-      cache.client = null;
-    }
-    const instance = (cache.instance ??= connect(connectionString));
+    const instance = poolInstance();
     const value = Reflect.get(instance, prop);
     return typeof value === "function" ? value.bind(instance) : value;
+  },
+});
+
+// Inside withOrg() (src/lib/tenant.ts), `db` is that company's transaction,
+// running as app_user under row-level security; anywhere else it is the pool.
+export const db: Db = new Proxy({} as Db, {
+  get(_target, prop) {
+    const target = (activeTenant()?.tx as Db | undefined) ?? poolInstance();
+    const value = Reflect.get(target, prop);
+    return typeof value === "function" ? value.bind(target) : value;
   },
 });

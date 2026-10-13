@@ -33,8 +33,18 @@ marketing site) actually shows up — not before.
   transaction after `SET LOCAL ROLE app_user`. Unset means no rows: deny by default.
   `memberships` also shows a person their own rows in other companies (`app.user_id`), for the
   company switcher. **Nothing changes for the app yet:** it connects as the tables' owner, and an
-  owner bypasses RLS (not `FORCE`d). Phase 2 routes company-scoped code through a transaction
-  helper that switches to `app_user`. Phase 3 makes `app_user` the app's login, and only the
+  owner bypasses RLS (not `FORCE`d). **Phase 2** (`src/lib/tenant.ts`): `withOrg(session, fn)` runs
+  fn in one transaction that does `set_config('role', 'app_user')` plus the company and person
+  in a single round trip, and parks the transaction in an `AsyncLocalStorage`
+  (`src/db/tenant-context.ts`). The `db` proxy (`src/db/index.ts`) hands out that transaction
+  while it's open, so existing code runs under RLS just by being wrapped; `pool` is always the
+  owner connection. `inOrg(fn)` is the usual wrapper: it uses the signed-in person's company and,
+  with no session, runs fn unchanged so its own auth checks refuse it as before. One action is one
+  transaction: a failure rolls back its writes, and `redirect()`/`notFound()` commit first and are
+  rethrown. Nesting reuses the open transaction, and a fire-and-forget promise still running after
+  it closed falls back to the pool. Converted so far: items (incl. custom fields, import, export),
+  stock (search, import, export), scanner, bin panel, metrics, labels. Not yet: builder, team,
+  billing, account, capabilities, onboarding. Phase 3 makes `app_user` the app's login, and only the
   paths that legitimately work across companies (`/internal`, sign-in/up, invites by token, the
   Paysera callback, migrations) keep the owner connection. Tables without a company
   (`users`, `organizations`, `plans`, `rate_limit_events`, `contact_messages`,

@@ -11,6 +11,7 @@ import { parseStockText, type StockError } from "@/lib/import-stock";
 import { MAX_IMPORT_CHARS } from "@/lib/import-table";
 import { requirePermission } from "@/lib/permissions";
 import { UserError } from "@/lib/user-error";
+import { inOrg } from "@/lib/tenant";
 
 // The inventory count, in bulk: each row is a `receive` into a bin of the
 // facility the user is in — exactly what receiveStockAt() does one scan
@@ -113,7 +114,7 @@ async function previewStockImportImpl(text: string): Promise<StockImportPreview>
 }
 
 export async function previewStockImport(text: string) {
-  return attempt(() => previewStockImportImpl(text), "previewStockImport");
+  return attempt(() => inOrg(() => previewStockImportImpl(text)), "previewStockImport");
 }
 
 async function commitStockImportImpl(text: string) {
@@ -169,5 +170,5 @@ async function commitStockImportImpl(text: string) {
 }
 
 export async function commitStockImport(text: string) {
-  return attempt(() => commitStockImportImpl(text), "commitStockImport");
+  return attempt(() => inOrg(() => commitStockImportImpl(text)), "commitStockImport");
 }

@@ -13,6 +13,7 @@ import { requireCapability } from "@/lib/capabilities";
 import { exitStockAt, moveStockAt, receiveStockAt } from "@/lib/stock";
 import { attempt } from "@/lib/action-result";
 import { UserError } from "@/lib/user-error";
+import { inOrg } from "@/lib/tenant";
 
 // What a worker can do to an item from the scanner, in one commit: bring it
 // in, send it to a different bin, or take it off the floor for good because
@@ -55,62 +56,64 @@ async function commitScanImpl(action: ScanAction, itemId: string, quantity: numb
 }
 
 export async function getRecentMovements() {
-  const { organizationId } = await requireSession();
-  const facility = await getMyFacility();
+  return inOrg(async () => {
+    const { organizationId } = await requireSession();
+    const facility = await getMyFacility();
 
-  // Scoped to the facility the user is in: the scanner page is "what just
-  // happened on this floor", and the labels are resolved against this
-  // facility's locations anyway.
-  const allLocations = facility
-    ? await db.select().from(locations).where(eq(locations.facilityId, facility.id))
-    : [];
-  const byId = new Map(allLocations.map((l) => [l.id, l]));
-  const locationIds = allLocations.map((l) => l.id);
-  if (locationIds.length === 0) return [];
+    // Scoped to the facility the user is in: the scanner page is "what just
+    // happened on this floor", and the labels are resolved against this
+    // facility's locations anyway.
+    const allLocations = facility
+      ? await db.select().from(locations).where(eq(locations.facilityId, facility.id))
+      : [];
+    const byId = new Map(allLocations.map((l) => [l.id, l]));
+    const locationIds = allLocations.map((l) => l.id);
+    if (locationIds.length === 0) return [];
 
-  const rows = await db
-    .select({
-      id: movements.id,
-      createdAt: movements.createdAt,
-      reason: movements.reason,
-      quantity: movements.quantity,
-      itemName: items.name,
-      fromLocationId: movements.fromLocationId,
-      toLocationId: movements.toLocationId,
-    })
-    .from(movements)
-    .innerJoin(items, eq(movements.itemId, items.id))
-    .where(
-      and(
-        eq(movements.organizationId, organizationId),
-        // A movement touches this floor if either end of it is one of its
-        // locations — matching just toLocationId used to silently drop
-        // every pick/sale/removal (from set, to null) from this list.
-        or(inArray(movements.toLocationId, locationIds), inArray(movements.fromLocationId, locationIds)),
-      ),
-    )
-    .orderBy(desc(movements.createdAt))
-    .limit(10);
+    const rows = await db
+      .select({
+        id: movements.id,
+        createdAt: movements.createdAt,
+        reason: movements.reason,
+        quantity: movements.quantity,
+        itemName: items.name,
+        fromLocationId: movements.fromLocationId,
+        toLocationId: movements.toLocationId,
+      })
+      .from(movements)
+      .innerJoin(items, eq(movements.itemId, items.id))
+      .where(
+        and(
+          eq(movements.organizationId, organizationId),
+          // A movement touches this floor if either end of it is one of its
+          // locations — matching just toLocationId used to silently drop
+          // every pick/sale/removal (from set, to null) from this list.
+          or(inArray(movements.toLocationId, locationIds), inArray(movements.fromLocationId, locationIds)),
+        ),
+      )
+      .orderBy(desc(movements.createdAt))
+      .limit(10);
 
-  return rows.map((m) => ({
-    id: m.id,
-    when: new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(m.createdAt),
-    reason: m.reason,
-    itemName: m.itemName,
-    quantity: m.quantity,
-    from: locationLabel(m.fromLocationId, byId),
-    to: locationLabel(m.toLocationId, byId),
-  }));
+    return rows.map((m) => ({
+      id: m.id,
+      when: new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(m.createdAt),
+      reason: m.reason,
+      itemName: m.itemName,
+      quantity: m.quantity,
+      from: locationLabel(m.fromLocationId, byId),
+      to: locationLabel(m.toLocationId, byId),
+    }));
+  });
 }
 
 export async function commitScan(action: ScanAction, itemId: string, quantity: number, code: string, toCode?: string) {
-  return attempt(() => commitScanImpl(action, itemId, quantity, code, toCode), "commitScan");
+  return attempt(() => inOrg(() => commitScanImpl(action, itemId, quantity, code, toCode)), "commitScan");
 }
 
 // A printed label's QR carries the bin's URL (/builder/bin/<id>, see
@@ -142,5 +145,5 @@ async function resolveScanImpl(raw: string): Promise<{ code: string }> {
 }
 
 export async function resolveScan(raw: string) {
-  return attempt(() => resolveScanImpl(raw), "resolveScan");
+  return attempt(() => inOrg(() => resolveScanImpl(raw)), "resolveScan");
 }

@@ -17,10 +17,13 @@ import type { CustomFieldType } from "@/db/schema";
 import { requirePermission } from "@/lib/permissions";
 import { requireOrgId } from "@/lib/session";
 import { requireOwnedItem } from "@/lib/stock";
+import { inOrg } from "@/lib/tenant";
 
 export async function getMyFieldDefinitions() {
-  const organizationId = await requireOrgId();
-  return getFieldDefinitions(organizationId);
+  return inOrg(async () => {
+    const organizationId = await requireOrgId();
+    return getFieldDefinitions(organizationId);
+  });
 }
 
 // Keyed by itemId, then by fieldDefinitionId — a plain object rather than
@@ -30,14 +33,16 @@ export async function getMyFieldDefinitions() {
 // caller could otherwise hand it another company's item id and read back
 // its custom field values.
 export async function getMyItemsCustomValues(itemIds: string[]) {
-  const organizationId = await requireOrgId();
-  if (itemIds.length === 0) return {};
-  const owned = await db
-    .select({ id: items.id })
-    .from(items)
-    .where(and(eq(items.organizationId, organizationId), inArray(items.id, itemIds)));
-  const byItem = await getValuesForItems(owned.map((i) => i.id));
-  return Object.fromEntries(byItem);
+  return inOrg(async () => {
+    const organizationId = await requireOrgId();
+    if (itemIds.length === 0) return {};
+    const owned = await db
+      .select({ id: items.id })
+      .from(items)
+      .where(and(eq(items.organizationId, organizationId), inArray(items.id, itemIds)));
+    const byItem = await getValuesForItems(owned.map((i) => i.id));
+    return Object.fromEntries(byItem);
+  });
 }
 
 type FieldInput = { label: string; type: CustomFieldType; options?: string[]; required: boolean };
@@ -49,7 +54,7 @@ async function createFieldImpl(input: FieldInput) {
   return row;
 }
 export async function createField(input: FieldInput) {
-  return attempt(() => createFieldImpl(input), "createCustomField");
+  return attempt(() => inOrg(() => createFieldImpl(input)), "createCustomField");
 }
 
 async function updateFieldImpl(id: string, input: Omit<FieldInput, "type">) {
@@ -58,7 +63,7 @@ async function updateFieldImpl(id: string, input: Omit<FieldInput, "type">) {
   revalidatePath("/items");
 }
 export async function updateField(id: string, input: Omit<FieldInput, "type">) {
-  return attempt(() => updateFieldImpl(id, input), "updateCustomField");
+  return attempt(() => inOrg(() => updateFieldImpl(id, input)), "updateCustomField");
 }
 
 async function deleteFieldImpl(id: string) {
@@ -67,7 +72,7 @@ async function deleteFieldImpl(id: string) {
   revalidatePath("/items");
 }
 export async function deleteField(id: string) {
-  return attempt(() => deleteFieldImpl(id), "deleteCustomField");
+  return attempt(() => inOrg(() => deleteFieldImpl(id)), "deleteCustomField");
 }
 
 async function setValuesImpl(itemId: string, values: Record<string, string>) {
@@ -77,5 +82,5 @@ async function setValuesImpl(itemId: string, values: Record<string, string>) {
   revalidatePath("/items");
 }
 export async function setItemCustomValues(itemId: string, values: Record<string, string>) {
-  return attempt(() => setValuesImpl(itemId, values), "setItemCustomValues");
+  return attempt(() => inOrg(() => setValuesImpl(itemId, values)), "setItemCustomValues");
 }

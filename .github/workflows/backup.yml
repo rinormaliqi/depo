@@ -1,0 +1,58 @@
+name: Weekly database backup
+
+# A copy of production that lives outside Neon, so losing the Neon project
+# (account, billing, a bad migration past the PITR window) isn't losing the
+# data. The repo is public, so the dump is encrypted before it is uploaded:
+# without BACKUP_PASSPHRASE the artifact is unreadable.
+#
+# Secrets:
+#   BACKUP_DATABASE_URL  Neon's *direct* (non-pooled) connection string —
+#                        pg_dump doesn't work through the pooler.
+#   BACKUP_PASSPHRASE    long random string; keep a copy outside GitHub.
+#
+# Restore:
+#   gpg --decrypt smartdepo-YYYY-MM-DD.dump.gpg > smartdepo.dump
+#   pg_restore --no-owner --no-acl -d "$TARGET_URL" smartdepo.dump
+# Restoring into Postgres 16 reports one ignored error about
+# "transaction_timeout" (a 17-only setting) — harmless.
+
+on:
+  schedule:
+    - cron: "0 2 * * 0" # Sundays 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Dump and encrypt
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DATABASE_URL" ] || [ -z "$PASSPHRASE" ]; then
+            echo "::error::BACKUP_DATABASE_URL and BACKUP_PASSPHRASE secrets must be set"
+            exit 1
+          fi
+          name="smartdepo-$(date -u +%F).dump"
+          # pg_dump must be at least the server's major version; 17 reads 16 and 17.
+          docker run --rm -e DATABASE_URL postgres:17-alpine \
+            sh -c 'pg_dump --format=custom --no-owner --no-acl "$DATABASE_URL"' > "$name"
+          test -s "$name"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \
+            --symmetric --cipher-algo AES256 --output "$name.gpg" "$name"
+          rm "$name"
+          echo "NAME=$name.gpg" >> "$GITHUB_ENV"
+          ls -lh "$name.gpg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAME }}
+          path: ${{ env.NAME }}
+          retention-days: 90 # ~13 weekly copies
+          if-no-files-found: error

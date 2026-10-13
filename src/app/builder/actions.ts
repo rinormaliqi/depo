@@ -231,7 +231,7 @@ function gridBinRows(
 
 async function checkNoStock(
   ids: string[],
-  errorKey: "baysReduce" | "replaceHasStock" | "deleteHasStock" = "baysReduce",
+  errorKey: "baysReduce" | "replaceHasStock" | "deleteHasStock" | "clearHasStock" = "baysReduce",
 ) {
   if (ids.length === 0) return;
   const withStock = await db
@@ -339,19 +339,24 @@ async function createEntityImpl(
   return created;
 }
 
-async function applyTemplateImpl(facilityId: string, templateKey: TemplateKey, replace: boolean) {
+async function applyTemplateImpl(facilityId: string, templateKey: TemplateKey, replace: boolean, keepStructure: boolean) {
   const t = await getTranslations("builder.templateZone");
   const labels = { receiving: t("receiving"), dispatch: t("dispatch"), office: t("office") };
-  await applyGenerated(facilityId, replace, (w, h, opts) => buildTemplate(templateKey, w, h, { ...opts, labels }));
+  await applyGenerated(facilityId, replace, (w, h, opts) => buildTemplate(templateKey, w, h, { ...opts, labels }), { keepStructure });
 }
 
 // The wizard: same pipeline as a fixed template — keep the building, replace
 // the scheme, route racks around structure — driven by the user's answers.
 // Floor size is part of the answers, so it's written first; the generator
 // then runs against the new envelope.
-async function applyParametricImpl(facilityId: string, layout: ParametricLayout, floor: { widthM: number; heightM: number } | null, replace: boolean) {
+async function applyParametricImpl(
+  facilityId: string,
+  layout: ParametricLayout,
+  floor: { widthM: number; heightM: number } | null,
+  replace: boolean,
+  keepStructure: boolean,
+) {
   await requirePermission("editLayout");
-  if (floor) await updateFacilityImpl(facilityId, floor);
   const clean: ParametricLayout = {
     zones: Math.min(12, Math.max(1, Math.round(layout.zones))),
     orientation: layout.orientation === "horizontal" ? "horizontal" : "vertical",
@@ -372,38 +377,54 @@ async function applyParametricImpl(facilityId: string, layout: ParametricLayout,
     facilityLevels = await ensureLevels(facilityId);
   }
   clean.levels = Math.min(clean.levels, facilityLevels.length);
-  await applyGenerated(facilityId, replace, (w, h, opts) => buildParametric(clean, w, h, opts));
+  await applyGenerated(facilityId, replace, (w, h, opts) => buildParametric(clean, w, h, opts), { keepStructure, floor });
 }
 
 async function applyGenerated(
   facilityId: string,
   replace: boolean,
   build: (floorW: number, floorH: number, opts: TemplateOptions) => TemplateEntitySpec[],
+  {
+    keepStructure,
+    floor = null,
+  }: {
+    // Walls, columns, docks, doors, windows and vents are the building the
+    // scheme is drawn inside. Kept, they stay and the new racks are routed
+    // around them; not kept, the floor starts clean. Keeping a previous
+    // template's walls and docks is what left a smaller floor's walls and
+    // duplicate docks inside a new layout, so the caller decides.
+    keepStructure: boolean;
+    // The wizard's new floor size — saved only once the replace is allowed,
+    // so a refused apply can't leave the floor resized with the old scheme.
+    floor?: { widthM: number; heightM: number } | null;
+  },
 ) {
   await requirePermission("editLayout");
-  const facility = await requireOwnedFacility(facilityId);
+  let facility = await requireOwnedFacility(facilityId);
 
   const existing = await db.select().from(locations).where(eq(locations.facilityId, facilityId));
-  // The building survives a template: walls, columns, docks, doors, windows
-  // and vents are the structure the scheme is drawn *inside*, not part of
-  // the scheme. They stay, and the template's racks are routed around them.
-  const structure = existing.filter((l) => LOCATION_TYPES[l.kind as LocationKind].spatial === "fixture");
-  const scheme = existing.filter((l) => LOCATION_TYPES[l.kind as LocationKind].spatial !== "fixture");
-  if (scheme.length > 0) {
+  const isFixture = (l: { kind: string }) => LOCATION_TYPES[l.kind as LocationKind].spatial === "fixture";
+  const structure = keepStructure ? existing.filter(isFixture) : [];
+  const removed = keepStructure ? existing.filter((l) => !isFixture(l)) : existing;
+  if (removed.length > 0) {
     if (!replace) {
       const t = await getTranslations("builder.error");
       throw new UserError(t("confirmationRequired"));
     }
     // The scheme can be freely replaced once confirmed — but real stock is
     // never silently destroyed, confirmation or not.
-    await checkNoStock(scheme.map((l) => l.id), "replaceHasStock");
+    await checkNoStock(removed.map((l) => l.id), "replaceHasStock");
     // A dock or door drawn inside a zone reports to it (parentId), and
-    // deleting the zone would cascade to it — so the structure is detached
+    // deleting the zone would cascade to it — so kept structure is detached
     // first and re-homed into the template's zones below.
     if (structure.length > 0) {
       await db.update(locations).set({ parentId: null }).where(inArray(locations.id, structure.map((l) => l.id)));
     }
-    await db.delete(locations).where(inArray(locations.id, scheme.map((l) => l.id)));
+    await db.delete(locations).where(inArray(locations.id, removed.map((l) => l.id)));
+  }
+  if (floor) {
+    await updateFacilityImpl(facilityId, floor);
+    facility = await requireOwnedFacility(facilityId);
   }
 
   const specs = build(facility.widthM, facility.heightM, {
@@ -818,8 +839,8 @@ export async function createEntity(
   return attempt(() => createEntityImpl(facilityId, kind, xM, yM), "createEntity");
 }
 
-export async function applyTemplate(facilityId: string, templateKey: TemplateKey, replace: boolean) {
-  return attempt(() => applyTemplateImpl(facilityId, templateKey, replace), "applyTemplate");
+export async function applyTemplate(facilityId: string, templateKey: TemplateKey, replace: boolean, keepStructure = true) {
+  return attempt(() => applyTemplateImpl(facilityId, templateKey, replace, keepStructure), "applyTemplate");
 }
 
 export async function addPillarGrid(facilityId: string, zoneId: string | null, grid: PillarGridSpec) {
@@ -831,8 +852,9 @@ export async function applyParametric(
   layout: ParametricLayout,
   floor: { widthM: number; heightM: number } | null,
   replace: boolean,
+  keepStructure = true,
 ) {
-  return attempt(() => applyParametricImpl(facilityId, layout, floor, replace), "applyParametric");
+  return attempt(() => applyParametricImpl(facilityId, layout, floor, replace, keepStructure), "applyParametric");
 }
 
 export async function addSector(facilityId: string) {
@@ -855,6 +877,24 @@ export async function updateEntity(
   },
 ) {
   return attempt(() => updateEntityImpl(id, patch), "updateEntity");
+}
+
+// Empties the floor: every zone, rack, bin and fixture goes; the floor's
+// size, levels and underlay stay. Refused while any bin still holds stock,
+// like a template replace — stock is never deleted along with its bin.
+async function clearFloorImpl(facilityId: string) {
+  await requirePermission("editLayout");
+  await requireOwnedFacility(facilityId);
+  const existing = await db.select({ id: locations.id }).from(locations).where(eq(locations.facilityId, facilityId));
+  if (existing.length === 0) return { removed: 0 };
+  await checkNoStock(existing.map((l) => l.id), "clearHasStock");
+  await db.delete(locations).where(eq(locations.facilityId, facilityId));
+  revalidatePath("/builder");
+  return { removed: existing.length };
+}
+
+export async function clearFloor(facilityId: string) {
+  return attempt(() => clearFloorImpl(facilityId), "clearFloor");
 }
 
 export async function deleteEntity(id: string) {

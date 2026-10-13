@@ -701,6 +701,9 @@
     "confirmReplaceTitle": "Replace the current scheme?",
     "confirmReplaceBody": "Your subscription gives this facility one depot scheme. Applying a template replaces the zones, aisles and storage on the floor now and can't be undone — the building itself (walls, columns, docks, doors, windows, vents) stays, and the new racks are laid out around it. You can always come back and switch to a blank floor or another template later.",
     "confirmReplace": "Replace scheme",
+    "confirmReplaceBodyClean": "This removes the whole current plan — zones, aisles, racks and bins — and lays out the new one. It can't be undone. Locations holding stock are never deleted: if any do, the replace is refused.",
+    "keepStructure": { "label": "Keep the building structure ({n} elements: walls, docks, doors, columns…)", "hint": "Only if you drew them yourself to match the real building. A previous template's structure would mix with the new one." },
+    "clearFloor": { "button": "Clear the plan", "hint": "Removes every element and leaves the floor empty", "title": "Clear the whole plan?", "body": "All {n} elements go — zones, racks, bins, walls, docks, doors and columns. The floor size, levels and underlay stay. It can't be undone.", "confirm": "Clear the plan", "done": "Plan cleared" },
     "stocked": "stocked",
     "empty": "empty",
     "fillLevel": "Fill level",
@@ -788,6 +791,7 @@
       "deleteHasStock": "Can't delete — this still holds stock. Remove it first.",
       "confirmationRequired": "This floor already has a scheme — confirm before replacing it",
       "replaceHasStock": "Can't replace the scheme — some locations still hold stock. Clear it first.",
+      "clearHasStock": "The plan can't be cleared — some bins still hold stock. Move or remove it first.",
       "couldntAdd": "Couldn't add that",
       "couldntSave": "Couldn't save that change",
       "couldntDelete": "Couldn't delete that",
@@ -869,7 +873,7 @@
         "spacingX": "Spacing across (m)",
         "spacingY": "Spacing down (m)",
         "size": "Column size (m)",
-        "kept": "{n} structural elements already on the floor are kept and built around."
+        "kept": "There are {n} structural elements on the floor (walls, docks, doors…). Before generating you choose whether they stay or go."
       },
       "storage": {
         "body": "How the storage is divided. Each zone is filled with as many rows of racking as realistically fit.",

@@ -21,53 +21,58 @@ import { sendEmail } from "@/lib/email";
 import { buildPayseraPaymentUrl, getPayseraConfig } from "@/lib/paysera";
 import { requirePermission } from "@/lib/permissions";
 import { getOrgLockReason, requireSession } from "@/lib/session";
+import { inOrg, outsideOrg } from "@/lib/tenant";
 
 export async function getMyBilling() {
-  const session = await requireSession();
+  return inOrg(async () => {
+    const session = await requireSession();
 
-  const [org] = await db.select().from(organizations).where(eq(organizations.id, session.organizationId));
-  const [plan] = await db.select().from(plans).where(eq(plans.id, org.planId));
-  const usage = await getOrgUsage(session.organizationId);
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, session.organizationId));
+    const [plan] = await db.select().from(plans).where(eq(plans.id, org.planId));
+    const usage = await getOrgUsage(session.organizationId);
 
-  const activePlans = await db.select().from(plans).where(eq(plans.isActive, true)).orderBy(plans.priceCents);
-  const selfServePlans = activePlans.filter((p) => (SELF_SERVE_PLAN_KEYS as readonly string[]).includes(p.key));
-  const enterprise = activePlans.find((p) => p.key === "enterprise") ?? null;
+    const activePlans = await db.select().from(plans).where(eq(plans.isActive, true)).orderBy(plans.priceCents);
+    const selfServePlans = activePlans.filter((p) => (SELF_SERVE_PLAN_KEYS as readonly string[]).includes(p.key));
+    const enterprise = activePlans.find((p) => p.key === "enterprise") ?? null;
 
-  const history = await db
-    .select()
-    .from(payments)
-    .where(and(eq(payments.organizationId, session.organizationId), eq(payments.status, "paid")))
-    .orderBy(desc(payments.paidAt))
-    .limit(12);
+    const history = await db
+      .select()
+      .from(payments)
+      .where(and(eq(payments.organizationId, session.organizationId), eq(payments.status, "paid")))
+      .orderBy(desc(payments.paidAt))
+      .limit(12);
 
-  return {
-    org,
-    plan,
-    usage,
-    lockReason: await getOrgLockReason(session.organizationId),
-    role: session.role,
-    onlinePaymentsEnabled: getPayseraConfig() !== null,
-    // Each purchasable plan with why (if at all) the org can't move to it.
-    options: selfServePlans.map((p) => ({ plan: p, blockedBy: limitsExceeded(p, usage) })),
-    enterprisePriceCents: enterprise?.priceCents ?? null,
-    history,
-  };
+    return {
+      org,
+      plan,
+      usage,
+      lockReason: await getOrgLockReason(session.organizationId),
+      role: session.role,
+      onlinePaymentsEnabled: getPayseraConfig() !== null,
+      // Each purchasable plan with why (if at all) the org can't move to it.
+      options: selfServePlans.map((p) => ({ plan: p, blockedBy: limitsExceeded(p, usage) })),
+      enterprisePriceCents: enterprise?.priceCents ?? null,
+      history,
+    };
+  });
 }
 
 // A lighter query for the header's plan pill — avoid the usage-count joins
 // above on every single page load just to show a badge. Doubles as the
 // hook for the lazy expiry reminder, since it runs on every page view.
 export async function getBillingSummary() {
-  const session = await requireSession();
-  const [org] = await db.select().from(organizations).where(eq(organizations.id, session.organizationId));
-  const [plan] = await db.select().from(plans).where(eq(plans.id, org.planId));
-  maybeSendExpiryReminder(session.organizationId).catch((e) => console.error("[billing] reminder check failed", e));
-  return {
-    subscriptionStatus: org.subscriptionStatus,
-    trialEndsAt: org.trialEndsAt,
-    paidUntil: org.paidUntil,
-    planName: plan?.name ?? null,
-  };
+  return inOrg(async () => {
+    const session = await requireSession();
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, session.organizationId));
+    const [plan] = await db.select().from(plans).where(eq(plans.id, org.planId));
+    outsideOrg(() => maybeSendExpiryReminder(session.organizationId)).catch((e) => console.error("[billing] reminder check failed", e));
+    return {
+      subscriptionStatus: org.subscriptionStatus,
+      trialEndsAt: org.trialEndsAt,
+      paidUntil: org.paidUntil,
+      planName: plan?.name ?? null,
+    };
+  });
 }
 
 type CheckoutState = { error?: string } | undefined;
@@ -77,68 +82,70 @@ type CheckoutState = { error?: string } | undefined;
 // src/app/api/billing/paysera/callback/route.ts) — never by the return
 // redirect, which anyone could type into a browser.
 export async function startCheckout(_prevState: CheckoutState, formData: FormData): Promise<CheckoutState> {
-  const t = await getTranslations("billing.error");
-  let session: Awaited<ReturnType<typeof requireSession>>;
-  try {
-    session = await requirePermission("manageBilling");
-  } catch {
-    // A locked org must still be able to pay its way out — that's the
-    // whole point — so only the role matters here, not the lock.
-    const s = await requireSession();
-    if (s.role !== "admin") return { error: t("adminOnly") };
-    session = s;
-  }
+  return inOrg(async () => {
+    const t = await getTranslations("billing.error");
+    let session: Awaited<ReturnType<typeof requireSession>>;
+    try {
+      session = await requirePermission("manageBilling");
+    } catch {
+      // A locked org must still be able to pay its way out — that's the
+      // whole point — so only the role matters here, not the lock.
+      const s = await requireSession();
+      if (s.role !== "admin") return { error: t("adminOnly") };
+      session = s;
+    }
 
-  const config = getPayseraConfig();
-  if (!config) return { error: t("notConfigured") };
+    const config = getPayseraConfig();
+    if (!config) return { error: t("notConfigured") };
 
-  const planKey = formData.get("plan")?.toString();
-  const months = Number(formData.get("months"));
-  // Paysera is the instant-online path — 1 month only. 3/6 are a bank
-  // transfer (requestBankTransfer below) and 12 is a contract (Epic #7),
-  // neither of which is a Paysera checkout at all.
-  if (!planKey || !(SELF_SERVE_PLAN_KEYS as readonly string[]).includes(planKey) || months !== PAYSERA_MONTHS) {
-    return { error: t("invalidChoice") };
-  }
+    const planKey = formData.get("plan")?.toString();
+    const months = Number(formData.get("months"));
+    // Paysera is the instant-online path — 1 month only. 3/6 are a bank
+    // transfer (requestBankTransfer below) and 12 is a contract (Epic #7),
+    // neither of which is a Paysera checkout at all.
+    if (!planKey || !(SELF_SERVE_PLAN_KEYS as readonly string[]).includes(planKey) || months !== PAYSERA_MONTHS) {
+      return { error: t("invalidChoice") };
+    }
 
-  const [plan] = await db.select().from(plans).where(and(eq(plans.key, planKey), eq(plans.isActive, true)));
-  if (!plan) return { error: t("invalidChoice") };
+    const [plan] = await db.select().from(plans).where(and(eq(plans.key, planKey), eq(plans.isActive, true)));
+    if (!plan) return { error: t("invalidChoice") };
 
-  const usage = await getOrgUsage(session.organizationId);
-  if (limitsExceeded(plan, usage).length > 0) return { error: t("overLimits", { plan: plan.name }) };
+    const usage = await getOrgUsage(session.organizationId);
+    if (limitsExceeded(plan, usage).length > 0) return { error: t("overLimits", { plan: plan.name }) };
 
-  const [payer] = await db.select({ email: users.email }).from(users).where(eq(users.id, session.userId));
-  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, session.organizationId));
+    const [payer] = await db.select({ email: users.email }).from(users).where(eq(users.id, session.userId));
+    const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, session.organizationId));
 
-  const [payment] = await db
-    .insert(payments)
-    .values({
-      organizationId: session.organizationId,
-      planId: plan.id,
-      months,
-      amountCents: priceForPeriod(plan, months),
-      currency: BILLING_CURRENCY,
-      status: "pending",
-      provider: "paysera",
+    const [payment] = await db
+      .insert(payments)
+      .values({
+        organizationId: session.organizationId,
+        planId: plan.id,
+        months,
+        amountCents: priceForPeriod(plan, months),
+        currency: BILLING_CURRENCY,
+        status: "pending",
+        provider: "paysera",
+        payerEmail: payer?.email,
+      })
+      .returning();
+
+    const base = await appBaseUrl();
+    const locale = await getLocale();
+    const url = buildPayseraPaymentUrl(config, {
+      orderId: payment.id,
+      amountCents: payment.amountCents,
+      currency: payment.currency,
+      acceptUrl: `${base}/billing/return?payment=${payment.id}`,
+      cancelUrl: `${base}/billing?canceled=${payment.id}`,
+      callbackUrl: `${base}/api/billing/paysera/callback`,
+      payText: `SmartDepo ${plan.name} × ${months} — ${org?.name ?? ""}`.slice(0, 255),
       payerEmail: payer?.email,
-    })
-    .returning();
+      lang: locale === "sq" ? "SQI" : "ENG",
+    });
 
-  const base = await appBaseUrl();
-  const locale = await getLocale();
-  const url = buildPayseraPaymentUrl(config, {
-    orderId: payment.id,
-    amountCents: payment.amountCents,
-    currency: payment.currency,
-    acceptUrl: `${base}/billing/return?payment=${payment.id}`,
-    cancelUrl: `${base}/billing?canceled=${payment.id}`,
-    callbackUrl: `${base}/api/billing/paysera/callback`,
-    payText: `SmartDepo ${plan.name} × ${months} — ${org?.name ?? ""}`.slice(0, 255),
-    payerEmail: payer?.email,
-    lang: locale === "sq" ? "SQI" : "ENG",
+    redirect(url);
   });
-
-  redirect(url);
 }
 
 type BankTransferState = { ok?: true; error?: string } | undefined;
@@ -151,56 +158,60 @@ type BankTransferState = { ok?: true; error?: string } | undefined;
 // applyPaidPayment() path a Paysera callback uses. This is a heads-up
 // email, not a new approval step.
 export async function requestBankTransfer(_prevState: BankTransferState, formData: FormData): Promise<BankTransferState> {
-  const t = await getTranslations("billing.error");
-  let session: Awaited<ReturnType<typeof requireSession>>;
-  try {
-    session = await requirePermission("manageBilling");
-  } catch {
-    const s = await requireSession();
-    if (s.role !== "admin") return { error: t("adminOnly") };
-    session = s;
-  }
+  return inOrg(async () => {
+    const t = await getTranslations("billing.error");
+    let session: Awaited<ReturnType<typeof requireSession>>;
+    try {
+      session = await requirePermission("manageBilling");
+    } catch {
+      const s = await requireSession();
+      if (s.role !== "admin") return { error: t("adminOnly") };
+      session = s;
+    }
 
-  const planKey = formData.get("plan")?.toString();
-  const months = Number(formData.get("months"));
-  if (!planKey || !(SELF_SERVE_PLAN_KEYS as readonly string[]).includes(planKey) || !(BANK_TRANSFER_MONTHS as readonly number[]).includes(months)) {
-    return { error: t("invalidChoice") };
-  }
+    const planKey = formData.get("plan")?.toString();
+    const months = Number(formData.get("months"));
+    if (!planKey || !(SELF_SERVE_PLAN_KEYS as readonly string[]).includes(planKey) || !(BANK_TRANSFER_MONTHS as readonly number[]).includes(months)) {
+      return { error: t("invalidChoice") };
+    }
 
-  const [plan] = await db.select().from(plans).where(and(eq(plans.key, planKey), eq(plans.isActive, true)));
-  if (!plan) return { error: t("invalidChoice") };
+    const [plan] = await db.select().from(plans).where(and(eq(plans.key, planKey), eq(plans.isActive, true)));
+    if (!plan) return { error: t("invalidChoice") };
 
-  const usage = await getOrgUsage(session.organizationId);
-  if (limitsExceeded(plan, usage).length > 0) return { error: t("overLimits", { plan: plan.name }) };
+    const usage = await getOrgUsage(session.organizationId);
+    if (limitsExceeded(plan, usage).length > 0) return { error: t("overLimits", { plan: plan.name }) };
 
-  const [payer] = await db.select({ email: users.email }).from(users).where(eq(users.id, session.userId));
-  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, session.organizationId));
-  const amountCents = priceForPeriod(plan, months);
+    const [payer] = await db.select({ email: users.email }).from(users).where(eq(users.id, session.userId));
+    const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, session.organizationId));
+    const amountCents = priceForPeriod(plan, months);
 
-  try {
-    await sendEmail({
-      to: companyInfo().supportEmail,
-      replyTo: payer?.email,
-      subject: `[SmartDepo] Bank transfer requested — ${org?.name ?? session.organizationId}`,
-      text: [
-        `${org?.name ?? "?"} wants to pay by bank transfer.`,
-        `Plan: ${plan.name}`,
-        `Period: ${months} months`,
-        `Amount: €${(amountCents / 100).toFixed(2)}`,
-        `Requested by: ${payer?.email ?? session.userId}`,
-        `Organization id: ${session.organizationId}`,
-      ].join("\n"),
-    });
-  } catch (e) {
-    console.error("[billing] bank transfer notice failed", e);
-    return { error: t("bankTransferSendFailed") };
-  }
+    try {
+      await sendEmail({
+        to: companyInfo().supportEmail,
+        replyTo: payer?.email,
+        subject: `[SmartDepo] Bank transfer requested — ${org?.name ?? session.organizationId}`,
+        text: [
+          `${org?.name ?? "?"} wants to pay by bank transfer.`,
+          `Plan: ${plan.name}`,
+          `Period: ${months} months`,
+          `Amount: €${(amountCents / 100).toFixed(2)}`,
+          `Requested by: ${payer?.email ?? session.userId}`,
+          `Organization id: ${session.organizationId}`,
+        ].join("\n"),
+      });
+    } catch (e) {
+      console.error("[billing] bank transfer notice failed", e);
+      return { error: t("bankTransferSendFailed") };
+    }
 
-  return { ok: true };
+    return { ok: true };
+  });
 }
 
 export async function getPaymentStatus(paymentId: string) {
-  const session = await requireSession();
-  const [payment] = await db.select().from(payments).where(and(eq(payments.id, paymentId), eq(payments.organizationId, session.organizationId)));
-  return payment ?? null;
+  return inOrg(async () => {
+    const session = await requireSession();
+    const [payment] = await db.select().from(payments).where(and(eq(payments.id, paymentId), eq(payments.organizationId, session.organizationId)));
+    return payment ?? null;
+  });
 }

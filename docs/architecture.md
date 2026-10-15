@@ -42,9 +42,13 @@ marketing site) actually shows up — not before.
   with no session, runs fn unchanged so its own auth checks refuse it as before. One action is one
   transaction: a failure rolls back its writes, and `redirect()`/`notFound()` commit first and are
   rethrown. Nesting reuses the open transaction, and a fire-and-forget promise still running after
-  it closed falls back to the pool. Converted so far: items (incl. custom fields, import, export),
-  stock (search, import, export), scanner, bin panel, metrics, labels. Not yet: builder, team,
-  billing, account, capabilities, onboarding. Phase 3 makes `app_user` the app's login, and only the
+  it closed falls back to the pool. Converted: items (incl. custom fields, import, export), stock (search,
+  import, export), scanner, bin panel, metrics, labels, builder (incl. the underlay upload route),
+  team, billing and contracts (incl. the contract PDF/upload routes), `getCapabilities()`. A
+  fire-and-forget started inside goes through `outsideOrg()` (the billing reminder). **Stay on the
+  owner connection on purpose:** account settings and account deletion (per person, and deletion
+  spans companies), the company switcher, sign-up/onboarding and invites by token (before there is
+  a company), `/internal` and view-as (platform admin), the Paysera callback, contact form, auth. Phase 3 makes `app_user` the app's login, and only the
   paths that legitimately work across companies (`/internal`, sign-in/up, invites by token, the
   Paysera callback, migrations) keep the owner connection. Tables without a company
   (`users`, `organizations`, `plans`, `rate_limit_events`, `contact_messages`,

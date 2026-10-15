@@ -5,10 +5,13 @@ import { attempt } from "@/lib/action-result";
 import { createContract, getMyContracts, type ClientInfo } from "@/lib/contracts";
 import { requirePermission } from "@/lib/permissions";
 import { requireSession } from "@/lib/session";
+import { inOrg } from "@/lib/tenant";
 
 export async function getMyContractsForOrg() {
-  const { organizationId } = await requireSession();
-  return getMyContracts(organizationId);
+  return inOrg(async () => {
+    const { organizationId } = await requireSession();
+    return getMyContracts(organizationId);
+  });
 }
 
 async function startContractImpl(planKey: string, months: number, clientInfo: ClientInfo) {
@@ -19,5 +22,5 @@ async function startContractImpl(planKey: string, months: number, clientInfo: Cl
 }
 
 export async function startContract(planKey: string, months: number, clientInfo: ClientInfo) {
-  return attempt(() => startContractImpl(planKey, months, clientInfo), "startContract");
+  return attempt(() => inOrg(() => startContractImpl(planKey, months, clientInfo)), "startContract");
 }

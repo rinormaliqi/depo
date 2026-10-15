@@ -61,3 +61,10 @@ export async function inOrg<T>(fn: () => Promise<T>): Promise<T> {
   const session = await getMySession();
   return session ? withOrg(session, fn) : fn();
 }
+
+// Starts fn outside the open company transaction, on the pool — for work
+// meant to outlive the action (a fire-and-forget reminder email), which
+// would otherwise race the transaction's commit.
+export function outsideOrg<T>(fn: () => T): T {
+  return tenantContext.exit(fn);
+}

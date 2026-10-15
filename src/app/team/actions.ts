@@ -15,6 +15,7 @@ import { assertCanAddSeats } from "@/lib/plan-limits";
 import { requireSession } from "@/lib/session";
 import { attempt } from "@/lib/action-result";
 import { UserError } from "@/lib/user-error";
+import { inOrg } from "@/lib/tenant";
 
 const INVITE_VALID_DAYS = 7;
 
@@ -29,28 +30,30 @@ function isRole(value: unknown): value is MembershipRole {
 }
 
 export async function getTeam() {
-  const session = await requireSession();
+  return inOrg(async () => {
+    const session = await requireSession();
 
-  const members = await db
-    .select({ id: memberships.id, userId: memberships.userId, role: memberships.role, name: users.name, email: users.email, createdAt: memberships.createdAt })
-    .from(memberships)
-    .innerJoin(users, eq(memberships.userId, users.id))
-    .where(eq(memberships.organizationId, session.organizationId))
-    .orderBy(users.name);
+    const members = await db
+      .select({ id: memberships.id, userId: memberships.userId, role: memberships.role, name: users.name, email: users.email, createdAt: memberships.createdAt })
+      .from(memberships)
+      .innerJoin(users, eq(memberships.userId, users.id))
+      .where(eq(memberships.organizationId, session.organizationId))
+      .orderBy(users.name);
 
-  const pendingInvites = await db
-    .select()
-    .from(invites)
-    .where(and(eq(invites.organizationId, session.organizationId), isNull(invites.acceptedAt)))
-    .orderBy(invites.createdAt);
+    const pendingInvites = await db
+      .select()
+      .from(invites)
+      .where(and(eq(invites.organizationId, session.organizationId), isNull(invites.acceptedAt)))
+      .orderBy(invites.createdAt);
 
-  return {
-    members,
-    pendingInvites,
-    canManage: session.role === "admin" || session.role === "manager",
-    isAdmin: session.role === "admin",
-    myUserId: session.userId,
-  };
+    return {
+      members,
+      pendingInvites,
+      canManage: session.role === "admin" || session.role === "manager",
+      isAdmin: session.role === "admin",
+      myUserId: session.userId,
+    };
+  });
 }
 
 // The invite mail itself. Sent on create and on resend; the copyable link
@@ -76,78 +79,80 @@ async function sendInviteEmail(invite: { email: string; token: string; role: Mem
 type InviteState = { error?: string; values?: { email?: string; role?: string } } | undefined;
 
 export async function createInvite(_prevState: InviteState, formData: FormData): Promise<InviteState> {
-  const t = await getTranslations("team.error");
-  let session: Awaited<ReturnType<typeof requireSession>>;
-  try {
-    session = await requirePermission("manageTeam");
-  } catch (e) {
-    return {
-      error: e instanceof Error ? e.message : String(e),
-      values: { email: formData.get("email")?.toString().trim().toLowerCase(), role: formData.get("role")?.toString() },
-    };
-  }
-
-  const email = formData.get("email")?.toString().trim().toLowerCase();
-  const role = formData.get("role")?.toString();
-  const values = { email, role };
-
-  if (!email || !isRole(role)) return { error: t("required"), values };
-  if (role === "admin" && session.role !== "admin") return { error: t("onlyAdminCanInviteAdmin"), values };
-
-  const [existingUser] = await db.select().from(users).where(eq(users.normalizedEmail, normalizeEmail(email)));
-  if (existingUser) {
-    const [existingMembership] = await db
-      .select()
-      .from(memberships)
-      .where(and(eq(memberships.userId, existingUser.id), eq(memberships.organizationId, session.organizationId)));
-    if (existingMembership) return { error: t("alreadyMember", { email: existingUser.email }), values };
-  }
-
-  const expiresAt = expiryFromNow();
-  const [existingInvite] = await db
-    .select()
-    .from(invites)
-    .where(and(eq(invites.organizationId, session.organizationId), eq(invites.email, email), isNull(invites.acceptedAt)));
-
-  let invite: typeof invites.$inferSelect;
-  if (existingInvite) {
-    // Refreshing an already-pending invite (role change, resend) doesn't
-    // consume a new seat — it's already counted in the existing-invites
-    // query inside assertCanAddSeats, so no limit check here.
-    [invite] = await db
-      .update(invites)
-      .set({ role, expiresAt, invitedBy: session.userId })
-      .where(eq(invites.id, existingInvite.id))
-      .returning();
-  } else {
+  return inOrg(async () => {
+    const t = await getTranslations("team.error");
+    let session: Awaited<ReturnType<typeof requireSession>>;
     try {
-      await assertCanAddSeats(session.organizationId, 1);
+      session = await requirePermission("manageTeam");
     } catch (e) {
-      return { error: e instanceof Error ? e.message : t("notAuthorized"), values };
+      return {
+        error: e instanceof Error ? e.message : String(e),
+        values: { email: formData.get("email")?.toString().trim().toLowerCase(), role: formData.get("role")?.toString() },
+      };
     }
-    [invite] = await db
-      .insert(invites)
-      .values({
-        organizationId: session.organizationId,
-        email,
-        role,
-        token: randomBytes(32).toString("hex"),
-        invitedBy: session.userId,
-        expiresAt,
-      })
-      .returning();
-  }
 
-  try {
-    await sendInviteEmail(invite);
-  } catch {
-    // The invite row exists and its link is on /team — a mail provider
-    // hiccup shouldn't throw away the seat, just tell the inviter.
+    const email = formData.get("email")?.toString().trim().toLowerCase();
+    const role = formData.get("role")?.toString();
+    const values = { email, role };
+
+    if (!email || !isRole(role)) return { error: t("required"), values };
+    if (role === "admin" && session.role !== "admin") return { error: t("onlyAdminCanInviteAdmin"), values };
+
+    const [existingUser] = await db.select().from(users).where(eq(users.normalizedEmail, normalizeEmail(email)));
+    if (existingUser) {
+      const [existingMembership] = await db
+        .select()
+        .from(memberships)
+        .where(and(eq(memberships.userId, existingUser.id), eq(memberships.organizationId, session.organizationId)));
+      if (existingMembership) return { error: t("alreadyMember", { email: existingUser.email }), values };
+    }
+
+    const expiresAt = expiryFromNow();
+    const [existingInvite] = await db
+      .select()
+      .from(invites)
+      .where(and(eq(invites.organizationId, session.organizationId), eq(invites.email, email), isNull(invites.acceptedAt)));
+
+    let invite: typeof invites.$inferSelect;
+    if (existingInvite) {
+      // Refreshing an already-pending invite (role change, resend) doesn't
+      // consume a new seat — it's already counted in the existing-invites
+      // query inside assertCanAddSeats, so no limit check here.
+      [invite] = await db
+        .update(invites)
+        .set({ role, expiresAt, invitedBy: session.userId })
+        .where(eq(invites.id, existingInvite.id))
+        .returning();
+    } else {
+      try {
+        await assertCanAddSeats(session.organizationId, 1);
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : t("notAuthorized"), values };
+      }
+      [invite] = await db
+        .insert(invites)
+        .values({
+          organizationId: session.organizationId,
+          email,
+          role,
+          token: randomBytes(32).toString("hex"),
+          invitedBy: session.userId,
+          expiresAt,
+        })
+        .returning();
+    }
+
+    try {
+      await sendInviteEmail(invite);
+    } catch {
+      // The invite row exists and its link is on /team — a mail provider
+      // hiccup shouldn't throw away the seat, just tell the inviter.
+      revalidatePath("/team");
+      return { error: t("emailFailed"), values };
+    }
+
     revalidatePath("/team");
-    return { error: t("emailFailed"), values };
-  }
-
-  revalidatePath("/team");
+  });
 }
 
 async function loadOwnInvite(inviteId: string, organizationId: string) {
@@ -227,19 +232,19 @@ async function removeMemberImpl(membershipId: string) {
 }
 
 export async function revokeInvite(inviteId: string) {
-  return attempt(() => revokeInviteImpl(inviteId), "revokeInvite");
+  return attempt(() => inOrg(() => revokeInviteImpl(inviteId)), "revokeInvite");
 }
 
 export async function resendInvite(inviteId: string) {
-  return attempt(() => resendInviteImpl(inviteId), "resendInvite");
+  return attempt(() => inOrg(() => resendInviteImpl(inviteId)), "resendInvite");
 }
 
 export async function changeMemberRole(membershipId: string, role: string) {
-  return attempt(() => changeMemberRoleImpl(membershipId, role), "changeMemberRole");
+  return attempt(() => inOrg(() => changeMemberRoleImpl(membershipId, role)), "changeMemberRole");
 }
 
 export async function removeMember(membershipId: string) {
-  return attempt(() => removeMemberImpl(membershipId), "removeMember");
+  return attempt(() => inOrg(() => removeMemberImpl(membershipId)), "removeMember");
 }
 
 // ── Leaving and handing over ─────────────────────────────────────────────
@@ -283,8 +288,8 @@ async function transferOwnershipImpl(membershipId: string) {
 }
 
 export async function leaveOrganization() {
-  return attempt(() => leaveOrganizationImpl(), "leaveOrganization");
+  return attempt(() => inOrg(() => leaveOrganizationImpl()), "leaveOrganization");
 }
 export async function transferOwnership(membershipId: string) {
-  return attempt(() => transferOwnershipImpl(membershipId), "transferOwnership");
+  return attempt(() => inOrg(() => transferOwnershipImpl(membershipId)), "transferOwnership");
 }

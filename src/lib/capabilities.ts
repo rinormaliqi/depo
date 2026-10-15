@@ -5,6 +5,7 @@ import { facilities, invites, locations, memberships, organizations, plans, type
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
 import { getMySession, getOrgLockReason, type OrgLockReason } from "@/lib/session";
 import { UserError } from "@/lib/user-error";
+import { inOrg } from "@/lib/tenant";
 
 // One answer to "can this user do X here?" — role × plan × org state ×
 // usage, resolved once per request and read the same way by server
@@ -161,9 +162,11 @@ export async function getCapabilitiesFor(organizationId: string, role: Membershi
 
 // For pages: null when there's no session or no organization yet.
 export async function getCapabilities(): Promise<Capabilities | null> {
-  const session = await getMySession();
-  if (!session) return null;
-  return getCapabilitiesFor(session.organizationId, session.role);
+  return inOrg(async () => {
+    const session = await getMySession();
+    if (!session) return null;
+    return getCapabilitiesFor(session.organizationId, session.role);
+  });
 }
 
 // Paying is how a lock is lifted, so billing stays open to an admin while

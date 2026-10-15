@@ -7,6 +7,7 @@ import { generateContractPdf } from "@/lib/contract-pdf";
 import { getCapabilities } from "@/lib/capabilities";
 import { getOwnedContract } from "@/lib/contracts";
 import { getMyOrgId } from "@/lib/session";
+import { inOrg } from "@/lib/tenant";
 
 // Regenerated on every request from the contract's frozen pricingSnapshot
 // and clientInfo, not stored — deterministic from data already on the
@@ -14,33 +15,35 @@ import { getMyOrgId } from "@/lib/session";
 // route handler rather than a server action because the payload is a
 // binary file the browser should download, not JSON.
 export async function GET(_req: Request, { params }: { params: Promise<{ contractId: string }> }) {
-  const { contractId } = await params;
-  const organizationId = await getMyOrgId();
-  if (!organizationId) return new NextResponse(null, { status: 401 });
-  // The contract carries the price and the company's legal details: the
-  // same people who may open the contract page, not every member (#194).
-  const caps = await getCapabilities();
-  if (!caps?.can.manageBilling) return new NextResponse(null, { status: 403 });
+  return inOrg(async () => {
+    const { contractId } = await params;
+    const organizationId = await getMyOrgId();
+    if (!organizationId) return new NextResponse(null, { status: 401 });
+    // The contract carries the price and the company's legal details: the
+    // same people who may open the contract page, not every member (#194).
+    const caps = await getCapabilities();
+    if (!caps?.can.manageBilling) return new NextResponse(null, { status: 403 });
 
-  const contract = await getOwnedContract(contractId, organizationId);
-  if (!contract) return new NextResponse(null, { status: 404 });
+    const contract = await getOwnedContract(contractId, organizationId);
+    if (!contract) return new NextResponse(null, { status: 404 });
 
-  const [plan] = await db.select().from(plans).where(eq(plans.id, contract.planId));
-  const locale = await getLocale();
-  const bytes = await generateContractPdf({
-    locale: locale === "en" ? "en" : "sq",
-    planName: plan?.name ?? "",
-    months: contract.months,
-    pricing: contract.pricingSnapshot,
-    clientInfo: contract.clientInfo,
-    generatedAt: contract.generatedAt,
-  });
+    const [plan] = await db.select().from(plans).where(eq(plans.id, contract.planId));
+    const locale = await getLocale();
+    const bytes = await generateContractPdf({
+      locale: locale === "en" ? "en" : "sq",
+      planName: plan?.name ?? "",
+      months: contract.months,
+      pricing: contract.pricingSnapshot,
+      clientInfo: contract.clientInfo,
+      generatedAt: contract.generatedAt,
+    });
 
-  return new NextResponse(new Uint8Array(bytes), {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="smartdepo-kontrata-${contractId.slice(0, 8)}.pdf"`,
-      "Cache-Control": "private, no-store",
-    },
+    return new NextResponse(new Uint8Array(bytes), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="smartdepo-kontrata-${contractId.slice(0, 8)}.pdf"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
   });
 }

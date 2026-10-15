@@ -43,6 +43,7 @@ import { UserError } from "@/lib/user-error";
 import { deleteUnderlay, patchUnderlay } from "@/lib/underlay";
 import { autoLayout, parseLocationsText, type LocationImportError, type LocationRowImport } from "@/lib/import-locations";
 import { MAX_IMPORT_CHARS } from "@/lib/import-table";
+import { inOrg } from "@/lib/tenant";
 
 export type LocationRow = typeof locations.$inferSelect;
 
@@ -83,28 +84,34 @@ async function requireOwnedLocation(locationId: string) {
 // facility-scoped page and action reads through this, so switching is a
 // cookie write and nothing else has to know there's more than one.
 export async function getMyFacility() {
-  const organizationId = await getMyOrgId();
-  if (!organizationId) return null;
-  return currentFacility(organizationId);
+  return inOrg(async () => {
+    const organizationId = await getMyOrgId();
+    if (!organizationId) return null;
+    return currentFacility(organizationId);
+  });
 }
 
 // What the header's switcher needs in one round trip: the org's
 // facilities and whether this user may add one.
 export async function getMyFacilities() {
-  const session = await getMySession();
-  if (!session) return { facilities: [], canAdd: false };
-  const rows = await listFacilities(session.organizationId);
-  const caps = await getCapabilitiesFor(session.organizationId, session.role);
-  const room = caps.limits.facilities.max === null || caps.limits.facilities.used < caps.limits.facilities.max;
-  return { facilities: rows.map((f) => ({ id: f.id, name: f.name })), canAdd: caps.can.multiFacility && caps.can.editLayout && room };
+  return inOrg(async () => {
+    const session = await getMySession();
+    if (!session) return { facilities: [], canAdd: false };
+    const rows = await listFacilities(session.organizationId);
+    const caps = await getCapabilitiesFor(session.organizationId, session.role);
+    const room = caps.limits.facilities.max === null || caps.limits.facilities.used < caps.limits.facilities.max;
+    return { facilities: rows.map((f) => ({ id: f.id, name: f.name })), canAdd: caps.can.multiFacility && caps.can.editLayout && room };
+  });
 }
 
 export async function switchFacility(facilityId: string) {
-  await requireOwnedFacility(facilityId);
-  await rememberFacility(facilityId);
-  // Everything facility-scoped is rendered from getMyFacility(), so a
-  // layout-wide revalidate is the honest scope here, not a single path.
-  revalidatePath("/", "layout");
+  return inOrg(async () => {
+    await requireOwnedFacility(facilityId);
+    await rememberFacility(facilityId);
+    // Everything facility-scoped is rendered from getMyFacility(), so a
+    // layout-wide revalidate is the honest scope here, not a single path.
+    revalidatePath("/", "layout");
+  });
 }
 
 async function createFacilityImpl(name: string) {
@@ -123,7 +130,7 @@ async function createFacilityImpl(name: string) {
 }
 
 export async function createFacility(name: string) {
-  return attempt(() => createFacilityImpl(name), "createFacility");
+  return attempt(() => inOrg(() => createFacilityImpl(name)), "createFacility");
 }
 
 async function updateFacilityImpl(
@@ -150,13 +157,17 @@ async function updateFacilityImpl(
 }
 
 export async function getFacilityLocations(facilityId: string) {
-  await requireOwnedFacility(facilityId);
-  return db.select().from(locations).where(eq(locations.facilityId, facilityId));
+  return inOrg(async () => {
+    await requireOwnedFacility(facilityId);
+    return db.select().from(locations).where(eq(locations.facilityId, facilityId));
+  });
 }
 
 export async function getBlueprint(facilityId: string) {
-  await requireOwnedFacility(facilityId);
-  return buildBlueprintData(facilityId);
+  return inOrg(async () => {
+    await requireOwnedFacility(facilityId);
+    return buildBlueprintData(facilityId);
+  });
 }
 
 // The underlay's placement and viewing settings; the bytes go through
@@ -190,11 +201,11 @@ export async function updateUnderlay(
   facilityId: string,
   patch: { scale?: number; offsetXM?: number; offsetYM?: number; opacity?: number; visible?: boolean },
 ) {
-  return attempt(() => updateUnderlayImpl(facilityId, patch), "updateUnderlay");
+  return attempt(() => inOrg(() => updateUnderlayImpl(facilityId, patch)), "updateUnderlay");
 }
 
 export async function removeUnderlay(facilityId: string) {
-  return attempt(() => removeUnderlayImpl(facilityId), "removeUnderlay");
+  return attempt(() => inOrg(() => removeUnderlayImpl(facilityId)), "removeUnderlay");
 }
 
 function gridBinRows(
@@ -831,7 +842,7 @@ export async function updateFacility(
   facilityId: string,
   patch: { name?: string; widthM?: number; heightM?: number },
 ) {
-  return attempt(() => updateFacilityImpl(facilityId, patch), "updateFacility");
+  return attempt(() => inOrg(() => updateFacilityImpl(facilityId, patch)), "updateFacility");
 }
 
 export async function createEntity(
@@ -840,15 +851,15 @@ export async function createEntity(
   xM: number,
   yM: number,
 ) {
-  return attempt(() => createEntityImpl(facilityId, kind, xM, yM), "createEntity");
+  return attempt(() => inOrg(() => createEntityImpl(facilityId, kind, xM, yM)), "createEntity");
 }
 
 export async function applyTemplate(facilityId: string, templateKey: TemplateKey, replace: boolean, keepStructure = true) {
-  return attempt(() => applyTemplateImpl(facilityId, templateKey, replace, keepStructure), "applyTemplate");
+  return attempt(() => inOrg(() => applyTemplateImpl(facilityId, templateKey, replace, keepStructure)), "applyTemplate");
 }
 
 export async function addPillarGrid(facilityId: string, zoneId: string | null, grid: PillarGridSpec) {
-  return attempt(() => addPillarGridImpl(facilityId, zoneId, grid), "addPillarGrid");
+  return attempt(() => inOrg(() => addPillarGridImpl(facilityId, zoneId, grid)), "addPillarGrid");
 }
 
 export async function applyParametric(
@@ -858,11 +869,11 @@ export async function applyParametric(
   replace: boolean,
   keepStructure = true,
 ) {
-  return attempt(() => applyParametricImpl(facilityId, layout, floor, replace, keepStructure), "applyParametric");
+  return attempt(() => inOrg(() => applyParametricImpl(facilityId, layout, floor, replace, keepStructure)), "applyParametric");
 }
 
 export async function addSector(facilityId: string) {
-  return attempt(() => addSectorImpl(facilityId), "addSector");
+  return attempt(() => inOrg(() => addSectorImpl(facilityId)), "addSector");
 }
 
 export async function updateEntity(
@@ -880,7 +891,7 @@ export async function updateEntity(
     color?: string | null;
   },
 ) {
-  return attempt(() => updateEntityImpl(id, patch), "updateEntity");
+  return attempt(() => inOrg(() => updateEntityImpl(id, patch)), "updateEntity");
 }
 
 // Empties the floor: every zone, rack, bin and fixture goes; the floor's
@@ -898,22 +909,22 @@ async function clearFloorImpl(facilityId: string) {
 }
 
 export async function clearFloor(facilityId: string) {
-  return attempt(() => clearFloorImpl(facilityId), "clearFloor");
+  return attempt(() => inOrg(() => clearFloorImpl(facilityId)), "clearFloor");
 }
 
 export async function deleteEntity(id: string) {
-  return attempt(() => deleteEntityImpl(id), "deleteEntity");
+  return attempt(() => inOrg(() => deleteEntityImpl(id)), "deleteEntity");
 }
 
 export async function duplicateEntity(id: string) {
-  return attempt(() => duplicateEntityImpl(id), "duplicateEntity");
+  return attempt(() => inOrg(() => duplicateEntityImpl(id)), "duplicateEntity");
 }
 
 export async function restoreEntity(
   facilityId: string,
   spec: { kind: LocationKind; xM: number; yM: number; widthM: number; heightM: number; bays: number; levels: number; rotation?: number; color?: string | null },
 ) {
-  return attempt(() => restoreEntityImpl(facilityId, spec), "restoreEntity");
+  return attempt(() => inOrg(() => restoreEntityImpl(facilityId, spec)), "restoreEntity");
 }
 
 // ── Locations import (src/lib/import-locations.ts) ──────────────────────
@@ -1042,18 +1053,20 @@ async function commitLocationsImportImpl(facilityId: string, text: string) {
 }
 
 export async function previewLocationsImport(facilityId: string, text: string) {
-  return attempt(() => previewLocationsImportImpl(facilityId, text), "previewLocationsImport");
+  return attempt(() => inOrg(() => previewLocationsImportImpl(facilityId, text)), "previewLocationsImport");
 }
 
 export async function commitLocationsImport(facilityId: string, text: string) {
-  return attempt(() => commitLocationsImportImpl(facilityId, text), "commitLocationsImport");
+  return attempt(() => inOrg(() => commitLocationsImportImpl(facilityId, text)), "commitLocationsImport");
 }
 
 // ── Facility levels (src/lib/levels.ts) ─────────────────────────────────
 
 export async function getFacilityLevels(facilityId: string): Promise<FacilityLevel[]> {
-  await requireOwnedFacility(facilityId);
-  return ensureLevels(facilityId);
+  return inOrg(async () => {
+    await requireOwnedFacility(facilityId);
+    return ensureLevels(facilityId);
+  });
 }
 
 async function addLevelImpl(facilityId: string, extendRacks: boolean) {
@@ -1104,11 +1117,11 @@ async function removeTopLevelImpl(facilityId: string) {
 }
 
 export async function addLevel(facilityId: string, extendRacks: boolean) {
-  return attempt(() => addLevelImpl(facilityId, extendRacks), "addLevel");
+  return attempt(() => inOrg(() => addLevelImpl(facilityId, extendRacks)), "addLevel");
 }
 export async function renameLevel(facilityId: string, levelId: string, name: string | null) {
-  return attempt(() => renameLevelImpl(facilityId, levelId, name), "renameLevel");
+  return attempt(() => inOrg(() => renameLevelImpl(facilityId, levelId, name)), "renameLevel");
 }
 export async function removeTopLevel(facilityId: string) {
-  return attempt(() => removeTopLevelImpl(facilityId), "removeTopLevel");
+  return attempt(() => inOrg(() => removeTopLevelImpl(facilityId)), "removeTopLevel");
 }

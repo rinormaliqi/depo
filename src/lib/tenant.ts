@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
-import { pool } from "@/db";
-import { activeTenant, tenantContext, type TenantContext } from "@/db/tenant-context";
+import { appPool } from "@/db";
+import { activeTenant, asOwner, tenantContext, type TenantContext } from "@/db/tenant-context";
+
+export { asOwner };
 import { isNavigationError } from "@/lib/action-result";
 import { getMySession } from "@/lib/session";
 
@@ -28,7 +30,7 @@ export async function withOrg<T>(session: TenantSession, fn: () => Promise<T>): 
   let navigation: unknown = null;
   let ctx: TenantContext | null = null;
   try {
-    const result = await pool.transaction(async (tx) => {
+    const result = await appPool.transaction(async (tx) => {
       // One round trip: set_config('role', …) is SET LOCAL ROLE.
       await tx.execute(
         sql`select set_config('role', 'app_user', true), set_config('app.org_id', ${session.organizationId}, true), set_config('app.user_id', ${session.userId}, true)`,
@@ -62,9 +64,10 @@ export async function inOrg<T>(fn: () => Promise<T>): Promise<T> {
   return session ? withOrg(session, fn) : fn();
 }
 
-// Starts fn outside the open company transaction, on the pool — for work
-// meant to outlive the action (a fire-and-forget reminder email), which
-// would otherwise race the transaction's commit.
-export function outsideOrg<T>(fn: () => T): T {
-  return tenantContext.exit(fn);
+
+// Starts fn outside the open company transaction, on the owner connection —
+// for work meant to outlive the action (a fire-and-forget reminder email),
+// which would otherwise race the transaction's commit.
+export function outsideOrg<T>(fn: () => Promise<T>): Promise<T> {
+  return tenantContext.exit(() => asOwner(fn));
 }

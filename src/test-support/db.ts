@@ -24,7 +24,27 @@ export async function ensureTestDb() {
 
   const client = postgres(testDbUrl(), { max: 1, onnotice: () => {} });
   await migrate(drizzle(client), { migrationsFolder: "./drizzle" });
+  // The app's restricted login, as in production once DATABASE_URL_APP is
+  // set (#228 phase 3): a member of app_user, so every policy applies.
+  // Roles are cluster-wide, so it is created once and reused.
+  await client.unsafe(`
+    do $$ begin
+      if not exists (select from pg_roles where rolname = '${TEST_APP_ROLE}') then
+        create role ${TEST_APP_ROLE} login password '${TEST_APP_PASSWORD}' in role app_user;
+      end if;
+    end $$;
+  `);
   await client.end();
+}
+
+const TEST_APP_ROLE = "smartdepo_app_test";
+const TEST_APP_PASSWORD = "app-test";
+
+export function testAppDbUrl() {
+  const url = new URL(testDbUrl());
+  url.username = TEST_APP_ROLE;
+  url.password = TEST_APP_PASSWORD;
+  return url.toString();
 }
 
 // Wipes every app table between test files. TRUNCATE ... CASCADE keeps the

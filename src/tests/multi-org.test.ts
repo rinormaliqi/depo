@@ -5,7 +5,7 @@ import { getCapabilities } from "@/lib/capabilities";
 import { acceptInviteViaSession } from "@/lib/onboarding";
 import { currentOrganization, organizationCookieName, rememberOrganization } from "@/lib/organizations";
 import { getMySession } from "@/lib/session";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { invites } from "@/db/schema";
 import { addMember, createOrg, createUser, seedPlans } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";

@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { db } from "@/db";
 import { memberships, organizations, type MembershipRole } from "@/db/schema";
+import { activeTenant, asOwner } from "@/db/tenant-context";
 
 // Which organization a user is acting in. One person can belong to
 // several (a contractor who is a worker at one depot and admin of their
@@ -14,13 +15,20 @@ export const organizationCookieName = "smartdepo_org";
 
 export type MyOrganization = { id: string; name: string; role: MembershipRole; joinedAt: Date };
 
+// Outside a company transaction this runs on the owner connection: it is
+// how a request learns its company in the first place, before there is one
+// to scope to, and the userId filter is the whole scope. Inside one, the
+// memberships policy already shows a person all their own memberships
+// (app.user_id), so it runs right there.
 export async function listMyOrganizations(userId: string): Promise<MyOrganization[]> {
-  return db
-    .select({ id: organizations.id, name: organizations.name, role: memberships.role, joinedAt: memberships.createdAt })
-    .from(memberships)
-    .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
-    .where(eq(memberships.userId, userId))
-    .orderBy(desc(memberships.createdAt));
+  const query = () =>
+    db
+      .select({ id: organizations.id, name: organizations.name, role: memberships.role, joinedAt: memberships.createdAt })
+      .from(memberships)
+      .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
+      .where(eq(memberships.userId, userId))
+      .orderBy(desc(memberships.createdAt));
+  return activeTenant() ? query() : asOwner(query);
 }
 
 export async function currentOrganization(userId: string): Promise<MyOrganization | null> {

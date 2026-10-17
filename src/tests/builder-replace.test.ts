@@ -3,13 +3,14 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { applyParametric, applyTemplate, clearFloor } from "@/app/builder/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { facilities, locations } from "@/db/schema";
 import type { ParametricLayout } from "@/lib/blueprint-types";
-import { receiveStockAt } from "@/lib/stock";
+
 import { addMember, createItem, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
 import { resetCookies } from "@/test-support/stubs/next-headers";
+import { receiveStockAt } from "@/test-support/in-company";
 
 const LAYOUT: ParametricLayout = {
   zones: 4, orientation: "vertical", levels: 1, bays: 6, walls: true,

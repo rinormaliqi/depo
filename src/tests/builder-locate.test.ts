@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { cookies } from "next/headers";
 import { GET as locate } from "@/app/builder/locate/route";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { facilities } from "@/db/schema";
 import { facilityCookieName } from "@/lib/facilities";
 import { addMember, createBin, createOrg } from "@/test-support/factories";

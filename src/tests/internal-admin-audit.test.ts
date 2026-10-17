@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import { desc, eq } from "drizzle-orm";
 import { listAuditLog, recordManualPayment, updateOrgBilling } from "@/app/internal/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { adminAuditLog } from "@/db/schema";
 import { recordAdminAction } from "@/lib/admin-audit";
 import { createOrg, createUser, seedPlans } from "@/test-support/factories";

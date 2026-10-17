@@ -48,9 +48,28 @@ marketing site) actually shows up — not before.
   fire-and-forget started inside goes through `outsideOrg()` (the billing reminder). **Stay on the
   owner connection on purpose:** account settings and account deletion (per person, and deletion
   spans companies), the company switcher, sign-up/onboarding and invites by token (before there is
-  a company), `/internal` and view-as (platform admin), the Paysera callback, contact form, auth. Phase 3 makes `app_user` the app's login, and only the
-  paths that legitimately work across companies (`/internal`, sign-in/up, invites by token, the
-  Paysera callback, migrations) keep the owner connection. Tables without a company
+  a company), `/internal` and view-as (platform admin), the Paysera callback, contact form, auth. **Phase 3** (`src/db/index.ts`): two connections. `DATABASE_URL` is the
+  owner (migrations, and code inside `asOwner()`); `DATABASE_URL_APP` is a login role that is a
+  member of `app_user`, and everything else runs on it — so code that touches company rows
+  outside `withOrg()`/`asOwner()` sees nothing, instead of everything. Unset, `DATABASE_URL_APP`
+  falls back to `DATABASE_URL`: setting it in Vercel is what turns phase 3 on, deleting it (and
+  redeploying) turns it off. `asOwner()` (`src/db/tenant-context.ts`) marks every deliberate
+  cross-company entry point — `/internal` and view-as, invite pages/actions by token,
+  onboarding/sign-up, `markEmailVerified`, `deleteAccount`, `applyPaidPayment` and the Paysera
+  callback, the billing reminder (via `outsideOrg()`), and `listMyOrganizations()` outside a
+  company transaction (how a request learns its company). It is refused inside a company
+  transaction. Tests run the app on a restricted login too (`smartdepo_app_test`, created by
+  `src/test-support/db.ts`) and seed/assert through `ownerDb`; library functions they call
+  directly go through `src/test-support/in-company.ts`, which runs each in its company.
+  `TEST_DB_APP_ROLE=off pnpm test` runs the app on the owner instead (production before the
+  switch).
+- **Turning phase 3 on in production** (once): in the Neon SQL Editor, as `neondb_owner`,
+  `CREATE ROLE smartdepo_app LOGIN PASSWORD '<openssl rand -hex 24>' IN ROLE app_user;` — by SQL,
+  not the Console's Roles page, which adds roles to `neon_superuser`. Check it with
+  `select rolbypassrls, rolsuper, pg_has_role('smartdepo_app','app_user','member') from pg_roles
+  where rolname = 'smartdepo_app';` → `f | f | t`. `DATABASE_URL_APP` is `DATABASE_URL` (pooled
+  host) with `smartdepo_app` and its password in place of the owner's; add it to Vercel
+  (Production) and redeploy. Tables without a company
   (`users`, `organizations`, `plans`, `rate_limit_events`, `contact_messages`,
   `admin_audit_log`, `admin_view_as_sessions`, `email_*`, `password_resets`) stay outside RLS.
   `src/tests/rls.test.ts` checks every policy, both reads and writes.

@@ -2,11 +2,12 @@ import { freshDatabase } from "@/test-support/setup";
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { and, eq, sql } from "drizzle-orm";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { movements, stock } from "@/db/schema";
-import { pickStockAt, receiveStockAt } from "@/lib/stock";
+
 import { addMember, createBin, createItem, createOrg } from "@/test-support/factories";
 import { MAX_MOVEMENT_QUANTITY } from "@/lib/stock-limits";
+import { pickStockAt, receiveStockAt } from "@/test-support/in-company";
 
 // movements is the append-only source of truth and stock is the derived
 // "current quantity" (docs/architecture.md, "Stock model"). After any

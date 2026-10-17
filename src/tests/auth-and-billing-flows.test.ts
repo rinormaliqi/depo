@@ -6,7 +6,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { GET as payseraCallback } from "@/app/api/billing/paysera/callback/route";
 import { acceptInviteAsNewUser } from "@/app/invite/[token]/actions";
 import { signUp } from "@/app/signup/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { emailVerifications, invites, memberships, payments, users } from "@/db/schema";
 import { consumeVerificationToken } from "@/lib/email-verification";
 import { encodeSafeBase64 } from "@/lib/paysera";

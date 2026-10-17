@@ -4,11 +4,12 @@ import { before, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { getFacilityLocations } from "@/app/builder/actions";
 import { searchStock } from "@/app/stock/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { stock } from "@/db/schema";
-import { pickStockAt, receiveStockAt, requireOwnedBin, requireOwnedItem } from "@/lib/stock";
+
 import { addMember, createBin, createItem, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
+import { pickStockAt, receiveStockAt, requireOwnedBin, requireOwnedItem } from "@/test-support/in-company";
 
 // The multi-tenant promise: everything is scoped by organization_id in
 // app code (docs/architecture.md, "Data layer"). Org A must never read or

@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { getOrgDetail, listAuditLog, listOrganizations, reactivateOrganization, suspendOrganization } from "@/app/internal/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { adminAuditLog } from "@/db/schema";
 import { getOrgLockReason } from "@/lib/session";
 import { addMember, createBin, createItem, createOrg, createUser } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
-import { receiveStockAt } from "@/lib/stock";
+import { receiveStockAt } from "@/test-support/in-company";
 
 // Epic A1: search needs member emails alongside the org, the detail view
 // needs members/facilities/items/last-activity, and suspension is a

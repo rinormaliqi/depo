@@ -2,7 +2,7 @@ import { freshDatabase } from "@/test-support/setup";
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { getLabelBins } from "@/app/labels/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { locations } from "@/db/schema";
 import { addMember, createBin, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";

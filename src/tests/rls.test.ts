@@ -2,7 +2,8 @@ import { freshDatabase } from "@/test-support/setup";
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { eq, sql } from "drizzle-orm";
-import { db, type Tx } from "@/db";
+import type { Tx } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import {
   contracts, facilities, facilityLevels, facilityUnderlays, inventorySettings, invites, itemCustomFieldDefinitions,
   itemCustomFieldValues, items, locations, memberships, movements, payments, stock,

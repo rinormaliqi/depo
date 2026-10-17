@@ -1,11 +1,12 @@
 import { freshDatabase } from "@/test-support/setup";
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { facilities, inventorySettings, items, movements, stock } from "@/db/schema";
-import { getInventoryRules, getItemStockStatuses } from "@/lib/inventory";
+
 import { DEFAULT_INVENTORY_RULES } from "@/lib/stock-status";
 import { addMember, createBin, createOrg } from "@/test-support/factories";
+import { getInventoryRules, getItemStockStatuses } from "@/test-support/in-company";
 
 const NOW = new Date("2026-10-13T12:00:00Z");
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 86_400_000);

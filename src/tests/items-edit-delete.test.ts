@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { deleteItem, getMyItemsWithStock, updateItem } from "@/app/items/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { items, movements, stock } from "@/db/schema";
-import { pickStockAt, receiveStockAt } from "@/lib/stock";
+
 import { addMember, createBin, createItem, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
 import { MAX_FIELD_CHARS } from "@/lib/import-table";
+import { pickStockAt, receiveStockAt } from "@/test-support/in-company";
 
 async function itemById(id: string) {
   const [row] = await db.select().from(items).where(eq(items.id, id));

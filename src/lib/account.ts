@@ -10,6 +10,7 @@ import { appBaseUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email";
 import { isDisposableEmail, normalizeEmail } from "@/lib/email-normalize";
 import { UserError } from "@/lib/user-error";
+import { asOwner } from "@/db/tenant-context";
 
 // Everything a signed-in person can do to their own account (#75). Pure
 // server logic; src/app/account/actions.ts wraps it in session checks.
@@ -90,56 +91,58 @@ export async function signOutEverywhere(userId: string) {
 // the only member are deleted outright with their data; where others
 // remain, the only admin must hand over first.
 export async function deleteAccount(userId: string) {
-  const t = await getTranslations("account.error");
-  const mine = await db
-    .select({ id: memberships.id, organizationId: memberships.organizationId, role: memberships.role, orgName: organizations.name })
-    .from(memberships)
-    .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
-    .where(eq(memberships.userId, userId));
+  return asOwner(async () => {
+    const t = await getTranslations("account.error");
+    const mine = await db
+      .select({ id: memberships.id, organizationId: memberships.organizationId, role: memberships.role, orgName: organizations.name })
+      .from(memberships)
+      .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
+      .where(eq(memberships.userId, userId));
 
-  const soleMemberOrgs: string[] = [];
-  for (const m of mine) {
-    const others = await db.select({ id: memberships.id, role: memberships.role }).from(memberships).where(and(eq(memberships.organizationId, m.organizationId), ne(memberships.userId, userId)));
-    if (others.length === 0) {
-      soleMemberOrgs.push(m.organizationId);
-    } else if (m.role === "admin" && !others.some((o) => o.role === "admin")) {
-      throw new UserError(t("lastAdminOf", { org: m.orgName }));
-    }
-  }
-
-  await db.transaction(async (tx) => {
-    for (const orgId of soleMemberOrgs) {
-      // Bottom-up through the foreign keys that don't cascade.
-      await tx.delete(movements).where(eq(movements.organizationId, orgId));
-      const facs = await tx.select({ id: facilities.id }).from(facilities).where(eq(facilities.organizationId, orgId));
-      for (const f of facs) {
-        const locs = await tx.select({ id: locations.id }).from(locations).where(eq(locations.facilityId, f.id));
-        if (locs.length) await tx.delete(stock).where(sql`${stock.locationId} in ${sql.raw(`(${locs.map((l) => `'${l.id}'`).join(",")})`)}`);
-        await tx.delete(locations).where(eq(locations.facilityId, f.id));
+    const soleMemberOrgs: string[] = [];
+    for (const m of mine) {
+      const others = await db.select({ id: memberships.id, role: memberships.role }).from(memberships).where(and(eq(memberships.organizationId, m.organizationId), ne(memberships.userId, userId)));
+      if (others.length === 0) {
+        soleMemberOrgs.push(m.organizationId);
+      } else if (m.role === "admin" && !others.some((o) => o.role === "admin")) {
+        throw new UserError(t("lastAdminOf", { org: m.orgName }));
       }
-      await tx.delete(facilities).where(eq(facilities.organizationId, orgId));
-      await tx.delete(items).where(eq(items.organizationId, orgId));
-      // Not cascaded from organizations, so it has to go before the org row;
-      // the values themselves cascade from items and from the definitions.
-      await tx.delete(itemCustomFieldDefinitions).where(eq(itemCustomFieldDefinitions.organizationId, orgId));
-      await tx.delete(invites).where(eq(invites.organizationId, orgId));
-      await tx.delete(payments).where(eq(payments.organizationId, orgId));
-      await tx.delete(memberships).where(eq(memberships.organizationId, orgId));
-      await tx.delete(organizations).where(eq(organizations.id, orgId));
     }
-    await tx.delete(memberships).where(eq(memberships.userId, userId));
-    await tx.delete(invites).where(eq(invites.invitedBy, userId));
-    await tx.update(contactMessages).set({ userId: null }).where(eq(contactMessages.userId, userId));
-    await tx
-      .update(users)
-      .set({
-        email: `deleted-${userId}@deleted.invalid`,
-        normalizedEmail: `deleted-${userId}@deleted.invalid`,
-        name: "—",
-        passwordHash: null,
-        emailVerifiedAt: null,
-        sessionVersion: sql`${users.sessionVersion} + 1`,
-      })
-      .where(eq(users.id, userId));
+
+    await db.transaction(async (tx) => {
+      for (const orgId of soleMemberOrgs) {
+        // Bottom-up through the foreign keys that don't cascade.
+        await tx.delete(movements).where(eq(movements.organizationId, orgId));
+        const facs = await tx.select({ id: facilities.id }).from(facilities).where(eq(facilities.organizationId, orgId));
+        for (const f of facs) {
+          const locs = await tx.select({ id: locations.id }).from(locations).where(eq(locations.facilityId, f.id));
+          if (locs.length) await tx.delete(stock).where(sql`${stock.locationId} in ${sql.raw(`(${locs.map((l) => `'${l.id}'`).join(",")})`)}`);
+          await tx.delete(locations).where(eq(locations.facilityId, f.id));
+        }
+        await tx.delete(facilities).where(eq(facilities.organizationId, orgId));
+        await tx.delete(items).where(eq(items.organizationId, orgId));
+        // Not cascaded from organizations, so it has to go before the org row;
+        // the values themselves cascade from items and from the definitions.
+        await tx.delete(itemCustomFieldDefinitions).where(eq(itemCustomFieldDefinitions.organizationId, orgId));
+        await tx.delete(invites).where(eq(invites.organizationId, orgId));
+        await tx.delete(payments).where(eq(payments.organizationId, orgId));
+        await tx.delete(memberships).where(eq(memberships.organizationId, orgId));
+        await tx.delete(organizations).where(eq(organizations.id, orgId));
+      }
+      await tx.delete(memberships).where(eq(memberships.userId, userId));
+      await tx.delete(invites).where(eq(invites.invitedBy, userId));
+      await tx.update(contactMessages).set({ userId: null }).where(eq(contactMessages.userId, userId));
+      await tx
+        .update(users)
+        .set({
+          email: `deleted-${userId}@deleted.invalid`,
+          normalizedEmail: `deleted-${userId}@deleted.invalid`,
+          name: "—",
+          passwordHash: null,
+          emailVerifiedAt: null,
+          sessionVersion: sql`${users.sessionVersion} + 1`,
+        })
+        .where(eq(users.id, userId));
+    });
   });
 }

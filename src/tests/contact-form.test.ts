@@ -2,7 +2,7 @@ import { freshDatabase } from "@/test-support/setup";
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { sendContactMessage } from "@/app/contact/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { contactMessages } from "@/db/schema";
 
 function form(fields: Record<string, string>) {

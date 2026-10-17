@@ -2,7 +2,7 @@ import { freshDatabase } from "@/test-support/setup";
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { facilities, invites, memberships, users } from "@/db/schema";
 import { acceptInviteViaSession, createOrganizationForFounder, ensureUserFromGoogle, hasMembership } from "@/lib/onboarding";
 import { addMember, createOrg, createUser, orgById, seedPlans } from "@/test-support/factories";

@@ -1,7 +1,7 @@
 // Minimal row builders for tests. Each returns ids only; anything a test
 // asserts on it should read back itself.
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { facilities, items, locations, memberships, organizations, plans, users, type MembershipRole } from "@/db/schema";
 
 export async function seedPlans() {

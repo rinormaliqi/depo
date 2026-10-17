@@ -8,7 +8,7 @@ import { startContract } from "@/app/billing/contract/actions";
 import { GET as getPdf } from "@/app/api/contracts/[contractId]/pdf/route";
 import { POST as postSigned } from "@/app/api/contracts/[contractId]/signed/route";
 import { POST as postUnderlay } from "@/app/api/builder/underlay/[facilityId]/route";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { contracts } from "@/db/schema";
 import { LIMITS } from "@/lib/rate-limit";
 import { declaredTooLarge, safeFileName, sniffType } from "@/lib/upload-check";

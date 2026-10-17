@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { ownerDb } from "@/test-support/owner-db";
 import { items } from "@/db/schema";
 import { getMySession } from "@/lib/session";
-import { inOrg, withOrg } from "@/lib/tenant";
+import { asOwner, inOrg, outsideOrg, withOrg } from "@/lib/tenant";
 import { UserError } from "@/lib/user-error";
 import { addMember, createItem, createOrg, seedPlans } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
@@ -61,7 +62,7 @@ describe("withOrg", () => {
       }),
       /nope/,
     );
-    assert.equal((await db.select().from(items).where(eq(items.name, "half-done"))).length, 0);
+    assert.equal((await ownerDb.select().from(items).where(eq(items.name, "half-done"))).length, 0);
   });
 
   test("a redirect commits first, then still reaches Next", async () => {
@@ -74,7 +75,7 @@ describe("withOrg", () => {
       }),
       (e) => e === redirect,
     );
-    assert.equal((await db.select().from(items).where(eq(items.name, "kept"))).length, 1);
+    assert.equal((await ownerDb.select().from(items).where(eq(items.name, "kept"))).length, 1);
   });
 
   test("nesting reuses the open transaction; another company's is refused", async () => {
@@ -100,5 +101,20 @@ describe("withOrg", () => {
     release();
     const row = await later!;
     assert.notEqual(row.role, "app_user");
+  });
+
+  // Phase 3: what the app connection (DATABASE_URL_APP) sees on its own.
+  test("outside any company the app connection sees no company rows; asOwner sees them all", { skip: process.env.TEST_DB_APP_ROLE === "off" }, async () => {
+    const [who] = await db.execute<{ role: string }>(sql`select current_user as role`);
+    assert.equal(who.role, "smartdepo_app_test", "the tests run the app on the restricted login");
+    assert.equal((await db.select().from(items)).length, 0);
+    const all = await asOwner(() => db.select().from(items));
+    assert.ok(all.some((i) => i.organizationId === a.org.id) && all.some((i) => i.organizationId === b.org.id));
+    assert.equal((await outsideOrg(() => db.select().from(items))).length, all.length);
+  });
+
+  test("asOwner is refused inside a company transaction", async () => {
+    actAs(aAdmin);
+    await assert.rejects(inOrg(() => asOwner(async () => null)), /inside a company transaction/);
   });
 });

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { login } from "@/app/login/actions";
 import { requestPasswordReset } from "@/app/forgot-password/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { rateLimitEvents } from "@/db/schema";
 import { assertNotLimited, countRecent, isLimited, record } from "@/lib/rate-limit";
 import { createUser, seedPlans } from "@/test-support/factories";

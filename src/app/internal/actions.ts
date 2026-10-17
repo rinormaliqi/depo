@@ -9,35 +9,38 @@ import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { recordAdminAction } from "@/lib/admin-audit";
 import { attempt } from "@/lib/action-result";
 import { UserError } from "@/lib/user-error";
+import { asOwner } from "@/db/tenant-context";
 
 export async function listOrganizations() {
-  await requirePlatformAdmin();
+  return asOwner(async () => {
+    await requirePlatformAdmin();
 
-  const [orgs, allPlans, allMemberships] = await Promise.all([
-    db.select().from(organizations).orderBy(organizations.createdAt),
-    db.select().from(plans),
-    db.select({ organizationId: memberships.organizationId, email: users.email }).from(memberships).innerJoin(users, eq(memberships.userId, users.id)),
-  ]);
+    const [orgs, allPlans, allMemberships] = await Promise.all([
+      db.select().from(organizations).orderBy(organizations.createdAt),
+      db.select().from(plans),
+      db.select({ organizationId: memberships.organizationId, email: users.email }).from(memberships).innerJoin(users, eq(memberships.userId, users.id)),
+    ]);
 
-  const planById = new Map(allPlans.map((p) => [p.id, p]));
-  const memberCounts = new Map<string, number>();
-  const memberEmailsByOrg = new Map<string, string[]>();
-  for (const m of allMemberships) {
-    memberCounts.set(m.organizationId, (memberCounts.get(m.organizationId) ?? 0) + 1);
-    const emails = memberEmailsByOrg.get(m.organizationId) ?? [];
-    emails.push(m.email);
-    memberEmailsByOrg.set(m.organizationId, emails);
-  }
+    const planById = new Map(allPlans.map((p) => [p.id, p]));
+    const memberCounts = new Map<string, number>();
+    const memberEmailsByOrg = new Map<string, string[]>();
+    for (const m of allMemberships) {
+      memberCounts.set(m.organizationId, (memberCounts.get(m.organizationId) ?? 0) + 1);
+      const emails = memberEmailsByOrg.get(m.organizationId) ?? [];
+      emails.push(m.email);
+      memberEmailsByOrg.set(m.organizationId, emails);
+    }
 
-  return {
-    organizations: orgs.map((o) => ({
-      ...o,
-      planKey: planById.get(o.planId)?.key ?? null,
-      memberCount: memberCounts.get(o.id) ?? 0,
-      memberEmails: memberEmailsByOrg.get(o.id) ?? [],
-    })),
-    plans: allPlans,
-  };
+    return {
+      organizations: orgs.map((o) => ({
+        ...o,
+        planKey: planById.get(o.planId)?.key ?? null,
+        memberCount: memberCounts.get(o.id) ?? 0,
+        memberEmails: memberEmailsByOrg.get(o.id) ?? [],
+      })),
+      plans: allPlans,
+    };
+  });
 }
 
 async function getOrgDetailImpl(orgId: string) {
@@ -64,7 +67,7 @@ async function getOrgDetailImpl(orgId: string) {
 }
 
 export async function getOrgDetail(orgId: string) {
-  return attempt(() => getOrgDetailImpl(orgId), "getOrgDetail");
+  return attempt(() => asOwner(() => getOrgDetailImpl(orgId)), "getOrgDetail");
 }
 
 async function suspendOrganizationImpl(orgId: string, reason: string) {
@@ -78,7 +81,7 @@ async function suspendOrganizationImpl(orgId: string, reason: string) {
 }
 
 export async function suspendOrganization(orgId: string, reason: string) {
-  return attempt(() => suspendOrganizationImpl(orgId, reason), "suspendOrganization");
+  return attempt(() => asOwner(() => suspendOrganizationImpl(orgId, reason)), "suspendOrganization");
 }
 
 async function reactivateOrganizationImpl(orgId: string) {
@@ -89,7 +92,7 @@ async function reactivateOrganizationImpl(orgId: string) {
 }
 
 export async function reactivateOrganization(orgId: string) {
-  return attempt(() => reactivateOrganizationImpl(orgId), "reactivateOrganization");
+  return attempt(() => asOwner(() => reactivateOrganizationImpl(orgId)), "reactivateOrganization");
 }
 
 async function updateOrgBillingImpl(
@@ -159,13 +162,17 @@ async function recordManualPaymentImpl(orgId: string, input: { planId: string; m
 }
 
 export async function listRecentPayments() {
-  await requirePlatformAdmin();
-  return db.select().from(payments).orderBy(desc(payments.createdAt)).limit(50);
+  return asOwner(async () => {
+    await requirePlatformAdmin();
+    return db.select().from(payments).orderBy(desc(payments.createdAt)).limit(50);
+  });
 }
 
 export async function listAuditLog() {
-  await requirePlatformAdmin();
-  return db.select().from(adminAuditLog).orderBy(desc(adminAuditLog.createdAt)).limit(100);
+  return asOwner(async () => {
+    await requirePlatformAdmin();
+    return db.select().from(adminAuditLog).orderBy(desc(adminAuditLog.createdAt)).limit(100);
+  });
 }
 
 export async function updateOrgBilling(
@@ -177,11 +184,11 @@ export async function updateOrgBilling(
     paidUntil?: string | null;
   },
 ) {
-  return attempt(() => updateOrgBillingImpl(orgId, patch), "updateOrgBilling");
+  return attempt(() => asOwner(() => updateOrgBillingImpl(orgId, patch)), "updateOrgBilling");
 }
 
 export async function recordManualPayment(orgId: string, input: { planId: string; months: number; amountCents?: number; note?: string }) {
-  return attempt(() => recordManualPaymentImpl(orgId, input), "recordManualPayment");
+  return attempt(() => asOwner(() => recordManualPaymentImpl(orgId, input)), "recordManualPayment");
 }
 
 // Founder-only smoke test for error monitoring: throws a plain Error (not
@@ -194,5 +201,5 @@ async function throwTestErrorImpl() {
 }
 
 export async function throwTestError() {
-  return attempt(() => throwTestErrorImpl(), "throwTestError");
+  return attempt(() => asOwner(() => throwTestErrorImpl()), "throwTestError");
 }

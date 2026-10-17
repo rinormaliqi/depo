@@ -2,10 +2,11 @@ import { freshDatabase } from "@/test-support/setup";
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { getMetrics } from "@/app/metrics/actions";
-import { exitStockAt, moveStockAt, receiveStockAt } from "@/lib/stock";
+
 import { addMember, createBin, createItem, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
 import { resetCookies } from "@/test-support/stubs/next-headers";
+import { exitStockAt, moveStockAt, receiveStockAt } from "@/test-support/in-company";
 
 // Live stock (accountedSkus/occPct) only ever answers "what's on the floor
 // right now" — it can't tell a quiet warehouse from one that moved and sold

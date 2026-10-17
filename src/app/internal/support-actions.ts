@@ -7,10 +7,13 @@ import { db } from "@/db";
 import { contactMessages } from "@/db/schema";
 import { recordAdminAction } from "@/lib/admin-audit";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
+import { asOwner } from "@/db/tenant-context";
 
 export async function listContactMessages() {
-  await requirePlatformAdmin();
-  return db.select().from(contactMessages).orderBy(desc(contactMessages.createdAt)).limit(200);
+  return asOwner(async () => {
+    await requirePlatformAdmin();
+    return db.select().from(contactMessages).orderBy(desc(contactMessages.createdAt)).limit(200);
+  });
 }
 
 async function markContactMessageHandledImpl(id: string) {
@@ -21,5 +24,5 @@ async function markContactMessageHandledImpl(id: string) {
 }
 
 export async function markContactMessageHandled(id: string) {
-  return attempt(() => markContactMessageHandledImpl(id), "markContactMessageHandled");
+  return attempt(() => asOwner(() => markContactMessageHandledImpl(id)), "markContactMessageHandled");
 }

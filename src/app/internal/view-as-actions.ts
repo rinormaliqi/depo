@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { items, stock } from "@/db/schema";
 import { listFacilities } from "@/lib/facilities";
 import * as viewAs from "@/lib/view-as";
+import { asOwner } from "@/db/tenant-context";
 
 async function startViewAsImpl(organizationId: string) {
   await viewAs.startViewAs(organizationId);
@@ -15,7 +16,7 @@ async function startViewAsImpl(organizationId: string) {
 }
 
 export async function startViewAs(organizationId: string) {
-  return attempt(() => startViewAsImpl(organizationId), "startViewAs");
+  return attempt(() => asOwner(() => startViewAsImpl(organizationId)), "startViewAs");
 }
 
 async function endViewAsImpl() {
@@ -24,7 +25,7 @@ async function endViewAsImpl() {
 }
 
 export async function endViewAs() {
-  return attempt(() => endViewAsImpl(), "endViewAs");
+  return attempt(() => asOwner(() => endViewAsImpl()), "endViewAs");
 }
 
 async function getViewAsDataImpl() {
@@ -60,5 +61,5 @@ async function getViewAsDataImpl() {
 }
 
 export async function getViewAsData() {
-  return attempt(() => getViewAsDataImpl(), "getViewAsData");
+  return attempt(() => asOwner(() => getViewAsDataImpl()), "getViewAsData");
 }

@@ -4,11 +4,12 @@ import { before, describe, test } from "node:test";
 import { and, eq } from "drizzle-orm";
 import { createItem } from "@/app/items/actions";
 import { commitItemsImport, previewItemsImport } from "@/app/items/import/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { items } from "@/db/schema";
-import { createFieldDefinition, getValuesForItems } from "@/lib/custom-fields";
+
 import { addMember, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
+import { createFieldDefinition, getValuesForItems } from "@/test-support/in-company";
 
 async function orgItems(organizationId: string) {
   return db.select().from(items).where(eq(items.organizationId, organizationId)).orderBy(items.sku, items.name);

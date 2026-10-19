@@ -4,7 +4,7 @@ import { after, before, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { disableUser, forceSignOut, listUsersForAdmin, reactivateUser } from "@/app/internal/user-actions";
 import { listAuditLog } from "@/app/internal/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { users } from "@/db/schema";
 import { addMember, createOrg, createUser } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";

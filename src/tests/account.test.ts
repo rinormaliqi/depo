@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { emailChanges, itemCustomFieldDefinitions, itemCustomFieldValues, memberships, organizations, users } from "@/db/schema";
 import { changePassword, confirmEmailChange, deleteAccount, requestEmailChange, signOutEverywhere, updateName } from "@/lib/account";
 import { getMySession, getValidUserId } from "@/lib/session";

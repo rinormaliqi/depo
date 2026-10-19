@@ -5,13 +5,14 @@ import { and, eq } from "drizzle-orm";
 import { GET as getPdf } from "@/app/api/contracts/[contractId]/pdf/route";
 import { POST as postSigned } from "@/app/api/contracts/[contractId]/signed/route";
 import { getMyContractsForOrg, startContract } from "@/app/billing/contract/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { contracts, plans } from "@/db/schema";
 import { contractPriceBreakdown } from "@/lib/billing-plans";
-import { createContract } from "@/lib/contracts";
+
 import { addMember, createOrg, seedPlans } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
 import { resetCookies } from "@/test-support/stubs/next-headers";
+import { createContract } from "@/test-support/in-company";
 
 const CLIENT_INFO = {
   legalName: "Gjirafa Depo SH.P.K.",

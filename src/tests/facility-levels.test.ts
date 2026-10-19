@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { addLevel, removeTopLevel } from "@/app/builder/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { facilityLevels, locations, stock } from "@/db/schema";
-import { ensureLevels, renameLevel } from "@/lib/levels";
+
 import { unwrap } from "@/lib/action-result";
 import { addMember, createItem, createOrg, seedPlans } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
+import { ensureLevels, renameLevel } from "@/test-support/in-company";
 
 const addLevelU = unwrap(addLevel);
 const removeTopLevelU = unwrap(removeTopLevel);

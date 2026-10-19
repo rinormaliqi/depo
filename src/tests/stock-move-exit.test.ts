@@ -2,10 +2,11 @@ import { freshDatabase } from "@/test-support/setup";
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { and, eq } from "drizzle-orm";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { movements, stock } from "@/db/schema";
-import { exitStockAt, moveStockAt, receiveStockAt } from "@/lib/stock";
+
 import { addMember, createBin, createItem, createOrg } from "@/test-support/factories";
+import { exitStockAt, moveStockAt, receiveStockAt } from "@/test-support/in-company";
 
 // moveStockAt and exitStockAt are the "relocate within the depot" and
 // "leaves the depot for good (sold/removed)" primitives that Epic #0 adds

@@ -4,7 +4,7 @@ import { after, before, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { getBlueprint } from "@/app/builder/actions";
 import { listAuditLog } from "@/app/internal/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { adminViewAsSessions } from "@/db/schema";
 import { endViewAs, getActiveViewAs, startViewAs } from "@/lib/view-as";
 import { addMember, createOrg, createUser } from "@/test-support/factories";

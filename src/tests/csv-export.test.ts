@@ -6,7 +6,7 @@ import { GET as exportItems } from "@/app/items/export/route";
 import { commitItemsImport } from "@/app/items/import/actions";
 import { GET as exportStock } from "@/app/stock/export/route";
 import { previewStockImport } from "@/app/stock/import/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { items, stock } from "@/db/schema";
 import { tokenize } from "@/lib/import-table";
 import { addMember, createBin, createItem, createOrg } from "@/test-support/factories";

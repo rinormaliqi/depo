@@ -2,10 +2,10 @@ import { freshDatabase } from "@/test-support/setup";
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { searchStock } from "@/app/stock/actions";
-import { createFieldDefinition, setItemValues } from "@/lib/custom-fields";
-import { receiveStockAt } from "@/lib/stock";
+
 import { addMember, createBin, createItem, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
+import { createFieldDefinition, receiveStockAt, setItemValues } from "@/test-support/in-company";
 
 // The stock search box gets the same "narrow by a custom field" control
 // items already has (src/components/custom-field-filter.tsx) — this is

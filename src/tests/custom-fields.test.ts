@@ -1,16 +1,10 @@
 import { freshDatabase } from "@/test-support/setup";
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
-import {
-  createFieldDefinition,
-  deleteFieldDefinition,
-  getFieldDefinitions,
-  getValuesForItems,
-  setItemValues,
-  updateFieldDefinition,
-} from "@/lib/custom-fields";
+
 import { UserError } from "@/lib/user-error";
 import { addMember, createItem, createOrg } from "@/test-support/factories";
+import { createFieldDefinition, deleteFieldDefinition, getFieldDefinitions, getValuesForItems, setItemValues, updateFieldDefinition } from "@/test-support/in-company";
 
 describe("custom field definitions", () => {
   let orgA: Awaited<ReturnType<typeof createOrg>>;

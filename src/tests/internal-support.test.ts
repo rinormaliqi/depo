@@ -4,7 +4,7 @@ import { after, before, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { listAuditLog } from "@/app/internal/actions";
 import { listContactMessages, markContactMessageHandled } from "@/app/internal/support-actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { contactMessages } from "@/db/schema";
 import { createUser } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";

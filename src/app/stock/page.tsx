@@ -9,117 +9,120 @@ import { getFieldDefinitions } from "@/lib/custom-fields";
 import { requireOrgId } from "@/lib/session";
 import { getZoneUtilization, searchStock } from "./actions";
 import { StockSearch } from "./stock-search";
+import { inOrg } from "@/lib/tenant";
 
 export default async function StockPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  const t = await getTranslations();
+  return inOrg(async () => {
+    const session = await auth();
+    if (!session?.user) redirect("/login");
+    const t = await getTranslations();
 
-  const facility = await getMyFacility();
-  if (!facility) {
+    const facility = await getMyFacility();
+    if (!facility) {
+      return (
+        <main style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
+          <p className="text-muted">{t("common.noFacility")}</p>
+        </main>
+      );
+    }
+
+    const { q } = await searchParams;
+    const organizationId = await requireOrgId();
+    const [initialResults, zones, caps, fieldDefs] = await Promise.all([
+      q ? searchStock(q) : Promise.resolve([]),
+      getZoneUtilization(),
+      getCapabilities(),
+      getFieldDefinitions(organizationId),
+    ]);
+
     return (
-      <main style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
-        <p className="text-muted">{t("common.noFacility")}</p>
-      </main>
-    );
-  }
-
-  const { q } = await searchParams;
-  const organizationId = await requireOrgId();
-  const [initialResults, zones, caps, fieldDefs] = await Promise.all([
-    q ? searchStock(q) : Promise.resolve([]),
-    getZoneUtilization(),
-    getCapabilities(),
-    getFieldDefinitions(organizationId),
-  ]);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
-      <AppHeader
-        facilityId={facility.id}
-          facilityName={facility.name}
-        floorText={t("common.floorText", { width: facility.widthM.toFixed(1), height: facility.heightM.toFixed(1) })}
-        userEmail={session.user.email ?? ""}
-      />
-      <div className="stock-layout" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-        <div className="stock-search-pane" style={{ background: "#fff", overflow: "auto" }}>
-          <StockSearch initialQuery={q ?? ""} initialResults={initialResults} fieldDefs={fieldDefs} />
-        </div>
-
-        <div className="stock-zones-pane" style={{ overflow: "auto" }}>
-          <div
-            style={{
-              fontFamily: "var(--font-heading)",
-              fontSize: 13,
-              letterSpacing: ".16em",
-              textTransform: "uppercase",
-              marginBottom: 11,
-            }}
-          >
-            {t("stock.zoneUtilisation")}
+      <div style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 0, overflow: "hidden" }}>
+        <AppHeader
+          facilityId={facility.id}
+            facilityName={facility.name}
+          floorText={t("common.floorText", { width: facility.widthM.toFixed(1), height: facility.heightM.toFixed(1) })}
+          userEmail={session.user.email ?? ""}
+        />
+        <div className="stock-layout" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          <div className="stock-search-pane" style={{ background: "#fff", overflow: "auto" }}>
+            <StockSearch initialQuery={q ?? ""} initialResults={initialResults} fieldDefs={fieldDefs} />
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
-            <a href="/stock/export" className="btn btn-ghost" download>
-              {t("stock.exportLink")}
-            </a>
-            {caps?.can.manageItems && (
-              <Link href="/stock/import" className="btn btn-ghost">
-                {t("stock.importLink")}
-              </Link>
-            )}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 0, maxWidth: 560 }}>
-            {zones.map((z) => (
-              <div
-                key={z.id}
-                style={{
-                  padding: "11px 0",
-                  borderBottom: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                  <span style={{ fontFamily: "var(--font-heading)", fontSize: 16, letterSpacing: ".05em" }}>
-                    {z.code} · {z.name}
-                  </span>
-                  {/* A receiving bay, a shipping bay or an office holds no
-                      bins, so "0%" there is not a low figure — it is a
-                      meaningless one, sitting in the column people scan for
-                      the figures that do mean something. */}
-                  <span style={{ fontFamily: "var(--font-heading)", fontSize: 19, fontVariantNumeric: "tabular-nums" }}>
-                    {z.totalBins > 0 ? `${z.occPct}%` : "—"}
-                  </span>
-                </div>
-                {z.totalBins > 0 && (
-                  <div style={{ marginTop: 7, height: 8, background: "var(--color-neutral-200)" }}>
-                    <div style={{ width: `${z.occPct}%`, height: "100%", background: "var(--color-accent)" }} />
-                  </div>
-                )}
+
+          <div className="stock-zones-pane" style={{ overflow: "auto" }}>
+            <div
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: 13,
+                letterSpacing: ".16em",
+                textTransform: "uppercase",
+                marginBottom: 11,
+              }}
+            >
+              {t("stock.zoneUtilisation")}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
+              <a href="/stock/export" className="btn btn-ghost" download>
+                {t("stock.exportLink")}
+              </a>
+              {caps?.can.manageItems && (
+                <Link href="/stock/import" className="btn btn-ghost">
+                  {t("stock.importLink")}
+                </Link>
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 0, maxWidth: 560 }}>
+              {zones.map((z) => (
                 <div
+                  key={z.id}
                   style={{
-                    marginTop: 5,
-                    fontSize: 11,
-                    fontVariantNumeric: "tabular-nums",
-                    color: "color-mix(in srgb, var(--color-text) 50%, transparent)",
+                    padding: "11px 0",
+                    borderBottom: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)",
                   }}
                 >
-                  {z.totalBins > 0
-                    ? t("stock.occupiedOfTotal", { occupied: z.occupied, total: z.totalBins, area: z.areaM2 })
-                    : t("stock.noStorage", { area: z.areaM2 })}
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+                    <span style={{ fontFamily: "var(--font-heading)", fontSize: 16, letterSpacing: ".05em" }}>
+                      {z.code} · {z.name}
+                    </span>
+                    {/* A receiving bay, a shipping bay or an office holds no
+                        bins, so "0%" there is not a low figure — it is a
+                        meaningless one, sitting in the column people scan for
+                        the figures that do mean something. */}
+                    <span style={{ fontFamily: "var(--font-heading)", fontSize: 19, fontVariantNumeric: "tabular-nums" }}>
+                      {z.totalBins > 0 ? `${z.occPct}%` : "—"}
+                    </span>
+                  </div>
+                  {z.totalBins > 0 && (
+                    <div style={{ marginTop: 7, height: 8, background: "var(--color-neutral-200)" }}>
+                      <div style={{ width: `${z.occPct}%`, height: "100%", background: "var(--color-accent)" }} />
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      marginTop: 5,
+                      fontSize: 11,
+                      fontVariantNumeric: "tabular-nums",
+                      color: "color-mix(in srgb, var(--color-text) 50%, transparent)",
+                    }}
+                  >
+                    {z.totalBins > 0
+                      ? t("stock.occupiedOfTotal", { occupied: z.occupied, total: z.totalBins, area: z.areaM2 })
+                      : t("stock.noStorage", { area: z.areaM2 })}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {zones.length === 0 && (
-              <p className="text-muted" style={{ fontSize: 13 }}>
-                {t("stock.noZones")}
-              </p>
-            )}
+              ))}
+              {zones.length === 0 && (
+                <p className="text-muted" style={{ fontSize: 13 }}>
+                  {t("stock.noZones")}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  });
 }

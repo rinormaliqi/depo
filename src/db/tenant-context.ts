@@ -14,7 +14,7 @@ export type TenantContext = {
   role: MembershipRole;
   // Set once the transaction has ended. Work started inside it but still
   // running afterwards (a fire-and-forget email) can't use a closed
-  // transaction, so it falls back to the pool.
+  // transaction, so it falls back to the app connection.
   done: boolean;
 };
 
@@ -23,4 +23,25 @@ export const tenantContext = new AsyncLocalStorage<TenantContext>();
 export function activeTenant(): TenantContext | null {
   const ctx = tenantContext.getStore();
   return ctx && !ctx.done ? ctx : null;
+}
+
+// Code running inside asOwner() (src/lib/tenant.ts): the deliberate
+// cross-company paths — sign-up, invites by token, the company switcher,
+// account deletion, /internal, the Paysera callback. There `db` is the
+// owner connection, which row-level security doesn't apply to.
+export const ownerContext = new AsyncLocalStorage<true>();
+
+export function inOwnerScope(): boolean {
+  return ownerContext.getStore() === true;
+}
+
+// Runs fn on the owner connection, which row-level security doesn't apply
+// to — for the paths that work across companies on purpose (sign-up,
+// invites by token, the company switcher, account deletion, /internal, the
+// Paysera callback). Every caller is a deliberate exception; grep for it.
+// Inside an open company transaction it is refused: mixing the two would
+// silently widen what that request can see.
+export function asOwner<T>(fn: () => Promise<T>): Promise<T> {
+  if (activeTenant()) return Promise.reject(new Error("asOwner: called inside a company transaction"));
+  return ownerContext.run(true, fn);
 }

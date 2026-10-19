@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { getBlueprint } from "@/app/builder/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { items } from "@/db/schema";
-import { receiveStockAt } from "@/lib/stock";
+
 import { addMember, createBin, createItem, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
 import { resetCookies } from "@/test-support/stubs/next-headers";
+import { receiveStockAt } from "@/test-support/in-company";
 
 async function setMinStockLevel(itemId: string, min: number | null) {
   await db.update(items).set({ minStockLevel: min }).where(eq(items.id, itemId));

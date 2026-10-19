@@ -4,11 +4,12 @@ import { after, before, beforeEach, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { getPlatformOverview } from "@/app/internal/overview-actions";
 import { suspendOrganization } from "@/app/internal/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { movements, organizations } from "@/db/schema";
-import { receiveStockAt } from "@/lib/stock";
+
 import { addMember, createBin, createItem, createOrg, createUser } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
+import { receiveStockAt } from "@/test-support/in-company";
 
 const DAY = 86_400_000;
 

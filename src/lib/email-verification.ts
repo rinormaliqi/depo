@@ -7,6 +7,7 @@ import { appBaseUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email";
 import { isDisposableEmail, normalizeEmail } from "@/lib/email-normalize";
 import { UserError } from "@/lib/user-error";
+import { asOwner } from "@/db/tenant-context";
 
 const VERIFY_VALID_HOURS = 24;
 // Minimum gap between two verification mails to the same user — the
@@ -45,27 +46,29 @@ export async function resendVerificationEmail(user: { id: string; email: string 
 // count from here, not from the signup form, so an unverified signup can't
 // quietly burn its own trial before ever getting in.
 export async function markEmailVerified(userId: string) {
-  const now = new Date();
-  await db.update(users).set({ emailVerifiedAt: now }).where(and(eq(users.id, userId), isNull(users.emailVerifiedAt)));
+  return asOwner(async () => {
+    const now = new Date();
+    await db.update(users).set({ emailVerifiedAt: now }).where(and(eq(users.id, userId), isNull(users.emailVerifiedAt)));
 
-  const trialEndsAt = new Date(now);
-  trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
+    const trialEndsAt = new Date(now);
+    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
 
-  const founded = await db
-    .select({ organizationId: memberships.organizationId })
-    .from(memberships)
-    .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
-    .where(
-      and(
-        eq(memberships.userId, userId),
-        eq(memberships.role, "admin"),
-        eq(organizations.subscriptionStatus, "trialing"),
-        isNull(organizations.trialEndsAt),
-      ),
-    );
-  for (const { organizationId } of founded) {
-    await db.update(organizations).set({ trialEndsAt }).where(eq(organizations.id, organizationId));
-  }
+    const founded = await db
+      .select({ organizationId: memberships.organizationId })
+      .from(memberships)
+      .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
+      .where(
+        and(
+          eq(memberships.userId, userId),
+          eq(memberships.role, "admin"),
+          eq(organizations.subscriptionStatus, "trialing"),
+          isNull(organizations.trialEndsAt),
+        ),
+      );
+    for (const { organizationId } of founded) {
+      await db.update(organizations).set({ trialEndsAt }).where(eq(organizations.id, organizationId));
+    }
+  });
 }
 
 // Redeems a token: null if it's unknown, expired, or already used.

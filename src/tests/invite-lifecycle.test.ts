@@ -4,7 +4,7 @@ import { before, describe, test } from "node:test";
 import { and, eq } from "drizzle-orm";
 import { requestNewInvite } from "@/app/invite/[token]/actions";
 import { leaveOrganization, transferOwnership } from "@/app/team/actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { invites, memberships } from "@/db/schema";
 import { unwrap } from "@/lib/action-result";
 import { countRecent, LIMITS } from "@/lib/rate-limit";

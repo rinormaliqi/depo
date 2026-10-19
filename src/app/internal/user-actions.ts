@@ -9,30 +9,33 @@ import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { recordAdminAction } from "@/lib/admin-audit";
 import { attempt } from "@/lib/action-result";
 import { UserError } from "@/lib/user-error";
+import { asOwner } from "@/db/tenant-context";
 
 // Explicit columns, never passwordHash — this goes straight to the client.
 export async function listUsersForAdmin() {
-  await requirePlatformAdmin();
+  return asOwner(async () => {
+    await requirePlatformAdmin();
 
-  const [allUsers, allMemberships] = await Promise.all([
-    db
-      .select({ id: users.id, email: users.email, name: users.name, emailVerifiedAt: users.emailVerifiedAt, disabledAt: users.disabledAt, disabledReason: users.disabledReason, createdAt: users.createdAt })
-      .from(users)
-      .orderBy(users.createdAt),
-    db
-      .select({ userId: memberships.userId, organizationId: memberships.organizationId, role: memberships.role, orgName: organizations.name })
-      .from(memberships)
-      .innerJoin(organizations, eq(memberships.organizationId, organizations.id)),
-  ]);
+    const [allUsers, allMemberships] = await Promise.all([
+      db
+        .select({ id: users.id, email: users.email, name: users.name, emailVerifiedAt: users.emailVerifiedAt, disabledAt: users.disabledAt, disabledReason: users.disabledReason, createdAt: users.createdAt })
+        .from(users)
+        .orderBy(users.createdAt),
+      db
+        .select({ userId: memberships.userId, organizationId: memberships.organizationId, role: memberships.role, orgName: organizations.name })
+        .from(memberships)
+        .innerJoin(organizations, eq(memberships.organizationId, organizations.id)),
+    ]);
 
-  const membershipsByUser = new Map<string, { organizationId: string; orgName: string; role: string }[]>();
-  for (const m of allMemberships) {
-    const arr = membershipsByUser.get(m.userId) ?? [];
-    arr.push({ organizationId: m.organizationId, orgName: m.orgName, role: m.role });
-    membershipsByUser.set(m.userId, arr);
-  }
+    const membershipsByUser = new Map<string, { organizationId: string; orgName: string; role: string }[]>();
+    for (const m of allMemberships) {
+      const arr = membershipsByUser.get(m.userId) ?? [];
+      arr.push({ organizationId: m.organizationId, orgName: m.orgName, role: m.role });
+      membershipsByUser.set(m.userId, arr);
+    }
 
-  return allUsers.map((u) => ({ ...u, memberships: membershipsByUser.get(u.id) ?? [] }));
+    return allUsers.map((u) => ({ ...u, memberships: membershipsByUser.get(u.id) ?? [] }));
+  });
 }
 
 async function forceSignOutImpl(userId: string) {
@@ -43,7 +46,7 @@ async function forceSignOutImpl(userId: string) {
 }
 
 export async function forceSignOut(userId: string) {
-  return attempt(() => forceSignOutImpl(userId), "forceSignOut");
+  return attempt(() => asOwner(() => forceSignOutImpl(userId)), "forceSignOut");
 }
 
 async function disableUserImpl(userId: string, reason: string) {
@@ -60,7 +63,7 @@ async function disableUserImpl(userId: string, reason: string) {
 }
 
 export async function disableUser(userId: string, reason: string) {
-  return attempt(() => disableUserImpl(userId, reason), "disableUser");
+  return attempt(() => asOwner(() => disableUserImpl(userId, reason)), "disableUser");
 }
 
 async function reactivateUserImpl(userId: string) {
@@ -71,5 +74,5 @@ async function reactivateUserImpl(userId: string) {
 }
 
 export async function reactivateUser(userId: string) {
-  return attempt(() => reactivateUserImpl(userId), "reactivateUser");
+  return attempt(() => asOwner(() => reactivateUserImpl(userId)), "reactivateUser");
 }

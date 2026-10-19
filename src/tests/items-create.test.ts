@@ -4,11 +4,12 @@ import { before, describe, test } from "node:test";
 import { and, eq } from "drizzle-orm";
 import { createItem } from "@/app/items/actions";
 import { createField, deleteField } from "@/app/items/custom-fields-actions";
-import { db } from "@/db";
+import { ownerDb as db } from "@/test-support/owner-db";
 import { items } from "@/db/schema";
-import { getValuesForItems } from "@/lib/custom-fields";
+
 import { addMember, createOrg } from "@/test-support/factories";
 import { actAs } from "@/test-support/stubs/auth";
+import { getValuesForItems } from "@/test-support/in-company";
 
 function form(fields: Record<string, string>) {
   const fd = new FormData();
